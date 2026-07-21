@@ -34,6 +34,11 @@ npm run build
 The compiled output is `dist/index.js`.
 
 Load that file on the game page to mount the floating pickaxe button and bot panel.
+The launcher position is saved in browser localStorage.
+
+The current local resource catalog contains stable bot ids for agate,
+aquamarine, and turquoise. The panel exposes a mining start button and a
+compact multiselect for those resources.
 
 ## GitHub Pages Deploy
 

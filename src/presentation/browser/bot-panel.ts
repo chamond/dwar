@@ -1,44 +1,102 @@
+import type { BotResourceSnapshot } from '../../domain/entities/bot-resource';
+import { getPickaxeIcon } from './pickaxe-icon';
+import { createResourcePicker, type ResourcePickerElements } from './resource-picker';
+
 export interface BotPanelElements {
   panel: HTMLElement;
   header: HTMLElement;
   closeButton: HTMLButtonElement;
+  startMiningButton: HTMLButtonElement;
+  resourcePicker: ResourcePickerElements;
   logList: HTMLElement;
 }
 
-export function createBotPanel(): BotPanelElements {
+interface PanelHeaderElements {
+  header: HTMLElement;
+  closeButton: HTMLButtonElement;
+}
+
+interface MiningControlsElements {
+  controls: HTMLElement;
+  startMiningButton: HTMLButtonElement;
+  resourcePicker: ResourcePickerElements;
+}
+
+export function createBotPanel(resources: readonly BotResourceSnapshot[]): BotPanelElements {
   const panel = document.createElement('section');
   panel.className = 'dwar-panel';
   panel.hidden = true;
-  panel.innerHTML = `
-    <header class="dwar-panel__header" data-dwar-drag-handle>
-      <div class="dwar-panel__title">
-        <span class="dwar-panel__status" aria-hidden="true"></span>
-        <span>DWAR Bot</span>
-      </div>
-      <button class="dwar-panel__close" type="button" aria-label="Скрыть интерфейс" data-dwar-close>&times;</button>
-    </header>
-    <div class="dwar-panel__logs" role="log" aria-live="polite" data-dwar-log-list></div>
-  `;
+  const headerElements = createPanelHeader();
+  const controlsElements = createMiningControls(resources);
+  const logList = createLogList();
+  panel.append(headerElements.header, controlsElements.controls, logList);
 
   return {
     panel,
-    header: queryPanelElement(panel, '[data-dwar-drag-handle]', HTMLElement),
-    closeButton: queryPanelElement(panel, '[data-dwar-close]', HTMLButtonElement),
-    logList: queryPanelElement(panel, '[data-dwar-log-list]', HTMLElement)
+    header: headerElements.header,
+    closeButton: headerElements.closeButton,
+    startMiningButton: controlsElements.startMiningButton,
+    resourcePicker: controlsElements.resourcePicker,
+    logList
   };
 }
 
-function queryPanelElement<TElement extends Element>(
-  panel: HTMLElement,
-  selector: string,
-  constructor: new () => TElement
-): TElement {
-  const element = panel.querySelector(selector);
+function createPanelHeader(): PanelHeaderElements {
+  const header = document.createElement('header');
+  header.className = 'dwar-panel__header';
+  header.dataset.dwarDragHandle = '';
 
-  if (!(element instanceof constructor)) {
-    throw new Error(`Bot panel element is missing: ${selector}`);
-  }
+  const title = document.createElement('div');
+  title.className = 'dwar-panel__title';
 
-  return element;
+  const status = document.createElement('span');
+  status.className = 'dwar-panel__status';
+  status.setAttribute('aria-hidden', 'true');
+
+  const titleText = document.createElement('span');
+  titleText.textContent = 'DWAR Bot';
+
+  const closeButton = document.createElement('button');
+  closeButton.type = 'button';
+  closeButton.className = 'dwar-panel__close';
+  closeButton.dataset.dwarClose = '';
+  closeButton.setAttribute('aria-label', 'Скрыть интерфейс');
+  closeButton.innerHTML = '&times;';
+
+  title.append(status, titleText);
+  header.append(title, closeButton);
+
+  return {
+    header,
+    closeButton
+  };
 }
 
+function createMiningControls(resources: readonly BotResourceSnapshot[]): MiningControlsElements {
+  const controls = document.createElement('div');
+  controls.className = 'dwar-panel__controls';
+
+  const startMiningButton = document.createElement('button');
+  startMiningButton.type = 'button';
+  startMiningButton.className = 'dwar-mining-button';
+  startMiningButton.setAttribute('aria-label', 'Начать добычу');
+  startMiningButton.innerHTML = `${getPickaxeIcon()}<span>Добыча</span>`;
+
+  const resourcePicker = createResourcePicker(resources);
+  controls.append(startMiningButton, resourcePicker.root);
+
+  return {
+    controls,
+    startMiningButton,
+    resourcePicker
+  };
+}
+
+function createLogList(): HTMLElement {
+  const logList = document.createElement('div');
+  logList.className = 'dwar-panel__logs';
+  logList.setAttribute('role', 'log');
+  logList.setAttribute('aria-live', 'polite');
+
+  return logList;
+}

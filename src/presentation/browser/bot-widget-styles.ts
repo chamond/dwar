@@ -29,6 +29,8 @@ export const BOT_WIDGET_STYLES = `
     border-radius: 999px;
     box-shadow: 0 16px 34px rgba(0, 0, 0, .42), 0 0 0 1px rgba(243, 201, 107, .14);
     cursor: pointer;
+    touch-action: none;
+    user-select: none;
     transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
   }
 
@@ -42,8 +44,16 @@ export const BOT_WIDGET_STYLES = `
     transform: translateY(0) scale(.98);
   }
 
+  .dwar-launcher.is-dragging {
+    cursor: grabbing;
+    transform: scale(.98);
+    transition: none;
+  }
+
   .dwar-launcher:focus-visible,
-  .dwar-panel__close:focus-visible {
+  .dwar-panel__close:focus-visible,
+  .dwar-mining-button:focus-visible,
+  .dwar-resource-picker__toggle:focus-visible {
     outline: 2px solid #78d9c2;
     outline-offset: 3px;
   }
@@ -57,8 +67,8 @@ export const BOT_WIDGET_STYLES = `
   .dwar-panel {
     position: fixed;
     z-index: 2147483647;
-    width: min(324px, calc(100vw - 24px));
-    min-height: 232px;
+    width: min(356px, calc(100vw - 24px));
+    min-height: 288px;
     overflow: hidden;
     color: #e9edf5;
     background: linear-gradient(180deg, #171d28 0%, #0c1017 100%);
@@ -128,8 +138,172 @@ export const BOT_WIDGET_STYLES = `
     background: rgba(255, 255, 255, .08);
   }
 
+  .dwar-panel__controls {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px;
+    background: #101720;
+    border-bottom: 1px solid rgba(255, 255, 255, .07);
+  }
+
+  .dwar-mining-button,
+  .dwar-resource-picker__toggle {
+    height: 38px;
+    border: 1px solid rgba(255, 255, 255, .11);
+    border-radius: 7px;
+    font: 700 12px/1 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    letter-spacing: 0;
+    cursor: pointer;
+    transition: border-color .14s ease, background-color .14s ease, color .14s ease;
+  }
+
+  .dwar-mining-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    gap: 7px;
+    padding: 0 12px;
+    color: #121620;
+    background: linear-gradient(180deg, #f3c96b 0%, #d69b3f 100%);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, .26);
+  }
+
+  .dwar-mining-button:hover {
+    border-color: rgba(255, 232, 167, .58);
+    background: linear-gradient(180deg, #ffd982 0%, #dda948 100%);
+  }
+
+  .dwar-mining-button svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .dwar-resource-picker {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .dwar-resource-picker__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 8px;
+    padding: 0 10px;
+    color: #dbe3f1;
+    background: #0b1118;
+  }
+
+  .dwar-resource-picker__toggle:hover {
+    border-color: rgba(120, 217, 194, .42);
+    color: #ffffff;
+    background: #111a24;
+  }
+
+  .dwar-resource-picker__toggle-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dwar-resource-picker__count {
+    display: grid;
+    min-width: 24px;
+    height: 22px;
+    place-items: center;
+    padding: 0 7px;
+    color: #07110f;
+    background: #78d9c2;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .dwar-resource-picker__chevron {
+    flex: 0 0 auto;
+    color: #aeb8c7;
+    font-size: 12px;
+    transition: transform .14s ease;
+  }
+
+  .dwar-resource-picker.is-open .dwar-resource-picker__chevron {
+    transform: rotate(180deg);
+  }
+
+  .dwar-resource-picker__menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    left: 0;
+    z-index: 2;
+    padding: 6px;
+    background: #0b1118;
+    border: 1px solid rgba(120, 217, 194, .2);
+    border-radius: 8px;
+    box-shadow: 0 18px 36px rgba(0, 0, 0, .46);
+  }
+
+  .dwar-resource-picker__menu[hidden] {
+    display: none;
+  }
+
+  .dwar-resource-option {
+    display: flex;
+    align-items: center;
+    min-height: 34px;
+    gap: 8px;
+    padding: 6px;
+    color: #dbe3f1;
+    border-radius: 6px;
+    cursor: pointer;
+    font: 12px/1.2 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .dwar-resource-option:hover {
+    background: rgba(255, 255, 255, .06);
+  }
+
+  .dwar-resource-option input {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    margin: 0;
+    accent-color: #78d9c2;
+  }
+
+  .dwar-resource-option__badge {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    gap: 7px;
+    padding: 4px 8px;
+    border: 1px solid var(--dwar-resource-color);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .04);
+  }
+
+  .dwar-resource-option__swatch {
+    width: 10px;
+    height: 10px;
+    flex: 0 0 auto;
+    background: var(--dwar-resource-color);
+    border-radius: 999px;
+    box-shadow: 0 0 10px var(--dwar-resource-color);
+  }
+
+  .dwar-resource-option__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .dwar-panel__logs {
-    height: 190px;
+    height: 204px;
     padding: 10px 12px;
     overflow: auto;
     background:
@@ -151,4 +325,3 @@ export const BOT_WIDGET_STYLES = `
     border-bottom: 0;
   }
 `;
-
