@@ -1,9 +1,16 @@
-import { CreateGreetingUseCase } from './application/use-cases/CreateGreetingUseCase';
-import { SystemClock } from './infrastructure/system/SystemClock';
-import { runCli } from './presentation/cli/runCli';
+import { CreateBotLogEntryUseCase } from './application/use-cases/create-bot-log-entry';
+import { SystemClock } from './infrastructure/system/system-clock';
+import { mountBotWidget } from './presentation/browser/bot-widget';
 
-const clock = new SystemClock();
-const createGreeting = new CreateGreetingUseCase(clock);
+function bootstrap(): void {
+  const clock = new SystemClock();
+  const createLogEntry = new CreateBotLogEntryUseCase(clock);
 
-runCli(process.argv.slice(2), createGreeting);
+  mountBotWidget(createLogEntry);
+}
 
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+} else {
+  bootstrap();
+}

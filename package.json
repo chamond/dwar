@@ -1,20 +1,16 @@
 {
   "name": "dwar",
   "version": "0.1.0",
+  "description": "Browser game helper bot compiled to one JavaScript file.",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
   "exports": "./dist/index.js",
-  "bin": {
-    "dwar": "./dist/index.js"
-  },
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
     "typecheck": "tsc --noEmit",
     "bundle": "rollup --config",
-    "build": "npm run clean && npm run typecheck && npm run bundle",
-    "start": "node dist/index.js",
-    "dev": "npm run build && node dist/index.js"
+    "build": "npm run clean && npm run typecheck && npm run bundle"
   },
   "engines": {
     "node": ">=20.11"

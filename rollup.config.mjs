@@ -63,9 +63,9 @@ export default {
   input: './src/main.ts',
   output: {
     file: './dist/index.js',
-    format: 'es',
-    sourcemap: false,
-    banner: '#!/usr/bin/env node'
+    format: 'iife',
+    name: 'DwarBot',
+    sourcemap: false
   },
   plugins: [swcTypeScriptPlugin()]
 };

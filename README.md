@@ -1,20 +1,20 @@
 # dwar
 
-TypeScript 5.x project base with Clean Architecture layers and a single-file JavaScript build.
+Browser game helper bot base written in TypeScript 5.x.
+
+The build produces one browser-loadable JavaScript file: `dist/index.js`.
 
 ## Scripts
 
 - `npm run typecheck` - checks TypeScript types without emitting files.
 - `npm run build` - type-checks the project, then bundles it to `dist/index.js`.
-- `npm run start -- <name>` - runs the compiled bundle.
-- `npm run dev -- <name>` - builds and runs the bundle.
 
 ## Architecture
 
 - `src/domain` - business entities and domain rules. No framework or infrastructure imports.
 - `src/application` - use cases and ports required by the domain workflow.
 - `src/infrastructure` - adapters for external systems.
-- `src/presentation` - delivery layer, currently a small CLI.
+- `src/presentation` - delivery layer, currently a browser overlay widget.
 - `src/main.ts` - composition root where adapters and use cases are wired together.
 
 ## Build
@@ -33,3 +33,4 @@ npm run build
 
 The compiled output is `dist/index.js`.
 
+Load that file on the game page to mount the floating pickaxe button and bot panel.
