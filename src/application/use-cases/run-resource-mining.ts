@@ -22,7 +22,7 @@ const DEFAULT_DANGER_RADIUS = 100;
 const DEFAULT_LEVEL_ZERO_MINING_DURATION_MS = 20_000;
 const DEFAULT_SAFETY_CHECK_INTERVAL_MS = 5_000;
 const DEFAULT_NO_SAFE_RESOURCE_DELAY_MS = 20_000;
-const DEFAULT_POST_MINING_DELAY_MS = 5_000;
+const DEFAULT_POST_MINING_DELAY_MS = 2_000;
 const DEFAULT_MINING_DURATION_BY_RESOURCE_LEVEL_MS = new Map<number, number>([
   [0, DEFAULT_LEVEL_ZERO_MINING_DURATION_MS]
 ]);
@@ -99,6 +99,8 @@ export type ResourceMiningEvent =
       resource: ResourceMiningResourceInfo;
       elapsedMs: number;
       isSafe: boolean;
+      calmnessPercent: number;
+      safetyPercent: number;
       nearestDangerousMob: ResourceMiningMobInfo | null;
       nearestDangerousMobDistance: number | null;
     }
@@ -272,6 +274,8 @@ export class RunResourceMiningUseCase {
         resource: createResourceInfo(resource),
         elapsedMs,
         isSafe: safety.isSafe,
+        calmnessPercent: safety.calmnessPercent,
+        safetyPercent: safety.safetyPercent,
         nearestDangerousMob: createMobInfo(safety.nearestDangerousMob),
         nearestDangerousMobDistance: safety.nearestDangerousMobDistance
       });

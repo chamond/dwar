@@ -269,12 +269,6 @@ export const BOT_WIDGET_STYLES = `
     background-repeat: no-repeat;
   }
 
-  .dwar-location-select__control:hover {
-    border-color: rgba(120, 217, 194, .42);
-    color: #ffffff;
-    background-color: #111a24;
-  }
-
   .dwar-resource-picker__toggle {
     display: flex;
     align-items: center;
@@ -286,10 +280,13 @@ export const BOT_WIDGET_STYLES = `
     background: #0b1118;
   }
 
-  .dwar-resource-picker__toggle:hover {
+  .dwar-location-select__control:hover,
+  .dwar-location-select__control:focus-visible,
+  .dwar-resource-picker__toggle:hover,
+  .dwar-resource-picker__toggle:focus-visible {
     border-color: rgba(120, 217, 194, .42);
     color: #ffffff;
-    background: #111a24;
+    background-color: #111a24;
   }
 
   .dwar-resource-picker__toggle-label {

@@ -9,6 +9,8 @@ export interface ResourceMiningSafety {
   resource: HuntResourceNode;
   isSafe: boolean;
   isAvailable: boolean;
+  calmnessPercent: number;
+  safetyPercent: number;
   nearestDangerousMob: HuntMob | null;
   nearestDangerousMobDistance: number | null;
   blockingMob: HuntMob | null;
@@ -72,11 +74,54 @@ export function assessResourceMiningSafety(
     resource,
     isSafe: isAvailable && blockingMob === null,
     isAvailable,
+    calmnessPercent: calculateCalmnessPercent(dangerousDistances, options.dangerRadius),
+    safetyPercent: calculateSafetyPercent(nearestDangerousMob?.distance ?? null, options.dangerRadius, isAvailable),
     nearestDangerousMob: nearestDangerousMob?.mob ?? null,
     nearestDangerousMobDistance: nearestDangerousMob?.distance ?? null,
     blockingMob: blockingMob?.mob ?? null,
     blockingMobDistance: blockingMob?.distance ?? null
   };
+}
+
+function calculateSafetyPercent(
+  nearestDangerousMobDistance: number | null,
+  dangerRadius: number,
+  isAvailable: boolean
+): number {
+  if (!isAvailable) {
+    return 0;
+  }
+
+  if (nearestDangerousMobDistance === null) {
+    return 100;
+  }
+
+  if (dangerRadius <= 0) {
+    return nearestDangerousMobDistance > 0 ? 100 : 0;
+  }
+
+  return clampPercent((nearestDangerousMobDistance / dangerRadius) * 100);
+}
+
+function calculateCalmnessPercent(dangerousDistances: readonly MobDistance[], dangerRadius: number): number {
+  if (dangerousDistances.length === 0) {
+    return 100;
+  }
+
+  const awarenessRadius = Math.max(dangerRadius * 2, 1);
+  const maxThreatPercent = dangerousDistances.reduce((maxThreat, { mob, distance }) => {
+    const aggressionThreat = clampPercent(mob.getAggressionLevel()) / 100;
+    const proximityThreat = Math.max(0, 1 - distance / awarenessRadius);
+    const threatPercent = aggressionThreat * proximityThreat * 100;
+
+    return Math.max(maxThreat, threatPercent);
+  }, 0);
+
+  return clampPercent(100 - maxThreatPercent);
+}
+
+function clampPercent(value: number): number {
+  return Math.round(Math.max(0, Math.min(100, value)));
 }
 
 function compareResourceSafety(left: ResourceMiningSafety, right: ResourceMiningSafety): number {

@@ -323,7 +323,7 @@ function logMiningEvent(
     case 'safety-check-completed':
       if (event.isSafe) {
         addLog(
-          `Контроль безопасности: спокойно, прошло ${formatSeconds(event.elapsedMs)}.`,
+          `Контроль безопасности: спокойно, прошло ${formatSeconds(event.elapsedMs)}. ${formatSafetyCheckPercents(event)}.`,
           undefined,
           SAFETY_CHECK_LOG_KEY
         );
@@ -331,8 +331,8 @@ function logMiningEvent(
       }
 
       addLog(
-        'Контроль безопасности: опасность рядом.',
-        createDangerLogParts('Контроль безопасности: ', event.nearestDangerousMob),
+        `Контроль безопасности: опасность рядом. ${formatSafetyCheckPercents(event)}.`,
+        createSafetyCheckDangerLogParts(event),
         SAFETY_CHECK_LOG_KEY
       );
       return;
@@ -370,6 +370,20 @@ function createDangerLogParts(prefix: string, mob: ResourceMiningMobInfo | null)
   ];
 }
 
+function createSafetyCheckDangerLogParts(
+  event: Extract<ResourceMiningEvent, { type: 'safety-check-completed' }>
+): readonly BotLogLinePart[] {
+  if (!event.nearestDangerousMob) {
+    return [`Контроль безопасности: опасность рядом. ${formatSafetyCheckPercents(event)}.`];
+  }
+
+  return [
+    'Контроль безопасности: ',
+    createMobLogPart(event.nearestDangerousMob),
+    `. ${formatSafetyCheckPercents(event)}.`
+  ];
+}
+
 function createResourceLogPart(resource: ResourceMiningResourceInfo): BotLogLinePart {
   const label = formatResourceLabel(resource);
 
@@ -396,6 +410,12 @@ function setMiningButtonActive(button: HTMLButtonElement, isActive: boolean): vo
 
 function formatSeconds(durationMs: number): string {
   return `${Math.round(durationMs / 1000)} сек`;
+}
+
+function formatSafetyCheckPercents(
+  event: Extract<ResourceMiningEvent, { type: 'safety-check-completed' }>
+): string {
+  return `Спокойность ${event.calmnessPercent}%, безопасность ${event.safetyPercent}%`;
 }
 
 function isAbortError(error: unknown): boolean {
