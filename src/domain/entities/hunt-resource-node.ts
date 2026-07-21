@@ -50,8 +50,20 @@ export class HuntResourceNode {
     return this.props.resource;
   }
 
+  getServerNumber(): string {
+    return this.props.serverNumber;
+  }
+
   getArticleId(): number {
     return this.props.resource.getArticleId();
+  }
+
+  getPosition(): MapPosition {
+    return this.props.position;
+  }
+
+  isBeingFarmed(): boolean {
+    return this.props.isBeingFarmed;
   }
 
   toSnapshot(): HuntResourceNodeSnapshot {

@@ -49,6 +49,14 @@ export class BotResource {
     return this.articleId;
   }
 
+  getName(): string {
+    return this.name;
+  }
+
+  getMarkerColor(): string {
+    return this.markerColor;
+  }
+
   toSnapshot(): BotResourceSnapshot {
     return {
       id: this.id,

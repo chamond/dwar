@@ -29,6 +29,10 @@ export class MapPosition {
     return this.y;
   }
 
+  distanceTo(position: MapPosition): number {
+    return Math.hypot(this.x - position.x, this.y - position.y);
+  }
+
   toSnapshot(): MapPositionSnapshot {
     return {
       x: this.x,

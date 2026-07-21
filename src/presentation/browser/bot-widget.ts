@@ -2,11 +2,16 @@ import type { LauncherPositionStore } from '../../application/ports/launcher-pos
 import type { PanelSizeStore } from '../../application/ports/panel-size-store';
 import type { CreateBotLogEntryUseCase } from '../../application/use-cases/create-bot-log-entry';
 import type { ListResourcesUseCase } from '../../application/use-cases/list-resources';
-import type { ScanHuntZoneUseCase } from '../../application/use-cases/scan-hunt-zone';
-import type { HuntMobGroupDiagnostics } from '../../domain/services/diagnose-hunt-zone';
+import type {
+  ResourceMiningEvent,
+  ResourceMiningMobInfo,
+  ResourceMiningResourceInfo,
+  RunResourceMiningUseCase
+} from '../../application/use-cases/run-resource-mining';
 import { appendLogLine, type BotLogLinePart } from './log-list';
 import { createBotPanel } from './bot-panel';
 import { createLauncherButton } from './launcher-button';
+import { getPickaxeIcon } from './pickaxe-icon';
 import { attachDraggableLauncher, restoreLauncherPosition } from './draggable-launcher';
 import { attachDraggablePanel } from './draggable-panel';
 import { BOT_WIDGET_STYLES } from './bot-widget-styles';
@@ -19,7 +24,7 @@ export interface BotWidgetDependencies {
   listResources: ListResourcesUseCase;
   launcherPositionStore: LauncherPositionStore;
   panelSizeStore: PanelSizeStore;
-  scanHuntZone: ScanHuntZoneUseCase;
+  runResourceMining: RunResourceMiningUseCase;
 }
 
 export function mountBotWidget(dependencies: BotWidgetDependencies): void {
@@ -37,7 +42,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     const entry = dependencies.createLogEntry.execute({ message }).toSnapshot();
     appendLogLine(botPanel.logList, entry, parts);
   };
-  let isScanning = false;
+  let miningAbortController: AbortController | null = null;
 
   shadowRoot.append(createStyleElement(), launcher, botPanel.panel);
   document.documentElement.append(host);
@@ -74,7 +79,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     hidePanel(botPanel.panel, launcher);
   });
 
-  async function handleMiningStart(): Promise<void> {
+  function startMining(): void {
     const selectedResources = botPanel.resourcePicker.getSelectedResources();
 
     if (selectedResources.length === 0) {
@@ -82,45 +87,57 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
       return;
     }
 
-    if (isScanning) {
-      addLog('Сканирование уже выполняется.');
+    const controller = new AbortController();
+    miningAbortController = controller;
+    botPanel.resourcePicker.close();
+    setMiningButtonActive(botPanel.startMiningButton, true);
+    addLog(`Добыча запущена: ${selectedResources.map(({ name }) => name).join(', ')}.`);
+
+    void dependencies.runResourceMining
+      .execute({
+        selectedResourceIds: selectedResources.map(({ id }) => id),
+        signal: controller.signal,
+        observer: {
+          handle: (event) => {
+            logMiningEvent(event, addLog);
+          }
+        }
+      })
+      .catch((error) => {
+        if (!isAbortError(error)) {
+          addLog(`Добыча остановлена из-за ошибки: ${getErrorMessage(error)}.`);
+        }
+      })
+      .finally(() => {
+        if (miningAbortController !== controller) {
+          return;
+        }
+
+        miningAbortController = null;
+        setMiningButtonActive(botPanel.startMiningButton, false);
+
+        if (controller.signal.aborted) {
+          addLog('Добыча остановлена.');
+        }
+      });
+  }
+
+  function stopMining(): void {
+    if (!miningAbortController || miningAbortController.signal.aborted) {
       return;
     }
 
-    isScanning = true;
-    botPanel.resourcePicker.close();
-    botPanel.startMiningButton.disabled = true;
-    botPanel.startMiningButton.setAttribute('aria-busy', 'true');
-    addLog(`Сканирование зоны: ${selectedResources.map(({ name }) => name).join(', ')}.`);
-
-    try {
-      const { diagnostics } = await dependencies.scanHuntZone.execute({
-        selectedResourceIds: selectedResources.map(({ id }) => id)
-      });
-
-      addLog(
-        `Сканирование завершено: мобов ${diagnostics.totalMobCount}, агрессивных ${diagnostics.aggressiveMobCount}, ресурсов по выбору ${diagnostics.selectedResourceCount}.`
-      );
-
-      if (diagnostics.mobGroups.length === 0) {
-        addLog('Мобы не найдены.');
-        return;
-      }
-
-      diagnostics.mobGroups.forEach((group) => {
-        addLog(createMobGroupMessage(group), createMobGroupLogParts(group));
-      });
-    } catch (error) {
-      addLog(`Сканирование не удалось: ${getErrorMessage(error)}.`);
-    } finally {
-      isScanning = false;
-      botPanel.startMiningButton.disabled = false;
-      botPanel.startMiningButton.removeAttribute('aria-busy');
-    }
+    addLog('Останавливаю добычу.');
+    miningAbortController.abort();
   }
 
   botPanel.startMiningButton.addEventListener('click', () => {
-    void handleMiningStart();
+    if (miningAbortController) {
+      stopMining();
+      return;
+    }
+
+    startMining();
   });
 
   attachDraggablePanel({
@@ -158,20 +175,107 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   addLog('Скрипт загружен.');
 }
 
-function createMobGroupMessage(group: HuntMobGroupDiagnostics): string {
-  return `Моб: ${group.name}, ур. ${group.level} x${group.count}, агрессия ${group.aggressionLevel}.`;
+function logMiningEvent(
+  event: ResourceMiningEvent,
+  addLog: (message: string, parts?: readonly BotLogLinePart[]) => void
+): void {
+  switch (event.type) {
+    case 'scan-completed':
+      addLog(
+        `Скан: мобов ${event.totalMobCount}, агрессивных ${event.aggressiveMobCount}, ресурсов ${event.selectedResourceCount}, безопасных ${event.safeResourceCount}.`
+      );
+      return;
+
+    case 'no-safe-resource':
+      addLog(
+        event.selectedResourceCount === 0
+          ? `Выбранные ресурсы не найдены, пауза ${formatSeconds(event.delayMs)}.`
+          : `Безопасных ресурсов нет, пауза ${formatSeconds(event.delayMs)}.`
+      );
+      return;
+
+    case 'farm-started':
+      addLog(`Начата добыча ${event.resource.name}.`, [
+        'Начата добыча ',
+        createResourceLogPart(event.resource),
+        '.'
+      ]);
+      return;
+
+    case 'safety-check-completed':
+      if (event.isSafe) {
+        addLog(`Контроль безопасности: спокойно, прошло ${formatSeconds(event.elapsedMs)}.`);
+        return;
+      }
+
+      addLog('Контроль безопасности: опасность рядом.', createDangerLogParts('Контроль безопасности: ', event.nearestDangerousMob));
+      return;
+
+    case 'farm-interrupted':
+      addLog(
+        'Добыча прервана: рядом опасный моб.',
+        createDangerLogParts('Добыча прервана: рядом ', event.dangerousMob)
+      );
+      return;
+
+    case 'farm-completed':
+      addLog(`Добыча завершена: ${event.resource.name}.`, [
+        'Добыча завершена: ',
+        createResourceLogPart(event.resource),
+        '.'
+      ]);
+      return;
+  }
 }
 
-function createMobGroupLogParts(group: HuntMobGroupDiagnostics): readonly BotLogLinePart[] {
+function createDangerLogParts(prefix: string, mob: ResourceMiningMobInfo | null): readonly BotLogLinePart[] {
+  if (!mob) {
+    return [`${prefix}опасность рядом.`];
+  }
+
   return [
-    'Моб: ',
-    {
-      text: `${group.name}, ур. ${group.level}`,
-      color: group.aggressionColor,
-      title: `Агрессия ${group.aggressionLevel}`
-    },
-    ` x${group.count}, агрессия ${group.aggressionLevel}.`
+    prefix,
+    createMobLogPart(mob),
+    '.'
   ];
+}
+
+function createResourceLogPart(resource: ResourceMiningResourceInfo): BotLogLinePart {
+  return {
+    text: resource.name,
+    color: resource.markerColor,
+    title: `Ресурс ${resource.name}`
+  };
+}
+
+function createMobLogPart(mob: ResourceMiningMobInfo): BotLogLinePart {
+  return {
+    text: `${mob.name}, ур. ${mob.level}`,
+    color: mob.aggressionColor,
+    title: `Агрессия ${mob.aggressionLevel}`
+  };
+}
+
+function setMiningButtonActive(button: HTMLButtonElement, isActive: boolean): void {
+  button.classList.toggle('is-active', isActive);
+  button.setAttribute('aria-label', isActive ? 'Остановить добычу' : 'Начать добычу');
+  button.innerHTML = `${getPickaxeIcon()}<span>${isActive ? 'Стоп' : 'Добыча'}</span>`;
+}
+
+function formatSeconds(durationMs: number): string {
+  return `${Math.round(durationMs / 1000)} сек`;
+}
+
+function isAbortError(error: unknown): boolean {
+  if (error instanceof DOMException) {
+    return error.name === 'AbortError';
+  }
+
+  if (error instanceof Error) {
+    return error.name === 'AbortError';
+  }
+
+  return false;
 }
 
 function getErrorMessage(error: unknown): string {

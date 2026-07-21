@@ -187,6 +187,16 @@ export const BOT_WIDGET_STYLES = `
     background: linear-gradient(180deg, #ffd982 0%, #dda948 100%);
   }
 
+  .dwar-mining-button.is-active {
+    color: #ffe9e9;
+    background: linear-gradient(180deg, #d65a63 0%, #8f2e38 100%);
+    border-color: rgba(255, 173, 182, .44);
+  }
+
+  .dwar-mining-button.is-active:hover {
+    background: linear-gradient(180deg, #e66a74 0%, #9f3741 100%);
+  }
+
   .dwar-mining-button:disabled {
     color: rgba(18, 22, 32, .62);
     cursor: wait;

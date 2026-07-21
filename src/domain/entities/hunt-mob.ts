@@ -80,6 +80,10 @@ export class HuntMob {
     return this.props.aggressionLevel;
   }
 
+  getPosition(): MapPosition {
+    return this.props.position;
+  }
+
   getArticleId(): number {
     return this.props.articleId;
   }
