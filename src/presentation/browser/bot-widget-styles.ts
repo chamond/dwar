@@ -175,6 +175,13 @@ export const BOT_WIDGET_STYLES = `
     background: linear-gradient(180deg, #ffd982 0%, #dda948 100%);
   }
 
+  .dwar-mining-button:disabled {
+    color: rgba(18, 22, 32, .62);
+    cursor: wait;
+    background: linear-gradient(180deg, #a88746 0%, #76592d 100%);
+    box-shadow: none;
+  }
+
   .dwar-mining-button svg {
     width: 18px;
     height: 18px;
@@ -319,6 +326,24 @@ export const BOT_WIDGET_STYLES = `
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     border-bottom: 1px solid rgba(255, 255, 255, .05);
+  }
+
+  .dwar-log-line__time {
+    color: #7f8ca1;
+  }
+
+  .dwar-log-tag {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    margin: 0 2px;
+    padding: 1px 6px;
+    color: var(--dwar-log-tag-color);
+    background: color-mix(in srgb, var(--dwar-log-tag-color) 13%, transparent);
+    border: 1px solid color-mix(in srgb, var(--dwar-log-tag-color) 42%, transparent);
+    border-radius: 999px;
+    font-weight: 700;
+    vertical-align: baseline;
   }
 
   .dwar-log-line:last-child {

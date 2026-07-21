@@ -1,7 +1,9 @@
 import type { LauncherPositionStore } from '../../application/ports/launcher-position-store';
 import type { CreateBotLogEntryUseCase } from '../../application/use-cases/create-bot-log-entry';
 import type { ListResourcesUseCase } from '../../application/use-cases/list-resources';
-import { appendLogLine } from './log-list';
+import type { ScanHuntZoneUseCase } from '../../application/use-cases/scan-hunt-zone';
+import type { HuntMobGroupDiagnostics } from '../../domain/services/diagnose-hunt-zone';
+import { appendLogLine, type BotLogLinePart } from './log-list';
 import { createBotPanel } from './bot-panel';
 import { createLauncherButton } from './launcher-button';
 import { attachDraggableLauncher, restoreLauncherPosition } from './draggable-launcher';
@@ -14,6 +16,7 @@ export interface BotWidgetDependencies {
   createLogEntry: CreateBotLogEntryUseCase;
   listResources: ListResourcesUseCase;
   launcherPositionStore: LauncherPositionStore;
+  scanHuntZone: ScanHuntZoneUseCase;
 }
 
 export function mountBotWidget(dependencies: BotWidgetDependencies): void {
@@ -27,10 +30,11 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   const resources = dependencies.listResources.execute().map((resource) => resource.toSnapshot());
   const botPanel = createBotPanel(resources);
 
-  const addLog = (message: string): void => {
+  const addLog = (message: string, parts?: readonly BotLogLinePart[]): void => {
     const entry = dependencies.createLogEntry.execute({ message }).toSnapshot();
-    appendLogLine(botPanel.logList, entry);
+    appendLogLine(botPanel.logList, entry, parts);
   };
+  let isScanning = false;
 
   shadowRoot.append(createStyleElement(), launcher, botPanel.panel);
   document.documentElement.append(host);
@@ -66,7 +70,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     hidePanel(botPanel.panel, launcher);
   });
 
-  botPanel.startMiningButton.addEventListener('click', () => {
+  async function handleMiningStart(): Promise<void> {
     const selectedResources = botPanel.resourcePicker.getSelectedResources();
 
     if (selectedResources.length === 0) {
@@ -74,7 +78,45 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
       return;
     }
 
-    addLog(`Добыча запущена: ${selectedResources.map(({ name }) => name).join(', ')}.`);
+    if (isScanning) {
+      addLog('Сканирование уже выполняется.');
+      return;
+    }
+
+    isScanning = true;
+    botPanel.resourcePicker.close();
+    botPanel.startMiningButton.disabled = true;
+    botPanel.startMiningButton.setAttribute('aria-busy', 'true');
+    addLog(`Сканирование зоны: ${selectedResources.map(({ name }) => name).join(', ')}.`);
+
+    try {
+      const { diagnostics } = await dependencies.scanHuntZone.execute({
+        selectedResourceIds: selectedResources.map(({ id }) => id)
+      });
+
+      addLog(
+        `Сканирование завершено: мобов ${diagnostics.totalMobCount}, агрессивных ${diagnostics.aggressiveMobCount}, ресурсов по выбору ${diagnostics.selectedResourceCount}.`
+      );
+
+      if (diagnostics.mobGroups.length === 0) {
+        addLog('Мобы не найдены.');
+        return;
+      }
+
+      diagnostics.mobGroups.forEach((group) => {
+        addLog(createMobGroupMessage(group), createMobGroupLogParts(group));
+      });
+    } catch (error) {
+      addLog(`Сканирование не удалось: ${getErrorMessage(error)}.`);
+    } finally {
+      isScanning = false;
+      botPanel.startMiningButton.disabled = false;
+      botPanel.startMiningButton.removeAttribute('aria-busy');
+    }
+  }
+
+  botPanel.startMiningButton.addEventListener('click', () => {
+    void handleMiningStart();
   });
 
   attachDraggablePanel({
@@ -100,6 +142,30 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   });
 
   addLog('Скрипт загружен.');
+}
+
+function createMobGroupMessage(group: HuntMobGroupDiagnostics): string {
+  return `Моб: ${group.name}, ур. ${group.level} x${group.count}, агрессия ${group.aggressionLevel}.`;
+}
+
+function createMobGroupLogParts(group: HuntMobGroupDiagnostics): readonly BotLogLinePart[] {
+  return [
+    'Моб: ',
+    {
+      text: `${group.name}, ур. ${group.level}`,
+      color: group.aggressionColor,
+      title: `Агрессия ${group.aggressionLevel}`
+    },
+    ` x${group.count}, агрессия ${group.aggressionLevel}.`
+  ];
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'неизвестная ошибка';
 }
 
 function showPanel(panel: HTMLElement, launcher: HTMLElement): void {

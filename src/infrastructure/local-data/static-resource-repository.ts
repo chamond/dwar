@@ -5,17 +5,20 @@ const LOCAL_RESOURCE_RECORDS = [
   {
     id: 'agate',
     name: 'Агат',
-    markerColor: '#2f6dff'
+    markerColor: '#2f6dff',
+    articleId: 362
   },
   {
     id: 'aquamarine',
     name: 'Аквамарин',
-    markerColor: '#63d7ff'
+    markerColor: '#63d7ff',
+    articleId: 363
   },
   {
     id: 'turquoise',
     name: 'Бирюза',
-    markerColor: '#28d8be'
+    markerColor: '#28d8be',
+    articleId: 364
   }
 ] as const satisfies readonly BotResourceProps[];
 
@@ -24,5 +27,9 @@ export class StaticResourceRepository implements ResourceRepository {
 
   findAll(): readonly BotResource[] {
     return this.resources;
+  }
+
+  findByArticleId(articleId: number): BotResource | null {
+    return this.resources.find((resource) => resource.getArticleId() === articleId) ?? null;
   }
 }

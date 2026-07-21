@@ -4,19 +4,22 @@ export interface BotResourceProps {
   id: BotResourceId;
   name: string;
   markerColor: string;
+  articleId: number;
 }
 
 export interface BotResourceSnapshot {
   id: BotResourceId;
   name: string;
   markerColor: string;
+  articleId: number;
 }
 
 export class BotResource {
   private constructor(
     private readonly id: BotResourceId,
     private readonly name: string,
-    private readonly markerColor: string
+    private readonly markerColor: string,
+    private readonly articleId: number
   ) {}
 
   static create(props: BotResourceProps): BotResource {
@@ -31,14 +34,27 @@ export class BotResource {
       throw new Error('Resource marker color must be a hex color.');
     }
 
-    return new BotResource(props.id, name, markerColor);
+    if (!Number.isInteger(props.articleId) || props.articleId <= 0) {
+      throw new Error('Resource article id must be a positive integer.');
+    }
+
+    return new BotResource(props.id, name, markerColor, props.articleId);
+  }
+
+  getId(): BotResourceId {
+    return this.id;
+  }
+
+  getArticleId(): number {
+    return this.articleId;
   }
 
   toSnapshot(): BotResourceSnapshot {
     return {
       id: this.id,
       name: this.name,
-      markerColor: this.markerColor
+      markerColor: this.markerColor,
+      articleId: this.articleId
     };
   }
 }

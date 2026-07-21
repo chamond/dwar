@@ -2,4 +2,5 @@ import type { BotResource } from '../../domain/entities/bot-resource';
 
 export interface ResourceRepository {
   findAll(): readonly BotResource[];
+  findByArticleId(articleId: number): BotResource | null;
 }
