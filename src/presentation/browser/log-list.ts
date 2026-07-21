@@ -4,6 +4,7 @@ export interface BotLogTagPart {
   text: string;
   color: string;
   title?: string;
+  appearance?: 'tag' | 'text';
 }
 
 export type BotLogLinePart = string | BotLogTagPart;
@@ -66,6 +67,27 @@ function createLogPart(part: BotLogLinePart): Node {
     return document.createTextNode(part);
   }
 
+  if (part.appearance === 'text') {
+    return createColoredTextPart(part);
+  }
+
+  return createTagPart(part);
+}
+
+function createColoredTextPart(part: BotLogTagPart): HTMLElement {
+  const text = document.createElement('span');
+  text.className = 'dwar-log-colored-text';
+  text.textContent = part.text;
+  text.style.setProperty('--dwar-log-text-color', part.color);
+
+  if (part.title) {
+    text.title = part.title;
+  }
+
+  return text;
+}
+
+function createTagPart(part: BotLogTagPart): HTMLElement {
   const tag = document.createElement('span');
   tag.className = 'dwar-log-tag';
   tag.textContent = part.text;

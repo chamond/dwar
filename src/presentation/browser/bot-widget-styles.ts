@@ -528,6 +528,11 @@ export const BOT_WIDGET_STYLES = `
     color: #7f8ca1;
   }
 
+  .dwar-log-colored-text {
+    color: var(--dwar-log-text-color);
+    font-weight: 800;
+  }
+
   .dwar-log-tag {
     display: inline-flex;
     align-items: center;

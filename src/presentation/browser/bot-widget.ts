@@ -25,6 +25,8 @@ import { keepPanelInViewport, positionPanelNearLauncher } from './panel-position
 import { attachResizablePanel, keepPanelSizeInViewport, restorePanelSize } from './resizable-panel';
 
 const SAFETY_CHECK_LOG_KEY = 'resource-mining-safety-check';
+const DANGER_TEXT_HUE = 0;
+const SAFE_TEXT_HUE = 142;
 
 export interface BotWidgetDependencies {
   createLogEntry: CreateBotLogEntryUseCase;
@@ -324,7 +326,7 @@ function logMiningEvent(
       if (event.isSafe) {
         addLog(
           `Контроль безопасности: спокойно, прошло ${formatSeconds(event.elapsedMs)}. ${formatSafetyCheckPercents(event)}.`,
-          undefined,
+          createSafetyCheckCalmLogParts(event),
           SAFETY_CHECK_LOG_KEY
         );
         return;
@@ -374,13 +376,38 @@ function createSafetyCheckDangerLogParts(
   event: Extract<ResourceMiningEvent, { type: 'safety-check-completed' }>
 ): readonly BotLogLinePart[] {
   if (!event.nearestDangerousMob) {
-    return [`Контроль безопасности: опасность рядом. ${formatSafetyCheckPercents(event)}.`];
+    return [
+      'Контроль безопасности: опасность рядом. ',
+      ...createSafetyCheckPercentLogParts(event),
+      '.'
+    ];
   }
 
   return [
     'Контроль безопасности: ',
     createMobLogPart(event.nearestDangerousMob),
-    `. ${formatSafetyCheckPercents(event)}.`
+    '. ',
+    ...createSafetyCheckPercentLogParts(event),
+    '.'
+  ];
+}
+
+function createSafetyCheckCalmLogParts(
+  event: Extract<ResourceMiningEvent, { type: 'safety-check-completed' }>
+): readonly BotLogLinePart[] {
+  return [
+    `Контроль безопасности: спокойно, прошло ${formatSeconds(event.elapsedMs)}. `,
+    ...createSafetyCheckPercentLogParts(event),
+    '.'
+  ];
+}
+
+function createSafetyCheckPercentLogParts(
+  event: Extract<ResourceMiningEvent, { type: 'safety-check-completed' }>
+): readonly BotLogLinePart[] {
+  return [
+    `Спокойность ${event.calmnessPercent}%, `,
+    createSafetyPercentLogPart(event.safetyPercent)
   ];
 }
 
@@ -402,6 +429,18 @@ function createMobLogPart(mob: ResourceMiningMobInfo): BotLogLinePart {
   };
 }
 
+function createSafetyPercentLogPart(safetyPercent: number): BotLogLinePart {
+  const normalizedSafetyPercent = clampPercent(safetyPercent);
+  const dangerPercent = 100 - normalizedSafetyPercent;
+
+  return {
+    text: `безопасность ${normalizedSafetyPercent}%`,
+    color: getSafetyTextColor(normalizedSafetyPercent),
+    title: `Опасность ${dangerPercent}%`,
+    appearance: 'text'
+  };
+}
+
 function setMiningButtonActive(button: HTMLButtonElement, isActive: boolean): void {
   button.classList.toggle('is-active', isActive);
   button.setAttribute('aria-label', isActive ? 'Остановить добычу' : 'Начать добычу');
@@ -416,6 +455,16 @@ function formatSafetyCheckPercents(
   event: Extract<ResourceMiningEvent, { type: 'safety-check-completed' }>
 ): string {
   return `Спокойность ${event.calmnessPercent}%, безопасность ${event.safetyPercent}%`;
+}
+
+function getSafetyTextColor(safetyPercent: number): string {
+  const hue = Math.round(DANGER_TEXT_HUE + ((SAFE_TEXT_HUE - DANGER_TEXT_HUE) * clampPercent(safetyPercent)) / 100);
+
+  return `hsl(${hue} 78% 58%)`;
+}
+
+function clampPercent(value: number): number {
+  return Math.round(Math.max(0, Math.min(100, value)));
 }
 
 function isAbortError(error: unknown): boolean {
