@@ -1,6 +1,8 @@
 import type { HuntMob } from '../entities/hunt-mob';
 import type { HuntResourceNode } from '../entities/hunt-resource-node';
 
+const AWARENESS_RADIUS_MULTIPLIER = 10;
+
 export interface ResourceMiningSafetyOptions {
   dangerRadius: number;
 }
@@ -96,11 +98,9 @@ function calculateSafetyPercent(
     return 100;
   }
 
-  if (dangerRadius <= 0) {
-    return nearestDangerousMobDistance > 0 ? 100 : 0;
-  }
+  const awarenessRadius = calculateAwarenessRadius(dangerRadius);
 
-  return clampPercent((nearestDangerousMobDistance / dangerRadius) * 100);
+  return clampPercent((nearestDangerousMobDistance / awarenessRadius) * 100);
 }
 
 function calculateCalmnessPercent(dangerousDistances: readonly MobDistance[], dangerRadius: number): number {
@@ -108,16 +108,20 @@ function calculateCalmnessPercent(dangerousDistances: readonly MobDistance[], da
     return 100;
   }
 
-  const awarenessRadius = Math.max(dangerRadius * 2, 1);
-  const maxThreatPercent = dangerousDistances.reduce((maxThreat, { mob, distance }) => {
+  const awarenessRadius = calculateAwarenessRadius(dangerRadius);
+  const totalThreatPercent = dangerousDistances.reduce((totalThreat, { mob, distance }) => {
     const aggressionThreat = clampPercent(mob.getAggressionLevel()) / 100;
     const proximityThreat = Math.max(0, 1 - distance / awarenessRadius);
     const threatPercent = aggressionThreat * proximityThreat * 100;
 
-    return Math.max(maxThreat, threatPercent);
+    return totalThreat + threatPercent;
   }, 0);
 
-  return clampPercent(100 - maxThreatPercent);
+  return clampPercent(100 - totalThreatPercent);
+}
+
+function calculateAwarenessRadius(dangerRadius: number): number {
+  return Math.max(dangerRadius * AWARENESS_RADIUS_MULTIPLIER, 1);
 }
 
 function clampPercent(value: number): number {
