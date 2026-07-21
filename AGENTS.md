@@ -9,6 +9,7 @@
 - Чистая архитектура: `domain`, `application`, `infrastructure`, `presentation`.
 - Сборка через SWC и Rollup.
 - Результат сборки должен быть одним browser-loadable JavaScript-файлом.
+- Деплойный `dist/index.js` должен быть максимально минифицирован; не публиковать читаемый bundle на GitHub Pages.
 - Деплой конечного JavaScript-файла выполняется через GitHub Actions на GitHub Pages.
 
 Код:
