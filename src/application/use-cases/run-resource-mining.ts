@@ -16,6 +16,7 @@ import type { HuntZoneScanner } from '../ports/hunt-zone-scanner';
 import type { HuntZoneScanStore } from '../ports/hunt-zone-scan-store';
 import type { MiningDelay } from '../ports/mining-delay';
 import type { ResourceRepository } from '../ports/resource-repository';
+import type { Clock } from '../ports/clock';
 
 const DEFAULT_DANGER_RADIUS = 100;
 const DEFAULT_LEVEL_ZERO_MINING_DURATION_MS = 20_000;
@@ -62,6 +63,9 @@ export interface ResourceMiningMobInfo {
 
 export type ResourceMiningEvent =
   | {
+      type: 'scan-started';
+    }
+  | {
       type: 'scan-completed';
       totalMobCount: number;
       aggressiveMobCount: number;
@@ -84,6 +88,11 @@ export type ResourceMiningEvent =
       type: 'farm-cancelled';
       resource: ResourceMiningResourceInfo;
       reason: 'not-first-farmer';
+    }
+  | {
+      type: 'safety-check-started';
+      resource: ResourceMiningResourceInfo;
+      elapsedMs: number;
     }
   | {
       type: 'safety-check-completed';
@@ -119,6 +128,7 @@ export class RunResourceMiningUseCase {
     private readonly farmer: HuntResourceFarmer,
     private readonly farmInterrupter: HuntResourceFarmInterrupter,
     private readonly delay: MiningDelay,
+    private readonly clock: Clock,
     config: Partial<ResourceMiningConfig> = {}
   ) {
     this.config = {
@@ -136,6 +146,9 @@ export class RunResourceMiningUseCase {
     const location = this.getSelectedLocation(input.selectedLocationId);
 
     while (!input.signal?.aborted) {
+      this.emit(input, {
+        type: 'scan-started'
+      });
       const scan = await this.scanAndStore(location, input.signal);
       const selectedResources = scan.getResourcesByArticleIds(selectedArticleIds);
       const selection = selectSafestResourceForMining(selectedResources, scan.getMobs(), {
@@ -217,14 +230,39 @@ export class RunResourceMiningUseCase {
     miningDurationMs: number,
     input: RunResourceMiningInput
   ): Promise<boolean> {
-    let elapsedMs = 0;
+    const startedAtMs = this.nowMs();
+    const deadlineAtMs = startedAtMs + miningDurationMs;
+    let nextSafetyCheckAtMs = startedAtMs + this.config.safetyCheckIntervalMs;
 
-    while (elapsedMs < miningDurationMs) {
-      const waitMs = Math.min(this.config.safetyCheckIntervalMs, miningDurationMs - elapsedMs);
-      await this.delay.wait(waitMs, input.signal);
-      elapsedMs += waitMs;
+    if (this.config.safetyCheckIntervalMs <= 0) {
+      await this.delay.wait(miningDurationMs, input.signal);
+      return true;
+    }
+
+    while (nextSafetyCheckAtMs < deadlineAtMs && !input.signal?.aborted) {
+      const waitMs = Math.max(0, nextSafetyCheckAtMs - this.nowMs());
+
+      if (waitMs > 0) {
+        await this.delay.wait(waitMs, input.signal);
+      }
+
+      if (this.nowMs() >= deadlineAtMs) {
+        break;
+      }
+
+      const elapsedMs = Math.min(this.nowMs() - startedAtMs, miningDurationMs);
+      this.emit(input, {
+        type: 'safety-check-started',
+        resource: createResourceInfo(resource),
+        elapsedMs
+      });
 
       const scan = await this.scanAndStore(location, input.signal);
+
+      if (this.nowMs() >= deadlineAtMs) {
+        break;
+      }
+
       const safety = assessResourceMiningSafety(resource, scan.getMobs(), {
         dangerRadius: this.config.dangerRadius
       });
@@ -248,9 +286,33 @@ export class RunResourceMiningUseCase {
         });
         return false;
       }
+
+      nextSafetyCheckAtMs += this.config.safetyCheckIntervalMs;
+      nextSafetyCheckAtMs = this.skipMissedSafetyChecks(nextSafetyCheckAtMs, deadlineAtMs);
+    }
+
+    const remainingMs = deadlineAtMs - this.nowMs();
+
+    if (remainingMs > 0) {
+      await this.delay.wait(remainingMs, input.signal);
     }
 
     return true;
+  }
+
+  private skipMissedSafetyChecks(nextSafetyCheckAtMs: number, deadlineAtMs: number): number {
+    let normalizedNextSafetyCheckAtMs = nextSafetyCheckAtMs;
+    const nowMs = this.nowMs();
+
+    while (normalizedNextSafetyCheckAtMs <= nowMs && normalizedNextSafetyCheckAtMs < deadlineAtMs) {
+      normalizedNextSafetyCheckAtMs += this.config.safetyCheckIntervalMs;
+    }
+
+    return normalizedNextSafetyCheckAtMs;
+  }
+
+  private nowMs(): number {
+    return this.clock.now().getTime();
   }
 
   private async scanAndStore(location: HuntLocation, signal: AbortSignal | undefined): Promise<HuntZoneScan> {

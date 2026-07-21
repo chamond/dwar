@@ -11,7 +11,7 @@ import type {
   ResourceMiningResourceInfo,
   RunResourceMiningUseCase
 } from '../../application/use-cases/run-resource-mining';
-import { appendLogLine, clearLogList, type BotLogLinePart } from './log-list';
+import { appendLogLine, clearLogList, upsertLogLine, type BotLogLinePart } from './log-list';
 import { createBotPanel } from './bot-panel';
 import { createLauncherButton } from './launcher-button';
 import { getPickaxeIcon } from './pickaxe-icon';
@@ -23,6 +23,8 @@ import { BOT_WIDGET_STYLES } from './bot-widget-styles';
 import { DRAG_IGNORE_SELECTOR, ROOT_ID } from './bot-widget-constants';
 import { keepPanelInViewport, positionPanelNearLauncher } from './panel-position';
 import { attachResizablePanel, keepPanelSizeInViewport, restorePanelSize } from './resizable-panel';
+
+const SAFETY_CHECK_LOG_KEY = 'resource-mining-safety-check';
 
 export interface BotWidgetDependencies {
   createLogEntry: CreateBotLogEntryUseCase;
@@ -56,8 +58,14 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     }
   });
 
-  const addLog = (message: string, parts?: readonly BotLogLinePart[]): void => {
+  const addLog = (message: string, parts?: readonly BotLogLinePart[], key?: string): void => {
     const entry = dependencies.createLogEntry.execute({ message }).toSnapshot();
+
+    if (key) {
+      upsertLogLine(botPanel.logList, key, entry, parts);
+      return;
+    }
+
     appendLogLine(botPanel.logList, entry, parts);
   };
   let miningAbortController: AbortController | null = null;
@@ -210,7 +218,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
 
 function handleMiningEvent(
   event: ResourceMiningEvent,
-  addLog: (message: string, parts?: readonly BotLogLinePart[]) => void,
+  addLog: (message: string, parts?: readonly BotLogLinePart[], key?: string) => void,
   processBar: ProcessBarController
 ): void {
   updateMiningProcessBar(event, processBar);
@@ -219,6 +227,12 @@ function handleMiningEvent(
 
 function updateMiningProcessBar(event: ResourceMiningEvent, processBar: ProcessBarController): void {
   switch (event.type) {
+    case 'scan-started':
+      processBar.busy({
+        label: 'Сканирование зоны'
+      });
+      return;
+
     case 'no-safe-resource':
       processBar.start({
         label: 'Пауза поиска',
@@ -239,6 +253,10 @@ function updateMiningProcessBar(event: ResourceMiningEvent, processBar: ProcessB
       processBar.reset();
       return;
 
+    case 'safety-check-started':
+      processBar.setLabel(`Проверка ${formatResourceLabel(event.resource)}`);
+      return;
+
     case 'farm-completed':
       processBar.complete();
       return;
@@ -250,17 +268,25 @@ function updateMiningProcessBar(event: ResourceMiningEvent, processBar: ProcessB
       });
       return;
 
-    case 'scan-completed':
     case 'safety-check-completed':
+      if (event.isSafe) {
+        processBar.setLabel(`Добыча ${formatResourceLabel(event.resource)}`);
+      }
+      return;
+
+    case 'scan-completed':
       return;
   }
 }
 
 function logMiningEvent(
   event: ResourceMiningEvent,
-  addLog: (message: string, parts?: readonly BotLogLinePart[]) => void
+  addLog: (message: string, parts?: readonly BotLogLinePart[], key?: string) => void
 ): void {
   switch (event.type) {
+    case 'scan-started':
+      return;
+
     case 'scan-completed':
       addLog(
         `Скан: мобов ${event.totalMobCount}, агрессивных ${event.aggressiveMobCount}, ресурсов ${event.selectedResourceCount}, безопасных ${event.safeResourceCount}.`
@@ -291,15 +317,23 @@ function logMiningEvent(
       ]);
       return;
 
+    case 'safety-check-started':
+      return;
+
     case 'safety-check-completed':
       if (event.isSafe) {
-        addLog(`Контроль безопасности: спокойно, прошло ${formatSeconds(event.elapsedMs)}.`);
+        addLog(
+          `Контроль безопасности: спокойно, прошло ${formatSeconds(event.elapsedMs)}.`,
+          undefined,
+          SAFETY_CHECK_LOG_KEY
+        );
         return;
       }
 
       addLog(
         'Контроль безопасности: опасность рядом.',
-        createDangerLogParts('Контроль безопасности: ', event.nearestDangerousMob)
+        createDangerLogParts('Контроль безопасности: ', event.nearestDangerousMob),
+        SAFETY_CHECK_LOG_KEY
       );
       return;
 

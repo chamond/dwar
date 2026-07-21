@@ -14,6 +14,8 @@ export interface ProcessBarStartOptions {
 
 export interface ProcessBarController {
   start(options: ProcessBarStartOptions): void;
+  busy(options: Omit<ProcessBarStartOptions, 'durationMs'>): void;
+  setLabel(label: string): void;
   complete(): void;
   reset(): void;
 }
@@ -101,7 +103,7 @@ export function createProcessBarController(elements: ProcessBarElements): Proces
     stopAnimation();
     activeProcess = null;
     elements.root.classList.add('is-idle');
-    elements.root.classList.remove('is-active', 'is-complete');
+    elements.root.classList.remove('is-active', 'is-busy', 'is-complete');
     elements.label.textContent = 'Ожидание';
     elements.timer.textContent = '00:00 / 00:00';
     elements.fill.style.transform = 'scaleX(0)';
@@ -120,7 +122,7 @@ export function createProcessBarController(elements: ProcessBarElements): Proces
         durationMs
       };
 
-      elements.root.classList.remove('is-idle', 'is-complete');
+      elements.root.classList.remove('is-idle', 'is-busy', 'is-complete');
       elements.root.classList.add('is-active');
       elements.label.textContent = options.label;
 
@@ -134,6 +136,27 @@ export function createProcessBarController(elements: ProcessBarElements): Proces
       tick();
     },
 
+    busy(options: Omit<ProcessBarStartOptions, 'durationMs'>): void {
+      stopAnimation();
+      activeProcess = null;
+      elements.root.classList.remove('is-idle', 'is-active', 'is-complete');
+      elements.root.classList.add('is-busy');
+      elements.label.textContent = options.label;
+      elements.timer.textContent = '...';
+      elements.fill.style.transform = '';
+      elements.rail.removeAttribute('aria-valuenow');
+
+      if (options.accentColor) {
+        elements.root.style.setProperty('--dwar-process-color', options.accentColor);
+      } else {
+        elements.root.style.removeProperty('--dwar-process-color');
+      }
+    },
+
+    setLabel(label: string): void {
+      elements.label.textContent = label;
+    },
+
     complete(): void {
       if (!activeProcess) {
         return;
@@ -142,7 +165,7 @@ export function createProcessBarController(elements: ProcessBarElements): Proces
       render(activeProcess.durationMs, activeProcess.durationMs);
       stopAnimation();
       activeProcess = null;
-      elements.root.classList.remove('is-idle', 'is-active');
+      elements.root.classList.remove('is-idle', 'is-active', 'is-busy');
       elements.root.classList.add('is-complete');
     },
 

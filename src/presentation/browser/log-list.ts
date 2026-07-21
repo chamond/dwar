@@ -17,8 +17,32 @@ export function appendLogLine(
   logList.scrollTop = logList.scrollHeight;
 }
 
+export function upsertLogLine(
+  logList: HTMLElement,
+  key: string,
+  entry: BotLogEntrySnapshot,
+  parts: readonly BotLogLinePart[] = [entry.message]
+): void {
+  const existingLine = findLogLineByKey(logList, key);
+  const nextLine = createLogLine(entry, parts);
+  nextLine.dataset.dwarLogKey = key;
+
+  if (existingLine) {
+    existingLine.remove();
+  }
+
+  logList.append(nextLine);
+  logList.scrollTop = logList.scrollHeight;
+}
+
 export function clearLogList(logList: HTMLElement): void {
   logList.replaceChildren();
+}
+
+function findLogLineByKey(logList: HTMLElement, key: string): HTMLElement | null {
+  return Array.from(logList.children).find((child): child is HTMLElement => {
+    return child instanceof HTMLElement && child.dataset.dwarLogKey === key;
+  }) ?? null;
 }
 
 function createLogLine(entry: BotLogEntrySnapshot, parts: readonly BotLogLinePart[]): HTMLElement {

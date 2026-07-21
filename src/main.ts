@@ -41,7 +41,8 @@ function bootstrap(): void {
     huntZoneScanStore,
     huntResourceFarmer,
     huntResourceFarmInterrupter,
-    miningDelay
+    miningDelay,
+    clock
   );
 
   mountBotWidget({
