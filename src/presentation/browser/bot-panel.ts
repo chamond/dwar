@@ -1,4 +1,4 @@
-import type { BotResourceSnapshot } from '../../domain/entities/bot-resource';
+import type { BotResourceId, BotResourceSnapshot } from '../../domain/entities/bot-resource';
 import { getPickaxeIcon } from './pickaxe-icon';
 import { createResourcePicker, type ResourcePickerElements } from './resource-picker';
 
@@ -23,12 +23,20 @@ interface MiningControlsElements {
   resourcePicker: ResourcePickerElements;
 }
 
-export function createBotPanel(resources: readonly BotResourceSnapshot[]): BotPanelElements {
+export interface BotPanelOptions {
+  selectedResourceIds?: readonly BotResourceId[] | null | undefined;
+  onResourceSelectionChange?: ((resources: readonly BotResourceSnapshot[]) => void) | undefined;
+}
+
+export function createBotPanel(
+  resources: readonly BotResourceSnapshot[],
+  options: BotPanelOptions = {}
+): BotPanelElements {
   const panel = document.createElement('section');
   panel.className = 'dwar-panel';
   panel.hidden = true;
   const headerElements = createPanelHeader();
-  const controlsElements = createMiningControls(resources);
+  const controlsElements = createMiningControls(resources, options);
   const logList = createLogList();
   const resizeHandle = createResizeHandle();
   panel.append(headerElements.header, controlsElements.controls, logList, resizeHandle);
@@ -75,7 +83,10 @@ function createPanelHeader(): PanelHeaderElements {
   };
 }
 
-function createMiningControls(resources: readonly BotResourceSnapshot[]): MiningControlsElements {
+function createMiningControls(
+  resources: readonly BotResourceSnapshot[],
+  options: BotPanelOptions
+): MiningControlsElements {
   const controls = document.createElement('div');
   controls.className = 'dwar-panel__controls';
 
@@ -85,7 +96,10 @@ function createMiningControls(resources: readonly BotResourceSnapshot[]): Mining
   startMiningButton.setAttribute('aria-label', 'Начать добычу');
   startMiningButton.innerHTML = `${getPickaxeIcon()}<span>Добыча</span>`;
 
-  const resourcePicker = createResourcePicker(resources);
+  const resourcePicker = createResourcePicker(resources, {
+    selectedResourceIds: options.selectedResourceIds,
+    onSelectionChange: options.onResourceSelectionChange
+  });
   controls.append(startMiningButton, resourcePicker.root);
 
   return {

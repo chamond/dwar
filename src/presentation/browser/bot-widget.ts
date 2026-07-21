@@ -1,5 +1,6 @@
 import type { LauncherPositionStore } from '../../application/ports/launcher-position-store';
 import type { PanelSizeStore } from '../../application/ports/panel-size-store';
+import type { ResourceSelectionStore } from '../../application/ports/resource-selection-store';
 import type { CreateBotLogEntryUseCase } from '../../application/use-cases/create-bot-log-entry';
 import type { ListResourcesUseCase } from '../../application/use-cases/list-resources';
 import type {
@@ -24,6 +25,7 @@ export interface BotWidgetDependencies {
   listResources: ListResourcesUseCase;
   launcherPositionStore: LauncherPositionStore;
   panelSizeStore: PanelSizeStore;
+  resourceSelectionStore: ResourceSelectionStore;
   runResourceMining: RunResourceMiningUseCase;
 }
 
@@ -36,7 +38,12 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   const shadowRoot = host.attachShadow({ mode: 'open' });
   const launcher = createLauncherButton();
   const resources = dependencies.listResources.execute().map((resource) => resource.toSnapshot());
-  const botPanel = createBotPanel(resources);
+  const botPanel = createBotPanel(resources, {
+    selectedResourceIds: dependencies.resourceSelectionStore.load(),
+    onResourceSelectionChange: (selectedResources) => {
+      dependencies.resourceSelectionStore.save(selectedResources.map(({ id }) => id));
+    }
+  });
 
   const addLog = (message: string, parts?: readonly BotLogLinePart[]): void => {
     const entry = dependencies.createLogEntry.execute({ message }).toSnapshot();
@@ -199,6 +206,14 @@ function logMiningEvent(
         'Начата добыча ',
         createResourceLogPart(event.resource),
         '.'
+      ]);
+      return;
+
+    case 'farm-cancelled':
+      addLog(`Добыча отменена: ${event.resource.name} уже добывают.`, [
+        'Добыча отменена: ',
+        createResourceLogPart(event.resource),
+        ' уже добывают.'
       ]);
       return;
 

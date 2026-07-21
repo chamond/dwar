@@ -1,4 +1,4 @@
-import type { BotResourceSnapshot } from '../../domain/entities/bot-resource';
+import type { BotResourceId, BotResourceSnapshot } from '../../domain/entities/bot-resource';
 
 interface ResourceOptionElements {
   resource: BotResourceSnapshot;
@@ -14,7 +14,15 @@ export interface ResourcePickerElements {
   close(): void;
 }
 
-export function createResourcePicker(resources: readonly BotResourceSnapshot[]): ResourcePickerElements {
+export interface ResourcePickerOptions {
+  selectedResourceIds?: readonly BotResourceId[] | null | undefined;
+  onSelectionChange?: ((resources: readonly BotResourceSnapshot[]) => void) | undefined;
+}
+
+export function createResourcePicker(
+  resources: readonly BotResourceSnapshot[],
+  options: ResourcePickerOptions = {}
+): ResourcePickerElements {
   const root = document.createElement('div');
   root.className = 'dwar-resource-picker';
 
@@ -30,8 +38,11 @@ export function createResourcePicker(resources: readonly BotResourceSnapshot[]):
   menu.setAttribute('aria-multiselectable', 'true');
   menu.hidden = true;
 
-  const options = resources.map((resource) => createResourceOption(resource));
-  options.forEach(({ option }) => menu.append(option));
+  const selectedResourceIds = options.selectedResourceIds ? new Set(options.selectedResourceIds) : null;
+  const resourceOptions = resources.map((resource) => {
+    return createResourceOption(resource, selectedResourceIds?.has(resource.id) ?? true);
+  });
+  resourceOptions.forEach(({ option }) => menu.append(option));
 
   root.append(toggleButton, menu);
 
@@ -42,11 +53,11 @@ export function createResourcePicker(resources: readonly BotResourceSnapshot[]):
   };
 
   const getSelectedResources = (): readonly BotResourceSnapshot[] => {
-    return options.filter(({ input }) => input.checked).map(({ resource }) => resource);
+    return resourceOptions.filter(({ input }) => input.checked).map(({ resource }) => resource);
   };
 
   const updateSelectedState = (): void => {
-    options.forEach(({ input, option }) => {
+    resourceOptions.forEach(({ input, option }) => {
       option.setAttribute('aria-selected', String(input.checked));
     });
 
@@ -63,8 +74,11 @@ export function createResourcePicker(resources: readonly BotResourceSnapshot[]):
     }
   });
 
-  options.forEach(({ input }) => {
-    input.addEventListener('change', updateSelectedState);
+  resourceOptions.forEach(({ input }) => {
+    input.addEventListener('change', () => {
+      updateSelectedState();
+      options.onSelectionChange?.(getSelectedResources());
+    });
   });
 
   updateSelectedState();
@@ -115,7 +129,7 @@ function createChevron(): HTMLElement {
   return chevron;
 }
 
-function createResourceOption(resource: BotResourceSnapshot): ResourceOptionElements {
+function createResourceOption(resource: BotResourceSnapshot, isSelected: boolean): ResourceOptionElements {
   const option = document.createElement('label');
   option.className = 'dwar-resource-option';
   option.setAttribute('role', 'option');
@@ -123,7 +137,7 @@ function createResourceOption(resource: BotResourceSnapshot): ResourceOptionElem
 
   const input = document.createElement('input');
   input.type = 'checkbox';
-  input.checked = true;
+  input.checked = isSelected;
   input.value = resource.id;
 
   const badge = document.createElement('span');

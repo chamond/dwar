@@ -1,5 +1,7 @@
 import type { HuntResourceFarmer, HuntResourceFarmOptions } from '../../application/ports/hunt-resource-farmer';
+import type { HuntResourceFarmStart } from '../../domain/entities/hunt-resource-farm-start';
 import type { HuntResourceNode } from '../../domain/entities/hunt-resource-node';
+import { DwarHuntResourceFarmStartXmlParser } from './dwar-hunt-resource-farm-start-xml-parser';
 import {
   buildHuntResourceFarmBody,
   buildHuntResourceFarmUrl,
@@ -7,7 +9,9 @@ import {
 } from './hunt-resource-farm-request';
 
 export class BrowserHuntResourceFarmer implements HuntResourceFarmer {
-  async start(resource: HuntResourceNode, options: HuntResourceFarmOptions = {}): Promise<void> {
+  constructor(private readonly parser: DwarHuntResourceFarmStartXmlParser = new DwarHuntResourceFarmStartXmlParser()) {}
+
+  async start(resource: HuntResourceNode, options: HuntResourceFarmOptions = {}): Promise<HuntResourceFarmStart> {
     const requestInit: RequestInit = {
       method: HUNT_RESOURCE_FARM_REQUEST.method,
       body: buildHuntResourceFarmBody(resource.getServerNumber())
@@ -22,5 +26,7 @@ export class BrowserHuntResourceFarmer implements HuntResourceFarmer {
     if (!response.ok) {
       throw new Error(`Resource mining start failed with HTTP ${response.status}.`);
     }
+
+    return this.parser.parse(await response.text());
   }
 }

@@ -1,12 +1,10 @@
-const HUNT_RESOURCE_FARM_SIGNATURE = 'c39a9e1fe4604f3d8852766675c285ad';
-
 export const HUNT_RESOURCE_FARM_REQUEST = {
   method: 'POST',
   url: 'https://w1.dwar.ru/hunt_conf.php?mode=farm&action=chek&xy=0'
 } as const;
 
 export function buildHuntResourceFarmUrl(resourceServerNumber: string): string {
-  return `${HUNT_RESOURCE_FARM_REQUEST.url}&sig=${HUNT_RESOURCE_FARM_SIGNATURE}&num=${encodeURIComponent(resourceServerNumber)}&t=1`;
+  return `${HUNT_RESOURCE_FARM_REQUEST.url}&sig=${createFarmSignature()}&num=${encodeURIComponent(resourceServerNumber)}&t=1`;
 }
 
 export function buildHuntResourceFarmBody(resourceServerNumber: string): URLSearchParams {
@@ -48,4 +46,18 @@ function createFarmTelemetryPayload(resourceServerNumber: string): string {
   };
 
   return window.btoa(JSON.stringify(payload));
+}
+
+function createFarmSignature(): string {
+  const bytes = new Uint8Array(16);
+
+  if (globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(bytes);
+  } else {
+    for (let index = 0; index < bytes.length; index += 1) {
+      bytes[index] = Math.floor(Math.random() * 256);
+    }
+  }
+
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }

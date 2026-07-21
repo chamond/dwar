@@ -72,6 +72,11 @@ export type ResourceMiningEvent =
       miningDurationMs: number;
     }
   | {
+      type: 'farm-cancelled';
+      resource: ResourceMiningResourceInfo;
+      reason: 'not-first-farmer';
+    }
+  | {
       type: 'safety-check-completed';
       resource: ResourceMiningResourceInfo;
       elapsedMs: number;
@@ -146,8 +151,17 @@ export class RunResourceMiningUseCase {
 
   private async startMiningResource(safety: ResourceMiningSafety, input: RunResourceMiningInput): Promise<void> {
     const resource = safety.resource;
+    const farmStart = await this.farmer.start(resource, { signal: input.signal });
 
-    await this.farmer.start(resource, { signal: input.signal });
+    if (!farmStart.isFirstFarmer()) {
+      await this.farmInterrupter.interrupt(resource, { signal: input.signal });
+      this.emit(input, {
+        type: 'farm-cancelled',
+        resource: createResourceInfo(resource),
+        reason: 'not-first-farmer'
+      });
+      return;
+    }
 
     this.emit(input, {
       type: 'farm-started',
