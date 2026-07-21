@@ -1,4 +1,5 @@
 import type { BotResourceId, BotResourceSnapshot } from '../../domain/entities/bot-resource';
+import { formatResourceLabel } from './resource-label';
 
 interface ResourceOptionElements {
   resource: BotResourceSnapshot;
@@ -150,7 +151,7 @@ function createResourceOption(resource: BotResourceSnapshot, isSelected: boolean
 
   const name = document.createElement('span');
   name.className = 'dwar-resource-option__name';
-  name.textContent = resource.name;
+  name.textContent = formatResourceLabel(resource);
 
   badge.append(swatch, name);
   option.append(input, badge);

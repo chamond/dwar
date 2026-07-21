@@ -1,7 +1,9 @@
 import type { LauncherPositionStore } from '../../application/ports/launcher-position-store';
 import type { PanelSizeStore } from '../../application/ports/panel-size-store';
 import type { ResourceSelectionStore } from '../../application/ports/resource-selection-store';
+import type { HuntLocationSelectionStore } from '../../application/ports/hunt-location-selection-store';
 import type { CreateBotLogEntryUseCase } from '../../application/use-cases/create-bot-log-entry';
+import type { ListHuntLocationsUseCase } from '../../application/use-cases/list-hunt-locations';
 import type { ListResourcesUseCase } from '../../application/use-cases/list-resources';
 import type {
   ResourceMiningEvent,
@@ -13,6 +15,7 @@ import { appendLogLine, type BotLogLinePart } from './log-list';
 import { createBotPanel } from './bot-panel';
 import { createLauncherButton } from './launcher-button';
 import { getPickaxeIcon } from './pickaxe-icon';
+import { formatResourceLabel } from './resource-label';
 import { attachDraggableLauncher, restoreLauncherPosition } from './draggable-launcher';
 import { attachDraggablePanel } from './draggable-panel';
 import { BOT_WIDGET_STYLES } from './bot-widget-styles';
@@ -22,7 +25,9 @@ import { attachResizablePanel, keepPanelSizeInViewport, restorePanelSize } from 
 
 export interface BotWidgetDependencies {
   createLogEntry: CreateBotLogEntryUseCase;
+  listHuntLocations: ListHuntLocationsUseCase;
   listResources: ListResourcesUseCase;
+  locationSelectionStore: HuntLocationSelectionStore;
   launcherPositionStore: LauncherPositionStore;
   panelSizeStore: PanelSizeStore;
   resourceSelectionStore: ResourceSelectionStore;
@@ -38,10 +43,15 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   const shadowRoot = host.attachShadow({ mode: 'open' });
   const launcher = createLauncherButton();
   const resources = dependencies.listResources.execute().map((resource) => resource.toSnapshot());
-  const botPanel = createBotPanel(resources, {
+  const locations = dependencies.listHuntLocations.execute().map((location) => location.toSnapshot());
+  const botPanel = createBotPanel(resources, locations, {
     selectedResourceIds: dependencies.resourceSelectionStore.load(),
     onResourceSelectionChange: (selectedResources) => {
       dependencies.resourceSelectionStore.save(selectedResources.map(({ id }) => id));
+    },
+    selectedLocationId: dependencies.locationSelectionStore.load(),
+    onLocationSelectionChange: (location) => {
+      dependencies.locationSelectionStore.save(location.id);
     }
   });
 
@@ -88,9 +98,15 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
 
   function startMining(): void {
     const selectedResources = botPanel.resourcePicker.getSelectedResources();
+    const selectedLocation = botPanel.locationSelect.getSelectedLocation();
 
     if (selectedResources.length === 0) {
       addLog('Выберите хотя бы один ресурс для добычи.');
+      return;
+    }
+
+    if (!selectedLocation) {
+      addLog('Выберите локацию для добычи.');
       return;
     }
 
@@ -98,11 +114,14 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     miningAbortController = controller;
     botPanel.resourcePicker.close();
     setMiningButtonActive(botPanel.startMiningButton, true);
-    addLog(`Добыча запущена: ${selectedResources.map(({ name }) => name).join(', ')}.`);
+    addLog(
+      `Добыча запущена: ${selectedResources.map(formatResourceLabel).join(', ')}. Локация: ${selectedLocation.name}.`
+    );
 
     void dependencies.runResourceMining
       .execute({
         selectedResourceIds: selectedResources.map(({ id }) => id),
+        selectedLocationId: selectedLocation.id,
         signal: controller.signal,
         observer: {
           handle: (event) => {
@@ -202,7 +221,7 @@ function logMiningEvent(
       return;
 
     case 'farm-started':
-      addLog(`Начата добыча ${event.resource.name}.`, [
+      addLog(`Начата добыча ${formatResourceLabel(event.resource)}.`, [
         'Начата добыча ',
         createResourceLogPart(event.resource),
         '.'
@@ -210,7 +229,7 @@ function logMiningEvent(
       return;
 
     case 'farm-cancelled':
-      addLog(`Добыча отменена: ${event.resource.name} уже добывают.`, [
+      addLog(`Добыча отменена: ${formatResourceLabel(event.resource)} уже добывают.`, [
         'Добыча отменена: ',
         createResourceLogPart(event.resource),
         ' уже добывают.'
@@ -223,7 +242,10 @@ function logMiningEvent(
         return;
       }
 
-      addLog('Контроль безопасности: опасность рядом.', createDangerLogParts('Контроль безопасности: ', event.nearestDangerousMob));
+      addLog(
+        'Контроль безопасности: опасность рядом.',
+        createDangerLogParts('Контроль безопасности: ', event.nearestDangerousMob)
+      );
       return;
 
     case 'farm-interrupted':
@@ -234,11 +256,15 @@ function logMiningEvent(
       return;
 
     case 'farm-completed':
-      addLog(`Добыча завершена: ${event.resource.name}.`, [
+      addLog(`Добыча завершена: ${formatResourceLabel(event.resource)}.`, [
         'Добыча завершена: ',
         createResourceLogPart(event.resource),
         '.'
       ]);
+      return;
+
+    case 'next-mining-delayed':
+      addLog(`Пауза перед следующей добычей ${formatSeconds(event.delayMs)}.`);
       return;
   }
 }
@@ -256,10 +282,12 @@ function createDangerLogParts(prefix: string, mob: ResourceMiningMobInfo | null)
 }
 
 function createResourceLogPart(resource: ResourceMiningResourceInfo): BotLogLinePart {
+  const label = formatResourceLabel(resource);
+
   return {
-    text: resource.name,
+    text: label,
     color: resource.markerColor,
-    title: `Ресурс ${resource.name}`
+    title: `Ресурс ${label}`
   };
 }
 

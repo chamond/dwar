@@ -6,19 +6,22 @@ const LOCAL_RESOURCE_RECORDS = [
     id: 'agate',
     name: 'Агат',
     markerColor: '#2f6dff',
-    articleId: 362
+    articleId: 362,
+    level: 0
   },
   {
     id: 'aquamarine',
     name: 'Аквамарин',
     markerColor: '#63d7ff',
-    articleId: 363
+    articleId: 363,
+    level: 0
   },
   {
     id: 'turquoise',
     name: 'Бирюза',
     markerColor: '#28d8be',
-    articleId: 364
+    articleId: 364,
+    level: 0
   }
 ] as const satisfies readonly BotResourceProps[];
 

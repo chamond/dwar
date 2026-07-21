@@ -54,6 +54,7 @@ export const BOT_WIDGET_STYLES = `
   .dwar-panel__close:focus-visible,
   .dwar-panel__resize:focus-visible,
   .dwar-mining-button:focus-visible,
+  .dwar-location-select__control:focus-visible,
   .dwar-resource-picker__toggle:focus-visible {
     outline: 2px solid #78d9c2;
     outline-offset: 3px;
@@ -70,9 +71,9 @@ export const BOT_WIDGET_STYLES = `
     z-index: 2147483647;
     display: flex;
     width: 356px;
-    height: 288px;
+    height: 326px;
     min-width: 296px;
-    min-height: 240px;
+    min-height: 278px;
     max-width: calc(100vw - 24px);
     max-height: calc(100vh - 24px);
     flex-direction: column;
@@ -151,7 +152,7 @@ export const BOT_WIDGET_STYLES = `
 
   .dwar-panel__controls {
     display: flex;
-    align-items: stretch;
+    align-items: flex-start;
     flex: 0 0 auto;
     gap: 8px;
     padding: 10px;
@@ -160,6 +161,7 @@ export const BOT_WIDGET_STYLES = `
   }
 
   .dwar-mining-button,
+  .dwar-location-select__control,
   .dwar-resource-picker__toggle {
     height: 38px;
     border: 1px solid rgba(255, 255, 255, .11);
@@ -209,10 +211,44 @@ export const BOT_WIDGET_STYLES = `
     height: 18px;
   }
 
-  .dwar-resource-picker {
-    position: relative;
+  .dwar-panel__selectors {
+    display: grid;
     flex: 1 1 auto;
     min-width: 0;
+    gap: 8px;
+  }
+
+  .dwar-resource-picker {
+    position: relative;
+    min-width: 0;
+  }
+
+  .dwar-location-select {
+    display: block;
+    min-width: 0;
+  }
+
+  .dwar-location-select__control {
+    width: 100%;
+    padding: 0 32px 0 10px;
+    color: #dbe3f1;
+    background: #0b1118;
+    border-radius: 7px;
+    appearance: none;
+    background-image:
+      linear-gradient(45deg, transparent 50%, #aeb8c7 50%),
+      linear-gradient(135deg, #aeb8c7 50%, transparent 50%);
+    background-position:
+      calc(100% - 17px) 16px,
+      calc(100% - 12px) 16px;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+  }
+
+  .dwar-location-select__control:hover {
+    border-color: rgba(120, 217, 194, .42);
+    color: #ffffff;
+    background-color: #111a24;
   }
 
   .dwar-resource-picker__toggle {

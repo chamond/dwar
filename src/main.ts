@@ -1,4 +1,5 @@
 import { CreateBotLogEntryUseCase } from './application/use-cases/create-bot-log-entry';
+import { ListHuntLocationsUseCase } from './application/use-cases/list-hunt-locations';
 import { ListResourcesUseCase } from './application/use-cases/list-resources';
 import { RunResourceMiningUseCase } from './application/use-cases/run-resource-mining';
 import { BrowserHuntResourceFarmer } from './infrastructure/browser/browser-hunt-resource-farmer';
@@ -6,9 +7,11 @@ import { BrowserHuntResourceFarmInterrupter } from './infrastructure/browser/bro
 import { BrowserHuntZoneScanner } from './infrastructure/browser/browser-hunt-zone-scanner';
 import { BrowserMiningDelay } from './infrastructure/browser/browser-mining-delay';
 import { DwarHuntZoneXmlParser } from './infrastructure/browser/dwar-hunt-zone-xml-parser';
+import { LocalStorageHuntLocationSelectionStore } from './infrastructure/browser/local-storage-hunt-location-selection-store';
 import { LocalStorageLauncherPositionStore } from './infrastructure/browser/local-storage-launcher-position-store';
 import { LocalStoragePanelSizeStore } from './infrastructure/browser/local-storage-panel-size-store';
 import { LocalStorageResourceSelectionStore } from './infrastructure/browser/local-storage-resource-selection-store';
+import { StaticHuntLocationRepository } from './infrastructure/local-data/static-hunt-location-repository';
 import { StaticResourceRepository } from './infrastructure/local-data/static-resource-repository';
 import { InMemoryHuntZoneScanStore } from './infrastructure/memory/in-memory-hunt-zone-scan-store';
 import { SystemClock } from './infrastructure/system/system-clock';
@@ -18,10 +21,13 @@ function bootstrap(): void {
   const clock = new SystemClock();
   const createLogEntry = new CreateBotLogEntryUseCase(clock);
   const resourceRepository = new StaticResourceRepository();
+  const huntLocationRepository = new StaticHuntLocationRepository();
   const listResources = new ListResourcesUseCase(resourceRepository);
+  const listHuntLocations = new ListHuntLocationsUseCase(huntLocationRepository);
   const launcherPositionStore = new LocalStorageLauncherPositionStore();
   const panelSizeStore = new LocalStoragePanelSizeStore();
   const resourceSelectionStore = new LocalStorageResourceSelectionStore();
+  const locationSelectionStore = new LocalStorageHuntLocationSelectionStore();
   const huntZoneXmlParser = new DwarHuntZoneXmlParser(resourceRepository);
   const huntZoneScanner = new BrowserHuntZoneScanner(huntZoneXmlParser);
   const huntZoneScanStore = new InMemoryHuntZoneScanStore();
@@ -31,6 +37,7 @@ function bootstrap(): void {
   const runResourceMining = new RunResourceMiningUseCase(
     huntZoneScanner,
     resourceRepository,
+    huntLocationRepository,
     huntZoneScanStore,
     huntResourceFarmer,
     huntResourceFarmInterrupter,
@@ -39,7 +46,9 @@ function bootstrap(): void {
 
   mountBotWidget({
     createLogEntry,
+    listHuntLocations,
     listResources,
+    locationSelectionStore,
     launcherPositionStore,
     panelSizeStore,
     resourceSelectionStore,

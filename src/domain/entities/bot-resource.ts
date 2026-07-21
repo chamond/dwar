@@ -5,6 +5,7 @@ export interface BotResourceProps {
   name: string;
   markerColor: string;
   articleId: number;
+  level: number;
 }
 
 export interface BotResourceSnapshot {
@@ -12,6 +13,7 @@ export interface BotResourceSnapshot {
   name: string;
   markerColor: string;
   articleId: number;
+  level: number;
 }
 
 export class BotResource {
@@ -19,7 +21,8 @@ export class BotResource {
     private readonly id: BotResourceId,
     private readonly name: string,
     private readonly markerColor: string,
-    private readonly articleId: number
+    private readonly articleId: number,
+    private readonly level: number
   ) {}
 
   static create(props: BotResourceProps): BotResource {
@@ -38,7 +41,11 @@ export class BotResource {
       throw new Error('Resource article id must be a positive integer.');
     }
 
-    return new BotResource(props.id, name, markerColor, props.articleId);
+    if (!Number.isInteger(props.level) || props.level < 0) {
+      throw new Error('Resource level must be a non-negative integer.');
+    }
+
+    return new BotResource(props.id, name, markerColor, props.articleId, props.level);
   }
 
   getId(): BotResourceId {
@@ -53,6 +60,10 @@ export class BotResource {
     return this.name;
   }
 
+  getLevel(): number {
+    return this.level;
+  }
+
   getMarkerColor(): string {
     return this.markerColor;
   }
@@ -62,7 +73,8 @@ export class BotResource {
       id: this.id,
       name: this.name,
       markerColor: this.markerColor,
-      articleId: this.articleId
+      articleId: this.articleId,
+      level: this.level
     };
   }
 }

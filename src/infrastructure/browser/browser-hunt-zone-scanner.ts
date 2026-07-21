@@ -1,13 +1,13 @@
 import type { HuntZoneScanner } from '../../application/ports/hunt-zone-scanner';
 import type { HuntZoneScan } from '../../domain/entities/hunt-zone-scan';
-import { HUNT_ZONE_DIAGNOSTICS_REQUEST } from './hunt-zone-diagnostics-request';
+import { buildHuntZoneDiagnosticsUrl, HUNT_ZONE_DIAGNOSTICS_REQUEST } from './hunt-zone-diagnostics-request';
 import { DwarHuntZoneXmlParser } from './dwar-hunt-zone-xml-parser';
 import type { HuntZoneScanOptions } from '../../application/ports/hunt-zone-scanner';
 
 export class BrowserHuntZoneScanner implements HuntZoneScanner {
   constructor(private readonly parser: DwarHuntZoneXmlParser) {}
 
-  async scan(options: HuntZoneScanOptions = {}): Promise<HuntZoneScan> {
+  async scan(options: HuntZoneScanOptions): Promise<HuntZoneScan> {
     const requestInit: RequestInit = {
       method: HUNT_ZONE_DIAGNOSTICS_REQUEST.method
     };
@@ -16,7 +16,7 @@ export class BrowserHuntZoneScanner implements HuntZoneScanner {
       requestInit.signal = options.signal;
     }
 
-    const response = await fetch(HUNT_ZONE_DIAGNOSTICS_REQUEST.url, requestInit);
+    const response = await fetch(buildHuntZoneDiagnosticsUrl(options.areaId), requestInit);
 
     if (!response.ok) {
       throw new Error(`Hunt zone scan failed with HTTP ${response.status}.`);

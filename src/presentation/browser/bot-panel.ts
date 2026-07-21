@@ -1,5 +1,7 @@
 import type { BotResourceId, BotResourceSnapshot } from '../../domain/entities/bot-resource';
+import type { HuntLocationId, HuntLocationSnapshot } from '../../domain/entities/hunt-location';
 import { getPickaxeIcon } from './pickaxe-icon';
+import { createHuntLocationSelect, type HuntLocationSelectElements } from './hunt-location-select';
 import { createResourcePicker, type ResourcePickerElements } from './resource-picker';
 
 export interface BotPanelElements {
@@ -8,6 +10,7 @@ export interface BotPanelElements {
   closeButton: HTMLButtonElement;
   startMiningButton: HTMLButtonElement;
   resourcePicker: ResourcePickerElements;
+  locationSelect: HuntLocationSelectElements;
   logList: HTMLElement;
   resizeHandle: HTMLButtonElement;
 }
@@ -21,22 +24,26 @@ interface MiningControlsElements {
   controls: HTMLElement;
   startMiningButton: HTMLButtonElement;
   resourcePicker: ResourcePickerElements;
+  locationSelect: HuntLocationSelectElements;
 }
 
 export interface BotPanelOptions {
   selectedResourceIds?: readonly BotResourceId[] | null | undefined;
   onResourceSelectionChange?: ((resources: readonly BotResourceSnapshot[]) => void) | undefined;
+  selectedLocationId?: HuntLocationId | null | undefined;
+  onLocationSelectionChange?: ((location: HuntLocationSnapshot) => void) | undefined;
 }
 
 export function createBotPanel(
   resources: readonly BotResourceSnapshot[],
+  locations: readonly HuntLocationSnapshot[],
   options: BotPanelOptions = {}
 ): BotPanelElements {
   const panel = document.createElement('section');
   panel.className = 'dwar-panel';
   panel.hidden = true;
   const headerElements = createPanelHeader();
-  const controlsElements = createMiningControls(resources, options);
+  const controlsElements = createMiningControls(resources, locations, options);
   const logList = createLogList();
   const resizeHandle = createResizeHandle();
   panel.append(headerElements.header, controlsElements.controls, logList, resizeHandle);
@@ -47,6 +54,7 @@ export function createBotPanel(
     closeButton: headerElements.closeButton,
     startMiningButton: controlsElements.startMiningButton,
     resourcePicker: controlsElements.resourcePicker,
+    locationSelect: controlsElements.locationSelect,
     logList,
     resizeHandle
   };
@@ -85,6 +93,7 @@ function createPanelHeader(): PanelHeaderElements {
 
 function createMiningControls(
   resources: readonly BotResourceSnapshot[],
+  locations: readonly HuntLocationSnapshot[],
   options: BotPanelOptions
 ): MiningControlsElements {
   const controls = document.createElement('div');
@@ -100,12 +109,22 @@ function createMiningControls(
     selectedResourceIds: options.selectedResourceIds,
     onSelectionChange: options.onResourceSelectionChange
   });
-  controls.append(startMiningButton, resourcePicker.root);
+
+  const locationSelect = createHuntLocationSelect(locations, {
+    selectedLocationId: options.selectedLocationId,
+    onLocationChange: options.onLocationSelectionChange
+  });
+
+  const selectorGroup = document.createElement('div');
+  selectorGroup.className = 'dwar-panel__selectors';
+  selectorGroup.append(resourcePicker.root, locationSelect.root);
+  controls.append(startMiningButton, selectorGroup);
 
   return {
     controls,
     startMiningButton,
-    resourcePicker
+    resourcePicker,
+    locationSelect
   };
 }
 
