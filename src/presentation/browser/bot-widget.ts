@@ -126,7 +126,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
 
     void dependencies.runResourceMining
       .execute({
-        selectedResourceIds: selectedResources.map(({ id }) => id),
+        getSelectedResourceIds: () => botPanel.resourcePicker.getSelectedResources().map(({ id }) => id),
         selectedLocationId: selectedLocation.id,
         signal: controller.signal,
         observer: {

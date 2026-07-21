@@ -36,7 +36,7 @@ export interface ResourceMiningConfig {
 }
 
 export interface RunResourceMiningInput {
-  selectedResourceIds: readonly BotResourceId[];
+  getSelectedResourceIds(): readonly BotResourceId[];
   selectedLocationId: HuntLocationId;
   observer?: ResourceMiningObserver;
   signal?: AbortSignal;
@@ -137,10 +137,21 @@ export class RunResourceMiningUseCase {
   }
 
   async execute(input: RunResourceMiningInput): Promise<void> {
-    const selectedArticleIds = this.getSelectedArticleIds(input.selectedResourceIds);
     const location = this.getSelectedLocation(input.selectedLocationId);
 
     while (!input.signal?.aborted) {
+      const selectedArticleIds = this.getSelectedArticleIds(input.getSelectedResourceIds());
+
+      if (selectedArticleIds.size === 0) {
+        this.emit(input, {
+          type: 'no-safe-resource',
+          selectedResourceCount: 0,
+          delayMs: this.config.noSafeResourceDelayMs
+        });
+        await this.delay.wait(this.config.noSafeResourceDelayMs, input.signal);
+        continue;
+      }
+
       this.emit(input, {
         type: 'scan-started'
       });
@@ -328,7 +339,7 @@ export class RunResourceMiningUseCase {
 
   private getSelectedArticleIds(selectedResourceIds: readonly BotResourceId[]): ReadonlySet<number> {
     if (selectedResourceIds.length === 0) {
-      throw new Error('At least one resource must be selected before mining.');
+      return new Set();
     }
 
     const selectedResourceIdSet = new Set(selectedResourceIds);
