@@ -388,6 +388,25 @@ export const BOT_WIDGET_STYLES = `
     white-space: nowrap;
   }
 
+  .dwar-panel__log-section {
+    flex: 1 1 auto;
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    background: #090d13;
+  }
+
+  .dwar-panel__log-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 0 0 auto;
+    height: 34px;
+    padding: 4px 8px;
+    background: linear-gradient(180deg, rgba(120, 217, 194, .06), rgba(120, 217, 194, .015));
+    border-bottom: 1px solid rgba(255, 255, 255, .06);
+  }
+
   .dwar-panel__logs {
     flex: 1 1 auto;
     min-height: 0;
@@ -526,11 +545,6 @@ export const BOT_WIDGET_STYLES = `
 
   .dwar-log-line__time {
     color: #7f8ca1;
-  }
-
-  .dwar-log-colored-text {
-    color: var(--dwar-log-text-color);
-    font-weight: 800;
   }
 
   .dwar-log-tag {

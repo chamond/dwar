@@ -21,7 +21,6 @@ export interface BotPanelElements {
 
 interface PanelHeaderElements {
   header: HTMLElement;
-  clearLogButton: HTMLButtonElement;
   closeButton: HTMLButtonElement;
 }
 
@@ -30,6 +29,12 @@ interface MiningControlsElements {
   startMiningButton: HTMLButtonElement;
   resourcePicker: ResourcePickerElements;
   locationSelect: HuntLocationSelectElements;
+}
+
+interface LogSectionElements {
+  root: HTMLElement;
+  clearLogButton: HTMLButtonElement;
+  logList: HTMLElement;
 }
 
 export interface BotPanelOptions {
@@ -49,20 +54,20 @@ export function createBotPanel(
   panel.hidden = true;
   const headerElements = createPanelHeader();
   const controlsElements = createMiningControls(resources, locations, options);
-  const logList = createLogList();
+  const logSectionElements = createLogSection();
   const processBar = createProcessBar();
   const resizeHandle = createResizeHandle();
-  panel.append(headerElements.header, controlsElements.controls, logList, processBar.root, resizeHandle);
+  panel.append(headerElements.header, controlsElements.controls, logSectionElements.root, processBar.root, resizeHandle);
 
   return {
     panel,
     header: headerElements.header,
-    clearLogButton: headerElements.clearLogButton,
+    clearLogButton: logSectionElements.clearLogButton,
     closeButton: headerElements.closeButton,
     startMiningButton: controlsElements.startMiningButton,
     resourcePicker: controlsElements.resourcePicker,
     locationSelect: controlsElements.locationSelect,
-    logList,
+    logList: logSectionElements.logList,
     processBar,
     resizeHandle
   };
@@ -86,14 +91,6 @@ function createPanelHeader(): PanelHeaderElements {
   const actions = document.createElement('div');
   actions.className = 'dwar-panel__actions';
 
-  const clearLogButton = document.createElement('button');
-  clearLogButton.type = 'button';
-  clearLogButton.className = 'dwar-panel__icon-button dwar-panel__clear-log';
-  clearLogButton.dataset.dwarPanelAction = '';
-  clearLogButton.setAttribute('aria-label', 'Очистить лог');
-  clearLogButton.setAttribute('title', 'Очистить лог');
-  clearLogButton.innerHTML = getClearLogIcon();
-
   const closeButton = document.createElement('button');
   closeButton.type = 'button';
   closeButton.className = 'dwar-panel__icon-button dwar-panel__close';
@@ -102,12 +99,11 @@ function createPanelHeader(): PanelHeaderElements {
   closeButton.innerHTML = '&times;';
 
   title.append(status, titleText);
-  actions.append(clearLogButton, closeButton);
+  actions.append(closeButton);
   header.append(title, actions);
 
   return {
     header,
-    clearLogButton,
     closeButton
   };
 }
@@ -156,6 +152,32 @@ function createLogList(): HTMLElement {
   logList.setAttribute('aria-live', 'polite');
 
   return logList;
+}
+
+function createLogSection(): LogSectionElements {
+  const root = document.createElement('div');
+  root.className = 'dwar-panel__log-section';
+
+  const toolbar = document.createElement('div');
+  toolbar.className = 'dwar-panel__log-toolbar';
+
+  const clearLogButton = document.createElement('button');
+  clearLogButton.type = 'button';
+  clearLogButton.className = 'dwar-panel__icon-button dwar-panel__clear-log';
+  clearLogButton.dataset.dwarPanelAction = '';
+  clearLogButton.setAttribute('aria-label', 'Очистить лог');
+  clearLogButton.setAttribute('title', 'Очистить лог');
+  clearLogButton.innerHTML = getClearLogIcon();
+
+  const logList = createLogList();
+  toolbar.append(clearLogButton);
+  root.append(toolbar, logList);
+
+  return {
+    root,
+    clearLogButton,
+    logList
+  };
 }
 
 function createResizeHandle(): HTMLButtonElement {

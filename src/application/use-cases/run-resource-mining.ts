@@ -70,9 +70,7 @@ export type ResourceMiningEvent =
       totalMobCount: number;
       aggressiveMobCount: number;
       selectedResourceCount: number;
-      availableResourceCount: number;
       safeResourceCount: number;
-      dangerRadius: number;
     }
   | {
       type: 'no-safe-resource';
@@ -97,12 +95,7 @@ export type ResourceMiningEvent =
   | {
       type: 'safety-check-completed';
       resource: ResourceMiningResourceInfo;
-      elapsedMs: number;
       isSafe: boolean;
-      calmnessPercent: number;
-      safetyPercent: number;
-      nearestDangerousMob: ResourceMiningMobInfo | null;
-      nearestDangerousMobDistance: number | null;
     }
   | {
       type: 'farm-interrupted';
@@ -162,9 +155,7 @@ export class RunResourceMiningUseCase {
         totalMobCount: scan.getMobs().length,
         aggressiveMobCount: scan.getMobs().filter((mob) => mob.getAggressionLevel() > 0).length,
         selectedResourceCount: selection.candidateCount,
-        availableResourceCount: selection.availableCandidateCount,
-        safeResourceCount: selection.safeCandidateCount,
-        dangerRadius: this.config.dangerRadius
+        safeResourceCount: selection.safeCandidateCount
       });
 
       if (!selection.selectedSafety) {
@@ -272,12 +263,7 @@ export class RunResourceMiningUseCase {
       this.emit(input, {
         type: 'safety-check-completed',
         resource: createResourceInfo(resource),
-        elapsedMs,
-        isSafe: safety.isSafe,
-        calmnessPercent: safety.calmnessPercent,
-        safetyPercent: safety.safetyPercent,
-        nearestDangerousMob: createMobInfo(safety.nearestDangerousMob),
-        nearestDangerousMobDistance: safety.nearestDangerousMobDistance
+        isSafe: safety.isSafe
       });
 
       if (!safety.isSafe) {

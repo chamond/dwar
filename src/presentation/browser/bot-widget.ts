@@ -11,7 +11,7 @@ import type {
   ResourceMiningResourceInfo,
   RunResourceMiningUseCase
 } from '../../application/use-cases/run-resource-mining';
-import { appendLogLine, clearLogList, upsertLogLine, type BotLogLinePart } from './log-list';
+import { appendLogLine, clearLogList, type BotLogLinePart } from './log-list';
 import { createBotPanel } from './bot-panel';
 import { createLauncherButton } from './launcher-button';
 import { getPickaxeIcon } from './pickaxe-icon';
@@ -23,10 +23,6 @@ import { BOT_WIDGET_STYLES } from './bot-widget-styles';
 import { DRAG_IGNORE_SELECTOR, ROOT_ID } from './bot-widget-constants';
 import { keepPanelInViewport, positionPanelNearLauncher } from './panel-position';
 import { attachResizablePanel, keepPanelSizeInViewport, restorePanelSize } from './resizable-panel';
-
-const SAFETY_CHECK_LOG_KEY = 'resource-mining-safety-check';
-const DANGER_TEXT_HUE = 0;
-const SAFE_TEXT_HUE = 142;
 
 export interface BotWidgetDependencies {
   createLogEntry: CreateBotLogEntryUseCase;
@@ -60,14 +56,8 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     }
   });
 
-  const addLog = (message: string, parts?: readonly BotLogLinePart[], key?: string): void => {
+  const addLog = (message: string, parts?: readonly BotLogLinePart[]): void => {
     const entry = dependencies.createLogEntry.execute({ message }).toSnapshot();
-
-    if (key) {
-      upsertLogLine(botPanel.logList, key, entry, parts);
-      return;
-    }
-
     appendLogLine(botPanel.logList, entry, parts);
   };
   let miningAbortController: AbortController | null = null;
@@ -220,7 +210,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
 
 function handleMiningEvent(
   event: ResourceMiningEvent,
-  addLog: (message: string, parts?: readonly BotLogLinePart[], key?: string) => void,
+  addLog: (message: string, parts?: readonly BotLogLinePart[]) => void,
   processBar: ProcessBarController
 ): void {
   updateMiningProcessBar(event, processBar);
@@ -283,7 +273,7 @@ function updateMiningProcessBar(event: ResourceMiningEvent, processBar: ProcessB
 
 function logMiningEvent(
   event: ResourceMiningEvent,
-  addLog: (message: string, parts?: readonly BotLogLinePart[], key?: string) => void
+  addLog: (message: string, parts?: readonly BotLogLinePart[]) => void
 ): void {
   switch (event.type) {
     case 'scan-started':
@@ -320,23 +310,7 @@ function logMiningEvent(
       return;
 
     case 'safety-check-started':
-      return;
-
     case 'safety-check-completed':
-      if (event.isSafe) {
-        addLog(
-          `Контроль безопасности: спокойно, прошло ${formatSeconds(event.elapsedMs)}. ${formatSafetyCheckPercents(event)}.`,
-          createSafetyCheckCalmLogParts(event),
-          SAFETY_CHECK_LOG_KEY
-        );
-        return;
-      }
-
-      addLog(
-        `Контроль безопасности: опасность рядом. ${formatSafetyCheckPercents(event)}.`,
-        createSafetyCheckDangerLogParts(event),
-        SAFETY_CHECK_LOG_KEY
-      );
       return;
 
     case 'farm-interrupted':
@@ -372,45 +346,6 @@ function createDangerLogParts(prefix: string, mob: ResourceMiningMobInfo | null)
   ];
 }
 
-function createSafetyCheckDangerLogParts(
-  event: Extract<ResourceMiningEvent, { type: 'safety-check-completed' }>
-): readonly BotLogLinePart[] {
-  if (!event.nearestDangerousMob) {
-    return [
-      'Контроль безопасности: опасность рядом. ',
-      ...createSafetyCheckPercentLogParts(event),
-      '.'
-    ];
-  }
-
-  return [
-    'Контроль безопасности: ',
-    createMobLogPart(event.nearestDangerousMob),
-    '. ',
-    ...createSafetyCheckPercentLogParts(event),
-    '.'
-  ];
-}
-
-function createSafetyCheckCalmLogParts(
-  event: Extract<ResourceMiningEvent, { type: 'safety-check-completed' }>
-): readonly BotLogLinePart[] {
-  return [
-    `Контроль безопасности: спокойно, прошло ${formatSeconds(event.elapsedMs)}. `,
-    ...createSafetyCheckPercentLogParts(event),
-    '.'
-  ];
-}
-
-function createSafetyCheckPercentLogParts(
-  event: Extract<ResourceMiningEvent, { type: 'safety-check-completed' }>
-): readonly BotLogLinePart[] {
-  return [
-    `Спокойность ${event.calmnessPercent}%, `,
-    createSafetyPercentLogPart(event.safetyPercent)
-  ];
-}
-
 function createResourceLogPart(resource: ResourceMiningResourceInfo): BotLogLinePart {
   const label = formatResourceLabel(resource);
 
@@ -429,18 +364,6 @@ function createMobLogPart(mob: ResourceMiningMobInfo): BotLogLinePart {
   };
 }
 
-function createSafetyPercentLogPart(safetyPercent: number): BotLogLinePart {
-  const normalizedSafetyPercent = clampPercent(safetyPercent);
-  const dangerPercent = 100 - normalizedSafetyPercent;
-
-  return {
-    text: `безопасность ${normalizedSafetyPercent}%`,
-    color: getSafetyTextColor(normalizedSafetyPercent),
-    title: `Опасность ${dangerPercent}%`,
-    appearance: 'text'
-  };
-}
-
 function setMiningButtonActive(button: HTMLButtonElement, isActive: boolean): void {
   button.classList.toggle('is-active', isActive);
   button.setAttribute('aria-label', isActive ? 'Остановить добычу' : 'Начать добычу');
@@ -449,22 +372,6 @@ function setMiningButtonActive(button: HTMLButtonElement, isActive: boolean): vo
 
 function formatSeconds(durationMs: number): string {
   return `${Math.round(durationMs / 1000)} сек`;
-}
-
-function formatSafetyCheckPercents(
-  event: Extract<ResourceMiningEvent, { type: 'safety-check-completed' }>
-): string {
-  return `Спокойность ${event.calmnessPercent}%, безопасность ${event.safetyPercent}%`;
-}
-
-function getSafetyTextColor(safetyPercent: number): string {
-  const hue = Math.round(DANGER_TEXT_HUE + ((SAFE_TEXT_HUE - DANGER_TEXT_HUE) * clampPercent(safetyPercent)) / 100);
-
-  return `hsl(${hue} 78% 58%)`;
-}
-
-function clampPercent(value: number): number {
-  return Math.round(Math.max(0, Math.min(100, value)));
 }
 
 function isAbortError(error: unknown): boolean {

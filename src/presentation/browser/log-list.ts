@@ -4,7 +4,6 @@ export interface BotLogTagPart {
   text: string;
   color: string;
   title?: string;
-  appearance?: 'tag' | 'text';
 }
 
 export type BotLogLinePart = string | BotLogTagPart;
@@ -18,32 +17,8 @@ export function appendLogLine(
   logList.scrollTop = logList.scrollHeight;
 }
 
-export function upsertLogLine(
-  logList: HTMLElement,
-  key: string,
-  entry: BotLogEntrySnapshot,
-  parts: readonly BotLogLinePart[] = [entry.message]
-): void {
-  const existingLine = findLogLineByKey(logList, key);
-  const nextLine = createLogLine(entry, parts);
-  nextLine.dataset.dwarLogKey = key;
-
-  if (existingLine) {
-    existingLine.remove();
-  }
-
-  logList.append(nextLine);
-  logList.scrollTop = logList.scrollHeight;
-}
-
 export function clearLogList(logList: HTMLElement): void {
   logList.replaceChildren();
-}
-
-function findLogLineByKey(logList: HTMLElement, key: string): HTMLElement | null {
-  return Array.from(logList.children).find((child): child is HTMLElement => {
-    return child instanceof HTMLElement && child.dataset.dwarLogKey === key;
-  }) ?? null;
 }
 
 function createLogLine(entry: BotLogEntrySnapshot, parts: readonly BotLogLinePart[]): HTMLElement {
@@ -67,24 +42,7 @@ function createLogPart(part: BotLogLinePart): Node {
     return document.createTextNode(part);
   }
 
-  if (part.appearance === 'text') {
-    return createColoredTextPart(part);
-  }
-
   return createTagPart(part);
-}
-
-function createColoredTextPart(part: BotLogTagPart): HTMLElement {
-  const text = document.createElement('span');
-  text.className = 'dwar-log-colored-text';
-  text.textContent = part.text;
-  text.style.setProperty('--dwar-log-text-color', part.color);
-
-  if (part.title) {
-    text.title = part.title;
-  }
-
-  return text;
 }
 
 function createTagPart(part: BotLogTagPart): HTMLElement {

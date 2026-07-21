@@ -1,8 +1,6 @@
 import type { HuntMob } from '../entities/hunt-mob';
 import type { HuntResourceNode } from '../entities/hunt-resource-node';
 
-const AWARENESS_RADIUS_MULTIPLIER = 10;
-
 export interface ResourceMiningSafetyOptions {
   dangerRadius: number;
 }
@@ -11,8 +9,6 @@ export interface ResourceMiningSafety {
   resource: HuntResourceNode;
   isSafe: boolean;
   isAvailable: boolean;
-  calmnessPercent: number;
-  safetyPercent: number;
   nearestDangerousMob: HuntMob | null;
   nearestDangerousMobDistance: number | null;
   blockingMob: HuntMob | null;
@@ -22,7 +18,6 @@ export interface ResourceMiningSafety {
 export interface ResourceMiningSelection {
   selectedSafety: ResourceMiningSafety | null;
   candidateCount: number;
-  availableCandidateCount: number;
   safeCandidateCount: number;
 }
 
@@ -37,7 +32,6 @@ export function selectSafestResourceForMining(
   options: ResourceMiningSafetyOptions
 ): ResourceMiningSelection {
   const candidateSafeties = resources.map((resource) => assessResourceMiningSafety(resource, mobs, options));
-  const availableCandidateCount = candidateSafeties.filter((safety) => safety.isAvailable).length;
   const safeCandidates = candidateSafeties.filter((safety) => safety.isSafe);
 
   return {
@@ -49,7 +43,6 @@ export function selectSafestResourceForMining(
       return compareResourceSafety(current, best) < 0 ? current : best;
     }, null),
     candidateCount: candidateSafeties.length,
-    availableCandidateCount,
     safeCandidateCount: safeCandidates.length
   };
 }
@@ -76,56 +69,11 @@ export function assessResourceMiningSafety(
     resource,
     isSafe: isAvailable && blockingMob === null,
     isAvailable,
-    calmnessPercent: calculateCalmnessPercent(dangerousDistances, options.dangerRadius),
-    safetyPercent: calculateSafetyPercent(nearestDangerousMob?.distance ?? null, options.dangerRadius, isAvailable),
     nearestDangerousMob: nearestDangerousMob?.mob ?? null,
     nearestDangerousMobDistance: nearestDangerousMob?.distance ?? null,
     blockingMob: blockingMob?.mob ?? null,
     blockingMobDistance: blockingMob?.distance ?? null
   };
-}
-
-function calculateSafetyPercent(
-  nearestDangerousMobDistance: number | null,
-  dangerRadius: number,
-  isAvailable: boolean
-): number {
-  if (!isAvailable) {
-    return 0;
-  }
-
-  if (nearestDangerousMobDistance === null) {
-    return 100;
-  }
-
-  const awarenessRadius = calculateAwarenessRadius(dangerRadius);
-
-  return clampPercent((nearestDangerousMobDistance / awarenessRadius) * 100);
-}
-
-function calculateCalmnessPercent(dangerousDistances: readonly MobDistance[], dangerRadius: number): number {
-  if (dangerousDistances.length === 0) {
-    return 100;
-  }
-
-  const awarenessRadius = calculateAwarenessRadius(dangerRadius);
-  const totalThreatPercent = dangerousDistances.reduce((totalThreat, { mob, distance }) => {
-    const aggressionThreat = clampPercent(mob.getAggressionLevel()) / 100;
-    const proximityThreat = Math.max(0, 1 - distance / awarenessRadius);
-    const threatPercent = aggressionThreat * proximityThreat * 100;
-
-    return totalThreat + threatPercent;
-  }, 0);
-
-  return clampPercent(100 - totalThreatPercent);
-}
-
-function calculateAwarenessRadius(dangerRadius: number): number {
-  return Math.max(dangerRadius * AWARENESS_RADIUS_MULTIPLIER, 1);
-}
-
-function clampPercent(value: number): number {
-  return Math.round(Math.max(0, Math.min(100, value)));
 }
 
 function compareResourceSafety(left: ResourceMiningSafety, right: ResourceMiningSafety): number {
