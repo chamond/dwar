@@ -1,22 +1,27 @@
 import type { BotResourceId, BotResourceSnapshot } from '../../domain/entities/bot-resource';
 import type { HuntLocationId, HuntLocationSnapshot } from '../../domain/entities/hunt-location';
+import { getClearLogIcon } from './clear-log-icon';
 import { getPickaxeIcon } from './pickaxe-icon';
 import { createHuntLocationSelect, type HuntLocationSelectElements } from './hunt-location-select';
+import { createProcessBar, type ProcessBarElements } from './process-bar';
 import { createResourcePicker, type ResourcePickerElements } from './resource-picker';
 
 export interface BotPanelElements {
   panel: HTMLElement;
   header: HTMLElement;
+  clearLogButton: HTMLButtonElement;
   closeButton: HTMLButtonElement;
   startMiningButton: HTMLButtonElement;
   resourcePicker: ResourcePickerElements;
   locationSelect: HuntLocationSelectElements;
   logList: HTMLElement;
+  processBar: ProcessBarElements;
   resizeHandle: HTMLButtonElement;
 }
 
 interface PanelHeaderElements {
   header: HTMLElement;
+  clearLogButton: HTMLButtonElement;
   closeButton: HTMLButtonElement;
 }
 
@@ -45,17 +50,20 @@ export function createBotPanel(
   const headerElements = createPanelHeader();
   const controlsElements = createMiningControls(resources, locations, options);
   const logList = createLogList();
+  const processBar = createProcessBar();
   const resizeHandle = createResizeHandle();
-  panel.append(headerElements.header, controlsElements.controls, logList, resizeHandle);
+  panel.append(headerElements.header, controlsElements.controls, logList, processBar.root, resizeHandle);
 
   return {
     panel,
     header: headerElements.header,
+    clearLogButton: headerElements.clearLogButton,
     closeButton: headerElements.closeButton,
     startMiningButton: controlsElements.startMiningButton,
     resourcePicker: controlsElements.resourcePicker,
     locationSelect: controlsElements.locationSelect,
     logList,
+    processBar,
     resizeHandle
   };
 }
@@ -75,18 +83,31 @@ function createPanelHeader(): PanelHeaderElements {
   const titleText = document.createElement('span');
   titleText.textContent = 'DWAR Bot';
 
+  const actions = document.createElement('div');
+  actions.className = 'dwar-panel__actions';
+
+  const clearLogButton = document.createElement('button');
+  clearLogButton.type = 'button';
+  clearLogButton.className = 'dwar-panel__icon-button dwar-panel__clear-log';
+  clearLogButton.dataset.dwarPanelAction = '';
+  clearLogButton.setAttribute('aria-label', 'Очистить лог');
+  clearLogButton.setAttribute('title', 'Очистить лог');
+  clearLogButton.innerHTML = getClearLogIcon();
+
   const closeButton = document.createElement('button');
   closeButton.type = 'button';
-  closeButton.className = 'dwar-panel__close';
-  closeButton.dataset.dwarClose = '';
+  closeButton.className = 'dwar-panel__icon-button dwar-panel__close';
+  closeButton.dataset.dwarPanelAction = '';
   closeButton.setAttribute('aria-label', 'Скрыть интерфейс');
   closeButton.innerHTML = '&times;';
 
   title.append(status, titleText);
-  header.append(title, closeButton);
+  actions.append(clearLogButton, closeButton);
+  header.append(title, actions);
 
   return {
     header,
+    clearLogButton,
     closeButton
   };
 }

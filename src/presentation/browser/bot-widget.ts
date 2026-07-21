@@ -11,10 +11,11 @@ import type {
   ResourceMiningResourceInfo,
   RunResourceMiningUseCase
 } from '../../application/use-cases/run-resource-mining';
-import { appendLogLine, type BotLogLinePart } from './log-list';
+import { appendLogLine, clearLogList, type BotLogLinePart } from './log-list';
 import { createBotPanel } from './bot-panel';
 import { createLauncherButton } from './launcher-button';
 import { getPickaxeIcon } from './pickaxe-icon';
+import { createProcessBarController, type ProcessBarController } from './process-bar';
 import { formatResourceLabel } from './resource-label';
 import { attachDraggableLauncher, restoreLauncherPosition } from './draggable-launcher';
 import { attachDraggablePanel } from './draggable-panel';
@@ -60,6 +61,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     appendLogLine(botPanel.logList, entry, parts);
   };
   let miningAbortController: AbortController | null = null;
+  const processBar = createProcessBarController(botPanel.processBar);
 
   shadowRoot.append(createStyleElement(), launcher, botPanel.panel);
   document.documentElement.append(host);
@@ -96,6 +98,10 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     hidePanel(botPanel.panel, launcher);
   });
 
+  botPanel.clearLogButton.addEventListener('click', () => {
+    clearLogList(botPanel.logList);
+  });
+
   function startMining(): void {
     const selectedResources = botPanel.resourcePicker.getSelectedResources();
     const selectedLocation = botPanel.locationSelect.getSelectedLocation();
@@ -125,7 +131,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
         signal: controller.signal,
         observer: {
           handle: (event) => {
-            logMiningEvent(event, addLog);
+            handleMiningEvent(event, addLog, processBar);
           }
         }
       })
@@ -141,6 +147,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
 
         miningAbortController = null;
         setMiningButtonActive(botPanel.startMiningButton, false);
+        processBar.reset();
 
         if (controller.signal.aborted) {
           addLog('Добыча остановлена.');
@@ -199,6 +206,54 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   });
 
   addLog('Скрипт загружен.');
+}
+
+function handleMiningEvent(
+  event: ResourceMiningEvent,
+  addLog: (message: string, parts?: readonly BotLogLinePart[]) => void,
+  processBar: ProcessBarController
+): void {
+  updateMiningProcessBar(event, processBar);
+  logMiningEvent(event, addLog);
+}
+
+function updateMiningProcessBar(event: ResourceMiningEvent, processBar: ProcessBarController): void {
+  switch (event.type) {
+    case 'no-safe-resource':
+      processBar.start({
+        label: 'Пауза поиска',
+        durationMs: event.delayMs
+      });
+      return;
+
+    case 'farm-started':
+      processBar.start({
+        label: `Добыча ${formatResourceLabel(event.resource)}`,
+        durationMs: event.miningDurationMs,
+        accentColor: event.resource.markerColor
+      });
+      return;
+
+    case 'farm-cancelled':
+    case 'farm-interrupted':
+      processBar.reset();
+      return;
+
+    case 'farm-completed':
+      processBar.complete();
+      return;
+
+    case 'next-mining-delayed':
+      processBar.start({
+        label: 'Пауза',
+        durationMs: event.delayMs
+      });
+      return;
+
+    case 'scan-completed':
+    case 'safety-check-completed':
+      return;
+  }
 }
 
 function logMiningEvent(

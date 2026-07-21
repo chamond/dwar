@@ -17,6 +17,10 @@ export function appendLogLine(
   logList.scrollTop = logList.scrollHeight;
 }
 
+export function clearLogList(logList: HTMLElement): void {
+  logList.replaceChildren();
+}
+
 function createLogLine(entry: BotLogEntrySnapshot, parts: readonly BotLogLinePart[]): HTMLElement {
   const line = document.createElement('div');
   line.className = 'dwar-log-line';
