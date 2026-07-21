@@ -2,62 +2,24 @@ import type {
   LauncherPosition,
   LauncherPositionStore
 } from '../../application/ports/launcher-position-store';
+import { loadJsonFromLocalStorage, saveJsonToLocalStorage } from './local-storage-json';
 
 const STORAGE_KEY = 'dwar-bot.launcher-position.v1';
 
 export class LocalStorageLauncherPositionStore implements LauncherPositionStore {
   load(): LauncherPosition | null {
-    const storage = getLocalStorage();
-
-    if (!storage) {
-      return null;
-    }
-
-    try {
-      const rawPosition = storage.getItem(STORAGE_KEY);
-
-      if (!rawPosition) {
-        return null;
-      }
-
-      const parsedPosition: unknown = JSON.parse(rawPosition);
-
-      if (!isLauncherPosition(parsedPosition)) {
-        return null;
-      }
-
-      return parsedPosition;
-    } catch {
-      return null;
-    }
+    return loadJsonFromLocalStorage(STORAGE_KEY, isLauncherPosition);
   }
 
   save(position: LauncherPosition): void {
-    const storage = getLocalStorage();
-
-    if (!storage || !isFinitePosition(position)) {
+    if (!isFinitePosition(position)) {
       return;
     }
 
-    try {
-      storage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          left: Math.round(position.left),
-          top: Math.round(position.top)
-        })
-      );
-    } catch {
-      // The page can block localStorage. The widget stays usable without persistence.
-    }
-  }
-}
-
-function getLocalStorage(): Storage | null {
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
+    saveJsonToLocalStorage(STORAGE_KEY, {
+      left: Math.round(position.left),
+      top: Math.round(position.top)
+    });
   }
 }
 

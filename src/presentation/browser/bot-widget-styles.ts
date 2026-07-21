@@ -52,6 +52,7 @@ export const BOT_WIDGET_STYLES = `
 
   .dwar-launcher:focus-visible,
   .dwar-panel__close:focus-visible,
+  .dwar-panel__resize:focus-visible,
   .dwar-mining-button:focus-visible,
   .dwar-resource-picker__toggle:focus-visible {
     outline: 2px solid #78d9c2;
@@ -67,8 +68,14 @@ export const BOT_WIDGET_STYLES = `
   .dwar-panel {
     position: fixed;
     z-index: 2147483647;
-    width: min(356px, calc(100vw - 24px));
-    min-height: 288px;
+    display: flex;
+    width: 356px;
+    height: 288px;
+    min-width: 296px;
+    min-height: 240px;
+    max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+    flex-direction: column;
     overflow: hidden;
     color: #e9edf5;
     background: linear-gradient(180deg, #171d28 0%, #0c1017 100%);
@@ -96,6 +103,10 @@ export const BOT_WIDGET_STYLES = `
 
   .dwar-panel.is-dragging .dwar-panel__header {
     cursor: grabbing;
+  }
+
+  .dwar-panel.is-resizing {
+    user-select: none;
   }
 
   .dwar-panel__title {
@@ -141,6 +152,7 @@ export const BOT_WIDGET_STYLES = `
   .dwar-panel__controls {
     display: flex;
     align-items: stretch;
+    flex: 0 0 auto;
     gap: 8px;
     padding: 10px;
     background: #101720;
@@ -310,7 +322,8 @@ export const BOT_WIDGET_STYLES = `
   }
 
   .dwar-panel__logs {
-    height: 204px;
+    flex: 1 1 auto;
+    min-height: 0;
     padding: 10px 12px;
     overflow: auto;
     background:
@@ -318,6 +331,29 @@ export const BOT_WIDGET_STYLES = `
       #090d13;
     font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
     scrollbar-color: #394353 #090d13;
+  }
+
+  .dwar-panel__resize {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    display: block;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    color: rgba(120, 217, 194, .7);
+    background:
+      linear-gradient(135deg, transparent 0 54%, currentColor 55% 59%, transparent 60%),
+      linear-gradient(135deg, transparent 0 70%, currentColor 71% 75%, transparent 76%);
+    border: 0;
+    border-radius: 0 0 8px 0;
+    cursor: nwse-resize;
+    touch-action: none;
+  }
+
+  .dwar-panel__resize:hover {
+    color: #78d9c2;
+    background-color: rgba(120, 217, 194, .08);
   }
 
   .dwar-log-line {

@@ -4,6 +4,7 @@ import { ScanHuntZoneUseCase } from './application/use-cases/scan-hunt-zone';
 import { BrowserHuntZoneScanner } from './infrastructure/browser/browser-hunt-zone-scanner';
 import { DwarHuntZoneXmlParser } from './infrastructure/browser/dwar-hunt-zone-xml-parser';
 import { LocalStorageLauncherPositionStore } from './infrastructure/browser/local-storage-launcher-position-store';
+import { LocalStoragePanelSizeStore } from './infrastructure/browser/local-storage-panel-size-store';
 import { StaticResourceRepository } from './infrastructure/local-data/static-resource-repository';
 import { InMemoryHuntZoneScanStore } from './infrastructure/memory/in-memory-hunt-zone-scan-store';
 import { SystemClock } from './infrastructure/system/system-clock';
@@ -15,6 +16,7 @@ function bootstrap(): void {
   const resourceRepository = new StaticResourceRepository();
   const listResources = new ListResourcesUseCase(resourceRepository);
   const launcherPositionStore = new LocalStorageLauncherPositionStore();
+  const panelSizeStore = new LocalStoragePanelSizeStore();
   const huntZoneXmlParser = new DwarHuntZoneXmlParser(resourceRepository);
   const huntZoneScanner = new BrowserHuntZoneScanner(huntZoneXmlParser);
   const huntZoneScanStore = new InMemoryHuntZoneScanStore();
@@ -24,6 +26,7 @@ function bootstrap(): void {
     createLogEntry,
     listResources,
     launcherPositionStore,
+    panelSizeStore,
     scanHuntZone
   });
 }

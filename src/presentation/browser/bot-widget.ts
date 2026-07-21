@@ -1,4 +1,5 @@
 import type { LauncherPositionStore } from '../../application/ports/launcher-position-store';
+import type { PanelSizeStore } from '../../application/ports/panel-size-store';
 import type { CreateBotLogEntryUseCase } from '../../application/use-cases/create-bot-log-entry';
 import type { ListResourcesUseCase } from '../../application/use-cases/list-resources';
 import type { ScanHuntZoneUseCase } from '../../application/use-cases/scan-hunt-zone';
@@ -11,11 +12,13 @@ import { attachDraggablePanel } from './draggable-panel';
 import { BOT_WIDGET_STYLES } from './bot-widget-styles';
 import { DRAG_IGNORE_SELECTOR, ROOT_ID } from './bot-widget-constants';
 import { keepPanelInViewport, positionPanelNearLauncher } from './panel-position';
+import { attachResizablePanel, keepPanelSizeInViewport, restorePanelSize } from './resizable-panel';
 
 export interface BotWidgetDependencies {
   createLogEntry: CreateBotLogEntryUseCase;
   listResources: ListResourcesUseCase;
   launcherPositionStore: LauncherPositionStore;
+  panelSizeStore: PanelSizeStore;
   scanHuntZone: ScanHuntZoneUseCase;
 }
 
@@ -39,6 +42,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   shadowRoot.append(createStyleElement(), launcher, botPanel.panel);
   document.documentElement.append(host);
   restoreLauncherPosition(launcher, dependencies.launcherPositionStore);
+  restorePanelSize(botPanel.panel, dependencies.panelSizeStore);
 
   const launcherDrag = attachDraggableLauncher({
     launcher,
@@ -125,6 +129,15 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     ignoreSelector: DRAG_IGNORE_SELECTOR
   });
 
+  attachResizablePanel({
+    panel: botPanel.panel,
+    handle: botPanel.resizeHandle,
+    sizeStore: dependencies.panelSizeStore,
+    onResize: () => {
+      keepPanelInViewport(botPanel.panel);
+    }
+  });
+
   shadowRoot.addEventListener('pointerdown', (event) => {
     if (event.target instanceof Element && botPanel.resourcePicker.root.contains(event.target)) {
       return;
@@ -137,6 +150,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     launcherDrag.keepInViewport();
 
     if (!botPanel.panel.hidden) {
+      keepPanelSizeInViewport(botPanel.panel);
       keepPanelInViewport(botPanel.panel);
     }
   });

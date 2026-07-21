@@ -9,6 +9,7 @@ export interface BotPanelElements {
   startMiningButton: HTMLButtonElement;
   resourcePicker: ResourcePickerElements;
   logList: HTMLElement;
+  resizeHandle: HTMLButtonElement;
 }
 
 interface PanelHeaderElements {
@@ -29,7 +30,8 @@ export function createBotPanel(resources: readonly BotResourceSnapshot[]): BotPa
   const headerElements = createPanelHeader();
   const controlsElements = createMiningControls(resources);
   const logList = createLogList();
-  panel.append(headerElements.header, controlsElements.controls, logList);
+  const resizeHandle = createResizeHandle();
+  panel.append(headerElements.header, controlsElements.controls, logList, resizeHandle);
 
   return {
     panel,
@@ -37,7 +39,8 @@ export function createBotPanel(resources: readonly BotResourceSnapshot[]): BotPa
     closeButton: headerElements.closeButton,
     startMiningButton: controlsElements.startMiningButton,
     resourcePicker: controlsElements.resourcePicker,
-    logList
+    logList,
+    resizeHandle
   };
 }
 
@@ -99,4 +102,14 @@ function createLogList(): HTMLElement {
   logList.setAttribute('aria-live', 'polite');
 
   return logList;
+}
+
+function createResizeHandle(): HTMLButtonElement {
+  const resizeHandle = document.createElement('button');
+  resizeHandle.type = 'button';
+  resizeHandle.className = 'dwar-panel__resize';
+  resizeHandle.setAttribute('aria-label', 'Изменить размер панели');
+  resizeHandle.setAttribute('title', 'Изменить размер панели');
+
+  return resizeHandle;
 }
