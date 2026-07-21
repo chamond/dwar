@@ -34,3 +34,25 @@ npm run build
 The compiled output is `dist/index.js`.
 
 Load that file on the game page to mount the floating pickaxe button and bot panel.
+
+## GitHub Pages Deploy
+
+The workflow in `.github/workflows/deploy-pages.yml` runs on pushes, pull requests,
+and manual launches. It builds the project, verifies that `dist` contains only
+`index.js`, and deploys `dist/index.js` to GitHub Pages from the default branch.
+
+Before the first deploy, open the repository settings on GitHub and set
+`Pages -> Build and deployment -> Source` to `GitHub Actions`.
+
+After a successful deploy, the script is available at:
+
+```text
+https://<owner>.github.io/<repository>/index.js
+```
+
+For user or organization Pages repositories named `<owner>.github.io`, GitHub
+serves it from:
+
+```text
+https://<owner>.github.io/index.js
+```
