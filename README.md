@@ -41,6 +41,9 @@ for agate, aquamarine, and turquoise. The panel exposes independent mining and
 crafting start buttons, compact multiselects for resources and profession
 recipes, and one shared crafting amount input defaulting to 10. It also shows
 separate progress bars for mining and every parallel crafting timer.
+Unexpected server responses trigger a siren alarm, a red human-attention log tag,
+and process shutdown. The panel header includes an alarm test button that uses
+the same sound path. The alarm asset is embedded into the single output bundle.
 
 ## GitHub Pages Deploy
 

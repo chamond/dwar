@@ -6,8 +6,7 @@ import type { ProfessionRecipeId } from '../../domain/entities/profession-recipe
 import {
   createProcessBar,
   createProcessBarController,
-  type ProcessBarController,
-  type ProcessBarElements
+  type ProcessBarController
 } from './process-bar';
 import { formatProfessionRecipeLabel } from './profession-recipe-label';
 
@@ -15,14 +14,12 @@ type CraftingProcessPhase = 'busy' | 'active' | 'pause' | 'complete';
 
 interface CraftingProcessBarEntry {
   controller: ProcessBarController;
-  elements: ProcessBarElements;
   phase: CraftingProcessPhase;
 }
 
 export interface CraftingProcessBarsController {
   handle(event: ProfessionCraftingEvent): void;
   reset(): void;
-  clearInterrupted(): void;
 }
 
 export function createCraftingProcessBarsController(container: HTMLElement): CraftingProcessBarsController {
@@ -56,7 +53,6 @@ export function createCraftingProcessBarsController(container: HTMLElement): Cra
     const elements = createProcessBar(`Крафт: ${formatProfessionRecipeLabel(recipe)}`);
     const entry: CraftingProcessBarEntry = {
       controller: createProcessBarController(elements),
-      elements,
       phase: 'busy'
     };
     entries.set(recipe.id, entry);
@@ -118,21 +114,6 @@ export function createCraftingProcessBarsController(container: HTMLElement): Cra
       }
     },
 
-    reset,
-
-    clearInterrupted(): void {
-      for (const [recipeId, entry] of entries) {
-        if (entry.phase === 'complete') {
-          continue;
-        }
-
-        entry.elements.root.remove();
-        entries.delete(recipeId);
-      }
-
-      if (entries.size === 0) {
-        reset();
-      }
-    }
+    reset
   };
 }

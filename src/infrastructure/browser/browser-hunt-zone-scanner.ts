@@ -1,3 +1,4 @@
+import { UnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
 import type { HuntZoneScanner } from '../../application/ports/hunt-zone-scanner';
 import type { HuntZoneScan } from '../../domain/entities/hunt-zone-scan';
 import { buildHuntZoneDiagnosticsUrl, HUNT_ZONE_DIAGNOSTICS_REQUEST } from './hunt-zone-diagnostics-request';
@@ -19,7 +20,7 @@ export class BrowserHuntZoneScanner implements HuntZoneScanner {
     const response = await fetch(buildHuntZoneDiagnosticsUrl(options.areaId), requestInit);
 
     if (!response.ok) {
-      throw new Error(`Hunt zone scan failed with HTTP ${response.status}.`);
+      throw new UnexpectedServerResponseError(`Hunt zone scan failed with HTTP ${response.status}.`);
     }
 
     return this.parser.parse(await response.text());

@@ -6,6 +6,9 @@ import { minify, transform } from '@swc/core';
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const swcOptions = JSON.parse(readFileSync(new URL('./.swcrc', import.meta.url), 'utf8'));
 delete swcOptions.$schema;
+const dataUrlAssetMimeTypes = new Map([
+  ['.ogg', 'audio/ogg']
+]);
 
 function resolveTypeScriptModule(source, importer) {
   if (!importer || !source.startsWith('.')) {
@@ -59,6 +62,30 @@ function swcTypeScriptPlugin() {
   };
 }
 
+function dataUrlAssetPlugin() {
+  return {
+    name: 'data-url-assets',
+    resolveId(source, importer) {
+      if (!importer || !dataUrlAssetMimeTypes.has(path.extname(source))) {
+        return null;
+      }
+
+      return path.resolve(path.dirname(importer), source);
+    },
+    load(id) {
+      const mimeType = dataUrlAssetMimeTypes.get(path.extname(id));
+
+      if (!mimeType) {
+        return null;
+      }
+
+      const encodedAsset = readFileSync(id).toString('base64');
+
+      return `export default "data:${mimeType};base64,${encodedAsset}";`;
+    }
+  };
+}
+
 function swcMinifyBundlePlugin() {
   return {
     name: 'swc-minify-bundle',
@@ -104,5 +131,5 @@ export default {
     name: 'DwarBot',
     sourcemap: false
   },
-  plugins: [swcTypeScriptPlugin(), swcMinifyBundlePlugin()]
+  plugins: [dataUrlAssetPlugin(), swcTypeScriptPlugin(), swcMinifyBundlePlugin()]
 };

@@ -171,6 +171,19 @@ export const BOT_WIDGET_STYLES = `
     height: 17px;
   }
 
+  .dwar-panel__alarm-test {
+    color: #ff6470;
+  }
+
+  .dwar-panel__alarm-test:hover {
+    background: rgba(255, 100, 112, .13);
+  }
+
+  .dwar-panel__alarm-test svg {
+    width: 18px;
+    height: 18px;
+  }
+
   .dwar-panel__close {
     color: #aeb8c7;
   }

@@ -1,3 +1,4 @@
+import { UnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
 import type {
   ProfessionRecipeCraftOptions,
   ProfessionRecipeCrafter
@@ -24,7 +25,7 @@ export class BrowserProfessionRecipeCrafter implements ProfessionRecipeCrafter {
     const response = await fetch(buildProfessionRecipeCraftUrl(recipe.getRecipeId()), requestInit);
 
     if (!response.ok) {
-      throw new Error(`Profession recipe craft failed with HTTP ${response.status}.`);
+      throw new UnexpectedServerResponseError(`Profession recipe craft failed with HTTP ${response.status}.`);
     }
   }
 }

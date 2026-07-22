@@ -1,3 +1,4 @@
+import { UnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
 import type { HuntResourceFarmer, HuntResourceFarmOptions } from '../../application/ports/hunt-resource-farmer';
 import type { HuntResourceFarmStart } from '../../domain/entities/hunt-resource-farm-start';
 import type { HuntResourceNode } from '../../domain/entities/hunt-resource-node';
@@ -24,7 +25,7 @@ export class BrowserHuntResourceFarmer implements HuntResourceFarmer {
     const response = await fetch(buildHuntResourceFarmUrl(resource.getServerNumber()), requestInit);
 
     if (!response.ok) {
-      throw new Error(`Resource mining start failed with HTTP ${response.status}.`);
+      throw new UnexpectedServerResponseError(`Resource mining start failed with HTTP ${response.status}.`);
     }
 
     return this.parser.parse(await response.text());

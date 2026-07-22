@@ -1,3 +1,4 @@
+import { UnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
 import { HuntResourceFarmStart } from '../../domain/entities/hunt-resource-farm-start';
 
 export class DwarHuntResourceFarmStartXmlParser {
@@ -6,11 +7,11 @@ export class DwarHuntResourceFarmStartXmlParser {
     const parserError = document.querySelector('parsererror');
 
     if (parserError) {
-      throw new Error('Resource mining start response is not valid XML.');
+      throw new UnexpectedServerResponseError('Resource mining start response is not valid XML.');
     }
 
     if (document.documentElement.nodeName !== 'req') {
-      throw new Error('Resource mining start response has an unexpected root element.');
+      throw new UnexpectedServerResponseError('Resource mining start response has an unexpected root element.');
     }
 
     const element = document.documentElement;
@@ -33,7 +34,7 @@ function getRequiredAttribute(element: Element, name: string): string {
   const value = element.getAttribute(name);
 
   if (value === null) {
-    throw new Error(`Missing "${name}" attribute in resource mining start response.`);
+    throw new UnexpectedServerResponseError(`Missing "${name}" attribute in resource mining start response.`);
   }
 
   return value;
@@ -43,7 +44,7 @@ function getIntegerAttribute(element: Element, name: string): number {
   const value = getRequiredAttribute(element, name);
 
   if (!/^\d+$/.test(value)) {
-    throw new Error(`Attribute "${name}" must be a non-negative integer.`);
+    throw new UnexpectedServerResponseError(`Attribute "${name}" must be a non-negative integer.`);
   }
 
   return Number(value);
@@ -60,5 +61,5 @@ function getBooleanAttribute(element: Element, name: string): boolean {
     return true;
   }
 
-  throw new Error(`Attribute "${name}" must be 0 or 1.`);
+  throw new UnexpectedServerResponseError(`Attribute "${name}" must be 0 or 1.`);
 }

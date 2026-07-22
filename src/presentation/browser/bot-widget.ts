@@ -1,3 +1,4 @@
+import { isUnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
 import type { LauncherPositionStore } from '../../application/ports/launcher-position-store';
 import type { PanelSizeStore } from '../../application/ports/panel-size-store';
 import type { ProfessionRecipeSelectionStore } from '../../application/ports/profession-recipe-selection-store';
@@ -29,6 +30,7 @@ import { formatProfessionRecipeLabel } from './profession-recipe-label';
 import { formatResourceLabel } from './resource-label';
 import { attachDraggableLauncher, restoreLauncherPosition } from './draggable-launcher';
 import { attachDraggablePanel } from './draggable-panel';
+import { createHumanAttentionAlarm, type HumanAttentionAlarm } from './human-attention-alarm';
 import { BOT_WIDGET_STYLES } from './bot-widget-styles';
 import { DRAG_IGNORE_SELECTOR, ROOT_ID } from './bot-widget-constants';
 import { keepPanelInViewport, positionPanelNearLauncher } from './panel-position';
@@ -85,9 +87,10 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   let miningPhase: ProcessPhase = 'idle';
   let miningStopRequested = false;
   let craftingStopRequested = false;
-  let keepMiningProcessBarComplete = false;
+  let craftingRestartRequested = false;
   const miningProcessBar = createProcessBarController(botPanel.miningProcessBar);
   const craftingProcessBars = createCraftingProcessBarsController(botPanel.craftingProcessBars);
+  const humanAttentionAlarm = createHumanAttentionAlarm();
   attachMutuallyExclusivePickers(botPanel);
 
   shadowRoot.append(createStyleElement(), launcher, botPanel.panel);
@@ -132,6 +135,10 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     clearLogList(botPanel.logList);
   });
 
+  botPanel.testAlarmButton.addEventListener('click', () => {
+    triggerHumanAttentionAlarm('Проверка сирены.', addLog, humanAttentionAlarm);
+  });
+
   function startMining(): void {
     const selectedResources = botPanel.resourcePicker.getSelectedResources();
     const selectedLocation = botPanel.locationSelect.getSelectedLocation();
@@ -149,7 +156,6 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     const controller = new AbortController();
     miningAbortController = controller;
     miningStopRequested = false;
-    keepMiningProcessBarComplete = false;
     botPanel.resourcePicker.close();
     setMiningButtonActive(botPanel.startMiningButton, true);
     addLog(
@@ -167,7 +173,6 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
             handleMiningEvent(event, addLog, miningProcessBar);
 
             if (miningStopRequested && isMiningAttemptFinished(event)) {
-              keepMiningProcessBarComplete = event.type === 'farm-completed';
               controller.abort();
             }
           }
@@ -175,7 +180,9 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
       })
       .catch((error) => {
         if (!isAbortError(error)) {
-          addLog(`Добыча остановлена из-за ошибки: ${getErrorMessage(error)}.`);
+          if (!handleUnexpectedServerResponse('Добыча', error, addLog, humanAttentionAlarm)) {
+            addLog(`Добыча остановлена из-за ошибки: ${getErrorMessage(error)}.`);
+          }
         }
       })
       .finally(() => {
@@ -187,12 +194,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
         setMiningButtonActive(botPanel.startMiningButton, false);
         miningPhase = 'idle';
         miningStopRequested = false;
-
-        if (!keepMiningProcessBarComplete) {
-          miningProcessBar.reset();
-        }
-
-        keepMiningProcessBarComplete = false;
+        miningProcessBar.reset();
 
         if (controller.signal.aborted) {
           addLog('Добыча остановлена.');
@@ -210,6 +212,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     }
 
     miningStopRequested = true;
+    setMiningButtonActive(botPanel.startMiningButton, false);
 
     if (miningPhase === 'active') {
       addLog('Добыча остановится после текущего сбора.');
@@ -218,6 +221,16 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
 
     addLog('Останавливаю добычу.');
     miningAbortController.abort();
+  }
+
+  function resumeMining(): void {
+    if (!miningAbortController || miningAbortController.signal.aborted || !miningStopRequested) {
+      return;
+    }
+
+    miningStopRequested = false;
+    setMiningButtonActive(botPanel.startMiningButton, true);
+    addLog('Добыча продолжена.');
   }
 
   function startCrafting(): void {
@@ -234,6 +247,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     const controller = new AbortController();
     craftingAbortController = controller;
     craftingStopRequested = false;
+    craftingRestartRequested = false;
     craftingProcessBars.reset();
     botPanel.recipePicker.close();
     setCraftingButtonActive(botPanel.startCraftingButton, true);
@@ -249,7 +263,13 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
           }
         }
       })
-      .catch(() => undefined)
+      .catch((error) => {
+        if (!isAbortError(error)) {
+          if (!handleUnexpectedServerResponse('Крафт', error, addLog, humanAttentionAlarm)) {
+            addLog(`Крафт остановлен из-за ошибки: ${getErrorMessage(error)}.`);
+          }
+        }
+      })
       .finally(() => {
         if (craftingAbortController !== controller) {
           return;
@@ -257,12 +277,13 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
 
         craftingAbortController = null;
         setCraftingButtonActive(botPanel.startCraftingButton, false);
+        const shouldRestart = craftingRestartRequested;
         craftingStopRequested = false;
+        craftingRestartRequested = false;
+        craftingProcessBars.reset();
 
-        if (controller.signal.aborted) {
-          craftingProcessBars.clearInterrupted();
-        } else {
-          craftingProcessBars.reset();
+        if (shouldRestart) {
+          startCrafting();
         }
       });
   }
@@ -277,11 +298,31 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     }
 
     craftingStopRequested = true;
+    craftingRestartRequested = false;
+    setCraftingButtonActive(botPanel.startCraftingButton, false);
     craftingAbortController.abort();
   }
 
+  function toggleCraftingRestartAfterStop(): void {
+    if (!craftingAbortController || !craftingStopRequested) {
+      return;
+    }
+
+    craftingRestartRequested = !craftingRestartRequested;
+    setCraftingButtonActive(botPanel.startCraftingButton, craftingRestartRequested);
+    addLog(craftingRestartRequested
+      ? 'Крафт продолжится после текущего отката.'
+      : 'Продолжение крафта отменено.'
+    );
+  }
+
   botPanel.startMiningButton.addEventListener('click', () => {
-    if (miningAbortController) {
+    if (miningAbortController && !miningAbortController.signal.aborted) {
+      if (miningStopRequested) {
+        resumeMining();
+        return;
+      }
+
       stopMining();
       return;
     }
@@ -291,6 +332,11 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
 
   botPanel.startCraftingButton.addEventListener('click', () => {
     if (craftingAbortController) {
+      if (craftingStopRequested) {
+        toggleCraftingRestartAfterStop();
+        return;
+      }
+
       stopCrafting();
       return;
     }
@@ -576,6 +622,46 @@ function createMobLogPart(mob: ResourceMiningMobInfo): BotLogLinePart {
     text: `${mob.name}, ур. ${mob.level}`,
     color: mob.aggressionColor,
     title: `Агрессия ${mob.aggressionLevel}`
+  };
+}
+
+function handleUnexpectedServerResponse(
+  processName: string,
+  error: unknown,
+  addLog: (message: string, parts?: readonly BotLogLinePart[]) => void,
+  alarm: HumanAttentionAlarm
+): boolean {
+  if (!isUnexpectedServerResponseError(error)) {
+    return false;
+  }
+
+  triggerHumanAttentionAlarm(
+    `${processName} остановлена: неожиданный ответ сервера: ${getErrorMessage(error)}.`,
+    addLog,
+    alarm
+  );
+
+  return true;
+}
+
+function triggerHumanAttentionAlarm(
+  message: string,
+  addLog: (message: string, parts?: readonly BotLogLinePart[]) => void,
+  alarm: HumanAttentionAlarm
+): void {
+  alarm.play();
+  addLog(`${message} Требуется участие человека.`, [
+    message,
+    ' ',
+    createHumanAttentionLogPart()
+  ]);
+}
+
+function createHumanAttentionLogPart(): BotLogLinePart {
+  return {
+    text: 'ТРЕБУЕТСЯ УЧАСТИЕ ЧЕЛОВЕКА',
+    color: '#ff4f5f',
+    title: 'Проверь страницу игры вручную'
   };
 }
 

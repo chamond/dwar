@@ -1,3 +1,4 @@
+import { UnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
 import type { ResourceRepository } from '../../application/ports/resource-repository';
 import { HuntMob } from '../../domain/entities/hunt-mob';
 import { HuntResourceNode } from '../../domain/entities/hunt-resource-node';
@@ -12,11 +13,11 @@ export class DwarHuntZoneXmlParser {
     const parserError = document.querySelector('parsererror');
 
     if (parserError) {
-      throw new Error('Hunt zone response is not valid XML.');
+      throw new UnexpectedServerResponseError('Hunt zone response is not valid XML.');
     }
 
     if (document.documentElement.nodeName !== 'hunt') {
-      throw new Error('Hunt zone response has an unexpected root element.');
+      throw new UnexpectedServerResponseError('Hunt zone response has an unexpected root element.');
     }
 
     return HuntZoneScan.create({
@@ -78,7 +79,7 @@ function getRequiredAttribute(element: Element, name: string): string {
   const value = element.getAttribute(name);
 
   if (value === null) {
-    throw new Error(`Missing "${name}" attribute in hunt zone response.`);
+    throw new UnexpectedServerResponseError(`Missing "${name}" attribute in hunt zone response.`);
   }
 
   return value;
@@ -92,7 +93,7 @@ function getIntegerAttribute(element: Element, name: string): number {
   const value = getRequiredAttribute(element, name);
 
   if (!/^\d+$/.test(value)) {
-    throw new Error(`Attribute "${name}" must be a non-negative integer.`);
+    throw new UnexpectedServerResponseError(`Attribute "${name}" must be a non-negative integer.`);
   }
 
   return Number(value);
@@ -109,5 +110,5 @@ function getBooleanAttribute(element: Element, name: string): boolean {
     return true;
   }
 
-  throw new Error(`Attribute "${name}" must be 0 or 1.`);
+  throw new UnexpectedServerResponseError(`Attribute "${name}" must be 0 or 1.`);
 }

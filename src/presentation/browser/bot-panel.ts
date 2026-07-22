@@ -1,6 +1,7 @@
 import type { BotResourceId, BotResourceSnapshot } from '../../domain/entities/bot-resource';
 import type { HuntLocationId, HuntLocationSnapshot } from '../../domain/entities/hunt-location';
 import type { ProfessionRecipeId, ProfessionRecipeSnapshot } from '../../domain/entities/profession-recipe';
+import { getAlarmIcon } from './alarm-icon';
 import { getClearLogIcon } from './clear-log-icon';
 import { getCraftIcon } from './craft-icon';
 import { createCraftAmountInput, type CraftAmountInputElements } from './craft-amount-input';
@@ -18,6 +19,7 @@ export interface BotPanelElements {
   header: HTMLElement;
   clearLogButton: HTMLButtonElement;
   closeButton: HTMLButtonElement;
+  testAlarmButton: HTMLButtonElement;
   startMiningButton: HTMLButtonElement;
   startCraftingButton: HTMLButtonElement;
   craftAmountInput: CraftAmountInputElements;
@@ -33,6 +35,7 @@ export interface BotPanelElements {
 interface PanelHeaderElements {
   header: HTMLElement;
   closeButton: HTMLButtonElement;
+  testAlarmButton: HTMLButtonElement;
 }
 
 interface MiningControlsElements {
@@ -81,6 +84,7 @@ export function createBotPanel(
     header: headerElements.header,
     clearLogButton: logSectionElements.clearLogButton,
     closeButton: headerElements.closeButton,
+    testAlarmButton: headerElements.testAlarmButton,
     startMiningButton: controlsElements.startMiningButton,
     startCraftingButton: controlsElements.startCraftingButton,
     craftAmountInput: controlsElements.craftAmountInput,
@@ -112,6 +116,14 @@ function createPanelHeader(): PanelHeaderElements {
   const actions = document.createElement('div');
   actions.className = 'dwar-panel__actions';
 
+  const testAlarmButton = document.createElement('button');
+  testAlarmButton.type = 'button';
+  testAlarmButton.className = 'dwar-panel__icon-button dwar-panel__alarm-test';
+  testAlarmButton.dataset.dwarPanelAction = '';
+  testAlarmButton.setAttribute('aria-label', 'Проверить сирену');
+  testAlarmButton.setAttribute('title', 'Проверить сирену');
+  testAlarmButton.innerHTML = getAlarmIcon();
+
   const closeButton = document.createElement('button');
   closeButton.type = 'button';
   closeButton.className = 'dwar-panel__icon-button dwar-panel__close';
@@ -120,12 +132,13 @@ function createPanelHeader(): PanelHeaderElements {
   closeButton.innerHTML = '&times;';
 
   title.append(status, titleText);
-  actions.append(closeButton);
+  actions.append(testAlarmButton, closeButton);
   header.append(title, actions);
 
   return {
     header,
-    closeButton
+    closeButton,
+    testAlarmButton
   };
 }
 

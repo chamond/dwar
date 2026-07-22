@@ -1,3 +1,4 @@
+import { UnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
 import type {
   HuntResourceFarmInterrupter,
   HuntResourceFarmInterruptOptions
@@ -18,7 +19,7 @@ export class BrowserHuntResourceFarmInterrupter implements HuntResourceFarmInter
     const response = await fetch(HUNT_RESOURCE_FARM_CANCEL_REQUEST.url, requestInit);
 
     if (!response.ok) {
-      throw new Error(`Resource mining cancellation failed with HTTP ${response.status}.`);
+      throw new UnexpectedServerResponseError(`Resource mining cancellation failed with HTTP ${response.status}.`);
     }
   }
 }
