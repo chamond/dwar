@@ -36,11 +36,11 @@ The compiled output is `dist/index.js`.
 Load that file on the game page to mount the floating pickaxe button and bot panel.
 The launcher position is saved in browser localStorage.
 
-The current local resource catalog contains stable bot ids for agate,
-aquamarine, and turquoise. The panel exposes independent mining and crafting
-start buttons, compact multiselects for resources and profession recipes, and
-one shared crafting amount input defaulting to 10. It also shows separate
-progress bars for parallel mining and crafting timers.
+The current local resource catalog contains stable bot ids and mining duration
+for agate, aquamarine, and turquoise. The panel exposes independent mining and
+crafting start buttons, compact multiselects for resources and profession
+recipes, and one shared crafting amount input defaulting to 10. It also shows
+separate progress bars for mining and every parallel crafting timer.
 
 ## GitHub Pages Deploy
 

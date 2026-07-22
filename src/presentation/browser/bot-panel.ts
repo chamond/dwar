@@ -26,7 +26,7 @@ export interface BotPanelElements {
   locationSelect: HuntLocationSelectElements;
   logList: HTMLElement;
   miningProcessBar: ProcessBarElements;
-  craftingProcessBar: ProcessBarElements;
+  craftingProcessBars: HTMLElement;
   resizeHandle: HTMLButtonElement;
 }
 
@@ -89,7 +89,7 @@ export function createBotPanel(
     locationSelect: controlsElements.locationSelect,
     logList: logSectionElements.logList,
     miningProcessBar: processBars.miningProcessBar,
-    craftingProcessBar: processBars.craftingProcessBar,
+    craftingProcessBars: processBars.craftingProcessBars,
     resizeHandle
   };
 }
@@ -227,19 +227,20 @@ function createLogSection(): LogSectionElements {
 function createProcessBars(): {
   root: HTMLElement;
   miningProcessBar: ProcessBarElements;
-  craftingProcessBar: ProcessBarElements;
+  craftingProcessBars: HTMLElement;
 } {
   const root = document.createElement('div');
   root.className = 'dwar-process-bars';
 
   const miningProcessBar = createProcessBar('Добыча: ожидание');
-  const craftingProcessBar = createProcessBar('Крафт: ожидание');
-  root.append(miningProcessBar.root, craftingProcessBar.root);
+  const craftingProcessBars = document.createElement('div');
+  craftingProcessBars.className = 'dwar-crafting-process-bars';
+  root.append(miningProcessBar.root, craftingProcessBars);
 
   return {
     root,
     miningProcessBar,
-    craftingProcessBar
+    craftingProcessBars
   };
 }
 

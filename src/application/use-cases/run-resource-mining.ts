@@ -19,17 +19,12 @@ import type { ResourceRepository } from '../ports/resource-repository';
 import type { Clock } from '../ports/clock';
 
 const DEFAULT_DANGER_RADIUS = 100;
-const DEFAULT_LEVEL_ZERO_MINING_DURATION_MS = 20_000;
 const DEFAULT_SAFETY_CHECK_INTERVAL_MS = 5_000;
 const DEFAULT_NO_SAFE_RESOURCE_DELAY_MS = 20_000;
 const DEFAULT_POST_MINING_DELAY_MS = 2_000;
-const DEFAULT_MINING_DURATION_BY_RESOURCE_LEVEL_MS = new Map<number, number>([
-  [0, DEFAULT_LEVEL_ZERO_MINING_DURATION_MS]
-]);
 
 export interface ResourceMiningConfig {
   dangerRadius: number;
-  miningDurationByResourceLevelMs: ReadonlyMap<number, number>;
   safetyCheckIntervalMs: number;
   noSafeResourceDelayMs: number;
   postMiningDelayMs: number;
@@ -128,8 +123,6 @@ export class RunResourceMiningUseCase {
   ) {
     this.config = {
       dangerRadius: config.dangerRadius ?? DEFAULT_DANGER_RADIUS,
-      miningDurationByResourceLevelMs:
-        config.miningDurationByResourceLevelMs ?? DEFAULT_MINING_DURATION_BY_RESOURCE_LEVEL_MS,
       safetyCheckIntervalMs: config.safetyCheckIntervalMs ?? DEFAULT_SAFETY_CHECK_INTERVAL_MS,
       noSafeResourceDelayMs: config.noSafeResourceDelayMs ?? DEFAULT_NO_SAFE_RESOURCE_DELAY_MS,
       postMiningDelayMs: config.postMiningDelayMs ?? DEFAULT_POST_MINING_DELAY_MS
@@ -327,14 +320,7 @@ export class RunResourceMiningUseCase {
   }
 
   private getMiningDurationMs(resource: HuntResourceNode): number {
-    const resourceLevel = resource.getResource().getLevel();
-    const durationMs = this.config.miningDurationByResourceLevelMs.get(resourceLevel);
-
-    if (durationMs === undefined) {
-      throw new Error(`Mining duration for resource level ${resourceLevel} is not configured.`);
-    }
-
-    return durationMs;
+    return resource.getResource().getMiningDurationMs();
   }
 
   private getSelectedArticleIds(selectedResourceIds: readonly BotResourceId[]): ReadonlySet<number> {

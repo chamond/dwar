@@ -6,6 +6,7 @@ export interface BotResourceProps {
   markerColor: string;
   articleId: number;
   level: number;
+  miningDurationMs: number;
 }
 
 export interface BotResourceSnapshot {
@@ -14,6 +15,7 @@ export interface BotResourceSnapshot {
   markerColor: string;
   articleId: number;
   level: number;
+  miningDurationMs: number;
 }
 
 export class BotResource {
@@ -22,7 +24,8 @@ export class BotResource {
     private readonly name: string,
     private readonly markerColor: string,
     private readonly articleId: number,
-    private readonly level: number
+    private readonly level: number,
+    private readonly miningDurationMs: number
   ) {}
 
   static create(props: BotResourceProps): BotResource {
@@ -45,7 +48,11 @@ export class BotResource {
       throw new Error('Resource level must be a non-negative integer.');
     }
 
-    return new BotResource(props.id, name, markerColor, props.articleId, props.level);
+    if (!Number.isInteger(props.miningDurationMs) || props.miningDurationMs <= 0) {
+      throw new Error('Resource mining duration must be a positive integer.');
+    }
+
+    return new BotResource(props.id, name, markerColor, props.articleId, props.level, props.miningDurationMs);
   }
 
   getId(): BotResourceId {
@@ -68,13 +75,18 @@ export class BotResource {
     return this.markerColor;
   }
 
+  getMiningDurationMs(): number {
+    return this.miningDurationMs;
+  }
+
   toSnapshot(): BotResourceSnapshot {
     return {
       id: this.id,
       name: this.name,
       markerColor: this.markerColor,
       articleId: this.articleId,
-      level: this.level
+      level: this.level,
+      miningDurationMs: this.miningDurationMs
     };
   }
 }

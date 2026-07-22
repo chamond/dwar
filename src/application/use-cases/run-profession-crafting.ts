@@ -8,12 +8,14 @@ const DEFAULT_CRAFT_AMOUNT_PER_REQUEST = 10;
 const DEFAULT_CRAFT_COOLDOWN_PER_ITEM_MS = 30_000;
 const DEFAULT_POST_CRAFT_DELAY_MS = 5_000;
 const DEFAULT_NO_SELECTED_RECIPE_DELAY_MS = 5_000;
+const DEFAULT_SELECTION_REFRESH_DELAY_MS = 1_000;
 
 export interface ProfessionCraftingConfig {
   amountPerRequest: number;
   cooldownPerItemMs: number;
   postCraftDelayMs: number;
   noSelectedRecipeDelayMs: number;
+  selectionRefreshDelayMs: number;
 }
 
 export interface RunProfessionCraftingInput {
@@ -58,6 +60,7 @@ export type ProfessionCraftingEvent =
     }
   | {
       type: 'next-craft-delayed';
+      recipe: ProfessionCraftingRecipeInfo;
       delayMs: number;
     };
 
@@ -74,33 +77,88 @@ export class RunProfessionCraftingUseCase {
       amountPerRequest: config.amountPerRequest ?? DEFAULT_CRAFT_AMOUNT_PER_REQUEST,
       cooldownPerItemMs: config.cooldownPerItemMs ?? DEFAULT_CRAFT_COOLDOWN_PER_ITEM_MS,
       postCraftDelayMs: config.postCraftDelayMs ?? DEFAULT_POST_CRAFT_DELAY_MS,
-      noSelectedRecipeDelayMs: config.noSelectedRecipeDelayMs ?? DEFAULT_NO_SELECTED_RECIPE_DELAY_MS
+      noSelectedRecipeDelayMs: config.noSelectedRecipeDelayMs ?? DEFAULT_NO_SELECTED_RECIPE_DELAY_MS,
+      selectionRefreshDelayMs: config.selectionRefreshDelayMs ?? DEFAULT_SELECTION_REFRESH_DELAY_MS
     };
   }
 
   async execute(input: RunProfessionCraftingInput): Promise<void> {
-    let nextRecipeIndex = 0;
+    const abort = createAbortHandle(input.signal);
+    const runInput: RunProfessionCraftingInput = {
+      ...input,
+      signal: abort.signal
+    };
+    const activeTasks = new Map<ProfessionRecipeId, Promise<void>>();
+    let taskError: unknown = null;
 
-    while (!input.signal?.aborted) {
-      const selectedRecipes = this.getSelectedRecipes(input.getSelectedRecipeIds());
+    try {
+      while (!abort.signal.aborted) {
+        const selectedRecipes = this.getSelectedRecipes(input.getSelectedRecipeIds());
 
-      if (selectedRecipes.length === 0) {
-        this.emit(input, {
-          type: 'no-recipe-selected',
-          delayMs: this.config.noSelectedRecipeDelayMs
-        });
-        await this.delay.wait(this.config.noSelectedRecipeDelayMs, input.signal);
-        continue;
+        for (const recipe of selectedRecipes) {
+          const recipeId = recipe.getId();
+
+          if (activeTasks.has(recipeId)) {
+            continue;
+          }
+
+          const task = this.runRecipeLoop(recipe, runInput)
+            .catch((error) => {
+              if (!isAbortError(error)) {
+                taskError = error;
+                abort.abort();
+              }
+            })
+            .finally(() => {
+              activeTasks.delete(recipeId);
+            });
+          activeTasks.set(recipeId, task);
+        }
+
+        if (taskError) {
+          break;
+        }
+
+        if (activeTasks.size === 0) {
+          this.emit(runInput, {
+            type: 'no-recipe-selected',
+            delayMs: this.config.noSelectedRecipeDelayMs
+          });
+          await this.delay.wait(this.config.noSelectedRecipeDelayMs, abort.signal);
+          continue;
+        }
+
+        await this.delay.wait(this.config.selectionRefreshDelayMs, abort.signal);
       }
-
-      const recipe = selectedRecipes[nextRecipeIndex % selectedRecipes.length];
-      nextRecipeIndex += 1;
-
-      if (!recipe) {
-        continue;
+    } catch (error) {
+      if (!isAbortError(error)) {
+        taskError = error;
       }
+    } finally {
+      abort.dispose();
+      abort.abort();
+      await Promise.allSettled(activeTasks.values());
+    }
 
+    if (taskError) {
+      throw taskError;
+    }
+  }
+
+  private async runRecipeLoop(recipe: ProfessionRecipe, input: RunProfessionCraftingInput): Promise<void> {
+    while (!input.signal?.aborted && this.isRecipeSelected(recipe, input)) {
       await this.craftRecipe(recipe, input);
+
+      if (this.config.postCraftDelayMs <= 0 || input.signal?.aborted || !this.isRecipeSelected(recipe, input)) {
+        continue;
+      }
+
+      this.emit(input, {
+        type: 'next-craft-delayed',
+        recipe: createRecipeInfo(recipe),
+        delayMs: this.config.postCraftDelayMs
+      });
+      await this.delay.wait(this.config.postCraftDelayMs, input.signal);
     }
   }
 
@@ -122,21 +180,11 @@ export class RunProfessionCraftingUseCase {
       amount,
       cooldownMs
     });
-    await this.delay.wait(cooldownMs, input.signal);
+    await this.delay.wait(cooldownMs);
     this.emit(input, {
       type: 'craft-completed',
       recipe: recipeInfo
     });
-
-    if (this.config.postCraftDelayMs <= 0 || input.signal?.aborted) {
-      return;
-    }
-
-    this.emit(input, {
-      type: 'next-craft-delayed',
-      delayMs: this.config.postCraftDelayMs
-    });
-    await this.delay.wait(this.config.postCraftDelayMs, input.signal);
   }
 
   private getCraftAmount(recipe: ProfessionRecipe, requestedAmount: number | undefined): number {
@@ -160,6 +208,10 @@ export class RunProfessionCraftingUseCase {
     }
 
     return selectedRecipes;
+  }
+
+  private isRecipeSelected(recipe: ProfessionRecipe, input: RunProfessionCraftingInput): boolean {
+    return input.getSelectedRecipeIds().includes(recipe.getId());
   }
 
   private emit(input: RunProfessionCraftingInput, event: ProfessionCraftingEvent): void {
@@ -186,4 +238,54 @@ function normalizeCraftAmount(amount: number, fallbackAmount: number): number {
   }
 
   return Math.max(1, Math.trunc(amount));
+}
+
+interface AbortHandle {
+  signal: AbortSignal;
+  abort(): void;
+  dispose(): void;
+}
+
+function createAbortHandle(sourceSignal: AbortSignal | undefined): AbortHandle {
+  const controller = new AbortController();
+
+  if (!sourceSignal) {
+    return {
+      signal: controller.signal,
+      abort(): void {
+        controller.abort();
+      },
+      dispose(): void {
+        return undefined;
+      }
+    };
+  }
+
+  const abort = (): void => {
+    controller.abort();
+  };
+
+  if (sourceSignal.aborted) {
+    controller.abort();
+  } else {
+    sourceSignal.addEventListener('abort', abort, { once: true });
+  }
+
+  return {
+    signal: controller.signal,
+    abort(): void {
+      controller.abort();
+    },
+    dispose(): void {
+      sourceSignal.removeEventListener('abort', abort);
+    }
+  };
+}
+
+function isAbortError(error: unknown): boolean {
+  if (error instanceof Error) {
+    return error.name === 'AbortError';
+  }
+
+  return typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError';
 }

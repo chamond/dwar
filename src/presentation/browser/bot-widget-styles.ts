@@ -510,6 +510,10 @@ export const BOT_WIDGET_STYLES = `
     border-top: 1px solid rgba(255, 255, 255, .06);
   }
 
+  .dwar-crafting-process-bars .dwar-process-bar {
+    border-top: 1px solid rgba(255, 255, 255, .06);
+  }
+
   .dwar-process-bar__meta {
     display: flex;
     align-items: center;
