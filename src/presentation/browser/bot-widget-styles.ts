@@ -171,17 +171,25 @@ export const BOT_WIDGET_STYLES = `
     height: 17px;
   }
 
-  .dwar-panel__alarm-test {
+  .dwar-panel__alarm-toggle {
     color: #ff6470;
   }
 
-  .dwar-panel__alarm-test:hover {
+  .dwar-panel__alarm-toggle:hover {
     background: rgba(255, 100, 112, .13);
   }
 
-  .dwar-panel__alarm-test svg {
+  .dwar-panel__alarm-toggle svg {
     width: 18px;
     height: 18px;
+  }
+
+  .dwar-panel__alarm-toggle.is-muted {
+    color: #697386;
+  }
+
+  .dwar-panel__alarm-toggle.is-muted:hover {
+    background: rgba(105, 115, 134, .13);
   }
 
   .dwar-panel__close {

@@ -11,6 +11,7 @@ import { BrowserDelay } from './infrastructure/browser/browser-delay';
 import { BrowserProfessionRecipeCrafter } from './infrastructure/browser/browser-profession-recipe-crafter';
 import { DwarHuntZoneXmlParser } from './infrastructure/browser/dwar-hunt-zone-xml-parser';
 import { LocalStorageHuntLocationSelectionStore } from './infrastructure/browser/local-storage-hunt-location-selection-store';
+import { LocalStorageHumanAttentionAlarmStore } from './infrastructure/browser/local-storage-human-attention-alarm-store';
 import { LocalStorageLauncherPositionStore } from './infrastructure/browser/local-storage-launcher-position-store';
 import { LocalStoragePanelSizeStore } from './infrastructure/browser/local-storage-panel-size-store';
 import { LocalStorageProfessionRecipeSelectionStore } from './infrastructure/browser/local-storage-profession-recipe-selection-store';
@@ -33,6 +34,7 @@ function bootstrap(): void {
   const listHuntLocations = new ListHuntLocationsUseCase(huntLocationRepository);
   const launcherPositionStore = new LocalStorageLauncherPositionStore();
   const panelSizeStore = new LocalStoragePanelSizeStore();
+  const humanAttentionAlarmStore = new LocalStorageHumanAttentionAlarmStore();
   const resourceSelectionStore = new LocalStorageResourceSelectionStore();
   const professionRecipeSelectionStore = new LocalStorageProfessionRecipeSelectionStore();
   const locationSelectionStore = new LocalStorageHuntLocationSelectionStore();
@@ -61,6 +63,7 @@ function bootstrap(): void {
 
   mountBotWidget({
     createLogEntry,
+    humanAttentionAlarmStore,
     listHuntLocations,
     listProfessionRecipes,
     listResources,

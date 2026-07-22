@@ -19,7 +19,7 @@ export interface BotPanelElements {
   header: HTMLElement;
   clearLogButton: HTMLButtonElement;
   closeButton: HTMLButtonElement;
-  testAlarmButton: HTMLButtonElement;
+  alarmToggleButton: HTMLButtonElement;
   startMiningButton: HTMLButtonElement;
   startCraftingButton: HTMLButtonElement;
   craftAmountInput: CraftAmountInputElements;
@@ -35,7 +35,7 @@ export interface BotPanelElements {
 interface PanelHeaderElements {
   header: HTMLElement;
   closeButton: HTMLButtonElement;
-  testAlarmButton: HTMLButtonElement;
+  alarmToggleButton: HTMLButtonElement;
 }
 
 interface MiningControlsElements {
@@ -84,7 +84,7 @@ export function createBotPanel(
     header: headerElements.header,
     clearLogButton: logSectionElements.clearLogButton,
     closeButton: headerElements.closeButton,
-    testAlarmButton: headerElements.testAlarmButton,
+    alarmToggleButton: headerElements.alarmToggleButton,
     startMiningButton: controlsElements.startMiningButton,
     startCraftingButton: controlsElements.startCraftingButton,
     craftAmountInput: controlsElements.craftAmountInput,
@@ -116,13 +116,14 @@ function createPanelHeader(): PanelHeaderElements {
   const actions = document.createElement('div');
   actions.className = 'dwar-panel__actions';
 
-  const testAlarmButton = document.createElement('button');
-  testAlarmButton.type = 'button';
-  testAlarmButton.className = 'dwar-panel__icon-button dwar-panel__alarm-test';
-  testAlarmButton.dataset.dwarPanelAction = '';
-  testAlarmButton.setAttribute('aria-label', 'Проверить сирену');
-  testAlarmButton.setAttribute('title', 'Проверить сирену');
-  testAlarmButton.innerHTML = getAlarmIcon();
+  const alarmToggleButton = document.createElement('button');
+  alarmToggleButton.type = 'button';
+  alarmToggleButton.className = 'dwar-panel__icon-button dwar-panel__alarm-toggle';
+  alarmToggleButton.dataset.dwarPanelAction = '';
+  alarmToggleButton.setAttribute('aria-label', 'Сирена включена');
+  alarmToggleButton.setAttribute('aria-pressed', 'true');
+  alarmToggleButton.setAttribute('title', 'Сирена включена');
+  alarmToggleButton.innerHTML = getAlarmIcon();
 
   const closeButton = document.createElement('button');
   closeButton.type = 'button';
@@ -132,13 +133,13 @@ function createPanelHeader(): PanelHeaderElements {
   closeButton.innerHTML = '&times;';
 
   title.append(status, titleText);
-  actions.append(testAlarmButton, closeButton);
+  actions.append(alarmToggleButton, closeButton);
   header.append(title, actions);
 
   return {
     header,
     closeButton,
-    testAlarmButton
+    alarmToggleButton
   };
 }
 

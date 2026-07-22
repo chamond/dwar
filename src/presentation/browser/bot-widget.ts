@@ -1,4 +1,5 @@
 import { isUnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
+import type { HumanAttentionAlarmStore } from '../../application/ports/human-attention-alarm-store';
 import type { LauncherPositionStore } from '../../application/ports/launcher-position-store';
 import type { PanelSizeStore } from '../../application/ports/panel-size-store';
 import type { ProfessionRecipeSelectionStore } from '../../application/ports/profession-recipe-selection-store';
@@ -38,6 +39,7 @@ import { attachResizablePanel, keepPanelSizeInViewport, restorePanelSize } from 
 
 export interface BotWidgetDependencies {
   createLogEntry: CreateBotLogEntryUseCase;
+  humanAttentionAlarmStore: HumanAttentionAlarmStore;
   listHuntLocations: ListHuntLocationsUseCase;
   listProfessionRecipes: ListProfessionRecipesUseCase;
   listResources: ListResourcesUseCase;
@@ -91,6 +93,8 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   const miningProcessBar = createProcessBarController(botPanel.miningProcessBar);
   const craftingProcessBars = createCraftingProcessBarsController(botPanel.craftingProcessBars);
   const humanAttentionAlarm = createHumanAttentionAlarm();
+  let isHumanAttentionAlarmEnabled = dependencies.humanAttentionAlarmStore.load() ?? true;
+  setHumanAttentionAlarmButtonEnabled(botPanel.alarmToggleButton, isHumanAttentionAlarmEnabled);
   attachMutuallyExclusivePickers(botPanel);
 
   shadowRoot.append(createStyleElement(), launcher, botPanel.panel);
@@ -135,8 +139,12 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     clearLogList(botPanel.logList);
   });
 
-  botPanel.testAlarmButton.addEventListener('click', () => {
-    triggerHumanAttentionAlarm('Проверка сирены.', addLog, humanAttentionAlarm);
+  botPanel.alarmToggleButton.addEventListener('click', () => {
+    isHumanAttentionAlarmEnabled = !isHumanAttentionAlarmEnabled;
+    dependencies.humanAttentionAlarmStore.save(isHumanAttentionAlarmEnabled);
+    setHumanAttentionAlarmButtonEnabled(botPanel.alarmToggleButton, isHumanAttentionAlarmEnabled);
+
+    addLog(isHumanAttentionAlarmEnabled ? 'Сирена включена.' : 'Сирена отключена.');
   });
 
   function startMining(): void {
@@ -180,7 +188,13 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
       })
       .catch((error) => {
         if (!isAbortError(error)) {
-          if (!handleUnexpectedServerResponse('Добыча', error, addLog, humanAttentionAlarm)) {
+          if (!handleUnexpectedServerResponse(
+            'Добыча',
+            error,
+            addLog,
+            humanAttentionAlarm,
+            isHumanAttentionAlarmEnabled
+          )) {
             addLog(`Добыча остановлена из-за ошибки: ${getErrorMessage(error)}.`);
           }
         }
@@ -265,7 +279,13 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
       })
       .catch((error) => {
         if (!isAbortError(error)) {
-          if (!handleUnexpectedServerResponse('Крафт', error, addLog, humanAttentionAlarm)) {
+          if (!handleUnexpectedServerResponse(
+            'Крафт',
+            error,
+            addLog,
+            humanAttentionAlarm,
+            isHumanAttentionAlarmEnabled
+          )) {
             addLog(`Крафт остановлен из-за ошибки: ${getErrorMessage(error)}.`);
           }
         }
@@ -629,7 +649,8 @@ function handleUnexpectedServerResponse(
   processName: string,
   error: unknown,
   addLog: (message: string, parts?: readonly BotLogLinePart[]) => void,
-  alarm: HumanAttentionAlarm
+  alarm: HumanAttentionAlarm,
+  isAlarmEnabled: boolean
 ): boolean {
   if (!isUnexpectedServerResponseError(error)) {
     return false;
@@ -638,7 +659,8 @@ function handleUnexpectedServerResponse(
   triggerHumanAttentionAlarm(
     `${processName} остановлена: неожиданный ответ сервера: ${getErrorMessage(error)}.`,
     addLog,
-    alarm
+    alarm,
+    isAlarmEnabled
   );
 
   return true;
@@ -647,9 +669,13 @@ function handleUnexpectedServerResponse(
 function triggerHumanAttentionAlarm(
   message: string,
   addLog: (message: string, parts?: readonly BotLogLinePart[]) => void,
-  alarm: HumanAttentionAlarm
+  alarm: HumanAttentionAlarm,
+  isAlarmEnabled: boolean
 ): void {
-  alarm.play();
+  if (isAlarmEnabled) {
+    alarm.play();
+  }
+
   addLog(`${message} Требуется участие человека.`, [
     message,
     ' ',
@@ -663,6 +689,13 @@ function createHumanAttentionLogPart(): BotLogLinePart {
     color: '#ff4f5f',
     title: 'Проверь страницу игры вручную'
   };
+}
+
+function setHumanAttentionAlarmButtonEnabled(button: HTMLButtonElement, isEnabled: boolean): void {
+  button.classList.toggle('is-muted', !isEnabled);
+  button.setAttribute('aria-pressed', String(isEnabled));
+  button.setAttribute('aria-label', isEnabled ? 'Сирена включена' : 'Сирена отключена');
+  button.setAttribute('title', isEnabled ? 'Сирена включена' : 'Сирена отключена');
 }
 
 function setMiningButtonActive(button: HTMLButtonElement, isActive: boolean): void {
