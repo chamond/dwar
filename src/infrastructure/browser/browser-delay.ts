@@ -1,6 +1,6 @@
-import type { MiningDelay } from '../../application/ports/mining-delay';
+import type { Delay } from '../../application/ports/delay';
 
-export class BrowserMiningDelay implements MiningDelay {
+export class BrowserDelay implements Delay {
   wait(durationMs: number, signal?: AbortSignal): Promise<void> {
     if (durationMs <= 0) {
       return Promise.resolve();
@@ -33,7 +33,7 @@ export class BrowserMiningDelay implements MiningDelay {
 }
 
 function createAbortError(): Error {
-  const error = new Error('Mining was stopped.');
+  const error = new Error('Operation was stopped.');
   error.name = 'AbortError';
 
   return error;

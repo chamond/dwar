@@ -14,7 +14,7 @@ import type { HuntResourceFarmer } from '../ports/hunt-resource-farmer';
 import type { HuntResourceFarmInterrupter } from '../ports/hunt-resource-farm-interrupter';
 import type { HuntZoneScanner } from '../ports/hunt-zone-scanner';
 import type { HuntZoneScanStore } from '../ports/hunt-zone-scan-store';
-import type { MiningDelay } from '../ports/mining-delay';
+import type { Delay } from '../ports/delay';
 import type { ResourceRepository } from '../ports/resource-repository';
 import type { Clock } from '../ports/clock';
 
@@ -122,7 +122,7 @@ export class RunResourceMiningUseCase {
     private readonly scanStore: HuntZoneScanStore,
     private readonly farmer: HuntResourceFarmer,
     private readonly farmInterrupter: HuntResourceFarmInterrupter,
-    private readonly delay: MiningDelay,
+    private readonly delay: Delay,
     private readonly clock: Clock,
     config: Partial<ResourceMiningConfig> = {}
   ) {

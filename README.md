@@ -37,8 +37,9 @@ Load that file on the game page to mount the floating pickaxe button and bot pan
 The launcher position is saved in browser localStorage.
 
 The current local resource catalog contains stable bot ids for agate,
-aquamarine, and turquoise. The panel exposes a mining start button and a
-compact multiselect for those resources.
+aquamarine, and turquoise. The panel exposes independent mining and crafting
+start buttons, compact multiselects for resources and profession recipes, and
+separate progress bars for parallel mining and crafting timers.
 
 ## GitHub Pages Deploy
 

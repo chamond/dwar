@@ -1,10 +1,17 @@
 import type { LauncherPositionStore } from '../../application/ports/launcher-position-store';
 import type { PanelSizeStore } from '../../application/ports/panel-size-store';
+import type { ProfessionRecipeSelectionStore } from '../../application/ports/profession-recipe-selection-store';
 import type { ResourceSelectionStore } from '../../application/ports/resource-selection-store';
 import type { HuntLocationSelectionStore } from '../../application/ports/hunt-location-selection-store';
 import type { CreateBotLogEntryUseCase } from '../../application/use-cases/create-bot-log-entry';
 import type { ListHuntLocationsUseCase } from '../../application/use-cases/list-hunt-locations';
+import type { ListProfessionRecipesUseCase } from '../../application/use-cases/list-profession-recipes';
 import type { ListResourcesUseCase } from '../../application/use-cases/list-resources';
+import type {
+  ProfessionCraftingEvent,
+  ProfessionCraftingRecipeInfo,
+  RunProfessionCraftingUseCase
+} from '../../application/use-cases/run-profession-crafting';
 import type {
   ResourceMiningEvent,
   ResourceMiningMobInfo,
@@ -14,8 +21,10 @@ import type {
 import { appendLogLine, clearLogList, type BotLogLinePart } from './log-list';
 import { createBotPanel } from './bot-panel';
 import { createLauncherButton } from './launcher-button';
+import { getCraftIcon } from './craft-icon';
 import { getPickaxeIcon } from './pickaxe-icon';
 import { createProcessBarController, type ProcessBarController } from './process-bar';
+import { formatProfessionRecipeLabel } from './profession-recipe-label';
 import { formatResourceLabel } from './resource-label';
 import { attachDraggableLauncher, restoreLauncherPosition } from './draggable-launcher';
 import { attachDraggablePanel } from './draggable-panel';
@@ -27,11 +36,14 @@ import { attachResizablePanel, keepPanelSizeInViewport, restorePanelSize } from 
 export interface BotWidgetDependencies {
   createLogEntry: CreateBotLogEntryUseCase;
   listHuntLocations: ListHuntLocationsUseCase;
+  listProfessionRecipes: ListProfessionRecipesUseCase;
   listResources: ListResourcesUseCase;
   locationSelectionStore: HuntLocationSelectionStore;
   launcherPositionStore: LauncherPositionStore;
   panelSizeStore: PanelSizeStore;
+  professionRecipeSelectionStore: ProfessionRecipeSelectionStore;
   resourceSelectionStore: ResourceSelectionStore;
+  runProfessionCrafting: RunProfessionCraftingUseCase;
   runResourceMining: RunResourceMiningUseCase;
 }
 
@@ -44,11 +56,16 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   const shadowRoot = host.attachShadow({ mode: 'open' });
   const launcher = createLauncherButton();
   const resources = dependencies.listResources.execute().map((resource) => resource.toSnapshot());
+  const recipes = dependencies.listProfessionRecipes.execute().map((recipe) => recipe.toSnapshot());
   const locations = dependencies.listHuntLocations.execute().map((location) => location.toSnapshot());
-  const botPanel = createBotPanel(resources, locations, {
+  const botPanel = createBotPanel(resources, recipes, locations, {
     selectedResourceIds: dependencies.resourceSelectionStore.load(),
     onResourceSelectionChange: (selectedResources) => {
       dependencies.resourceSelectionStore.save(selectedResources.map(({ id }) => id));
+    },
+    selectedRecipeIds: dependencies.professionRecipeSelectionStore.load(),
+    onRecipeSelectionChange: (selectedRecipes) => {
+      dependencies.professionRecipeSelectionStore.save(selectedRecipes.map(({ id }) => id));
     },
     selectedLocationId: dependencies.locationSelectionStore.load(),
     onLocationSelectionChange: (location) => {
@@ -61,7 +78,9 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     appendLogLine(botPanel.logList, entry, parts);
   };
   let miningAbortController: AbortController | null = null;
-  const processBar = createProcessBarController(botPanel.processBar);
+  let craftingAbortController: AbortController | null = null;
+  const miningProcessBar = createProcessBarController(botPanel.miningProcessBar);
+  const craftingProcessBar = createProcessBarController(botPanel.craftingProcessBar);
 
   shadowRoot.append(createStyleElement(), launcher, botPanel.panel);
   document.documentElement.append(host);
@@ -90,11 +109,14 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
       return;
     }
 
+    botPanel.resourcePicker.close();
+    botPanel.recipePicker.close();
     hidePanel(botPanel.panel, launcher);
   });
 
   botPanel.closeButton.addEventListener('click', () => {
     botPanel.resourcePicker.close();
+    botPanel.recipePicker.close();
     hidePanel(botPanel.panel, launcher);
   });
 
@@ -131,7 +153,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
         signal: controller.signal,
         observer: {
           handle: (event) => {
-            handleMiningEvent(event, addLog, processBar);
+            handleMiningEvent(event, addLog, miningProcessBar);
           }
         }
       })
@@ -147,7 +169,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
 
         miningAbortController = null;
         setMiningButtonActive(botPanel.startMiningButton, false);
-        processBar.reset();
+        miningProcessBar.reset();
 
         if (controller.signal.aborted) {
           addLog('Добыча остановлена.');
@@ -164,6 +186,52 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     miningAbortController.abort();
   }
 
+  function startCrafting(): void {
+    const selectedRecipes = botPanel.recipePicker.getSelectedRecipes();
+
+    if (selectedRecipes.length === 0) {
+      craftingProcessBar.start({
+        label: 'Выберите рецепт',
+        durationMs: 3_000
+      });
+      return;
+    }
+
+    const controller = new AbortController();
+    craftingAbortController = controller;
+    botPanel.recipePicker.close();
+    setCraftingButtonActive(botPanel.startCraftingButton, true);
+
+    void dependencies.runProfessionCrafting
+      .execute({
+        getSelectedRecipeIds: () => botPanel.recipePicker.getSelectedRecipes().map(({ id }) => id),
+        signal: controller.signal,
+        observer: {
+          handle: (event) => {
+            handleCraftingEvent(event, addLog, craftingProcessBar);
+          }
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (craftingAbortController !== controller) {
+          return;
+        }
+
+        craftingAbortController = null;
+        setCraftingButtonActive(botPanel.startCraftingButton, false);
+        craftingProcessBar.reset();
+      });
+  }
+
+  function stopCrafting(): void {
+    if (!craftingAbortController || craftingAbortController.signal.aborted) {
+      return;
+    }
+
+    craftingAbortController.abort();
+  }
+
   botPanel.startMiningButton.addEventListener('click', () => {
     if (miningAbortController) {
       stopMining();
@@ -171,6 +239,15 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     }
 
     startMining();
+  });
+
+  botPanel.startCraftingButton.addEventListener('click', () => {
+    if (craftingAbortController) {
+      stopCrafting();
+      return;
+    }
+
+    startCrafting();
   });
 
   attachDraggablePanel({
@@ -193,7 +270,12 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
       return;
     }
 
+    if (event.target instanceof Element && botPanel.recipePicker.root.contains(event.target)) {
+      return;
+    }
+
     botPanel.resourcePicker.close();
+    botPanel.recipePicker.close();
   });
 
   window.addEventListener('resize', () => {
@@ -215,6 +297,15 @@ function handleMiningEvent(
 ): void {
   updateMiningProcessBar(event, processBar);
   logMiningEvent(event, addLog);
+}
+
+function handleCraftingEvent(
+  event: ProfessionCraftingEvent,
+  addLog: (message: string, parts?: readonly BotLogLinePart[]) => void,
+  processBar: ProcessBarController
+): void {
+  updateCraftingProcessBar(event, processBar);
+  logCraftingEvent(event, addLog);
 }
 
 function updateMiningProcessBar(event: ResourceMiningEvent, processBar: ProcessBarController): void {
@@ -267,6 +358,43 @@ function updateMiningProcessBar(event: ResourceMiningEvent, processBar: ProcessB
       return;
 
     case 'scan-completed':
+      return;
+  }
+}
+
+function updateCraftingProcessBar(event: ProfessionCraftingEvent, processBar: ProcessBarController): void {
+  switch (event.type) {
+    case 'no-recipe-selected':
+      processBar.start({
+        label: 'Ожидание рецепта',
+        durationMs: event.delayMs
+      });
+      return;
+
+    case 'craft-request-started':
+      processBar.busy({
+        label: `Отправка ${formatProfessionRecipeLabel(event.recipe)}`,
+        accentColor: event.recipe.markerColor
+      });
+      return;
+
+    case 'craft-started':
+      processBar.start({
+        label: `Крафт ${formatProfessionRecipeLabel(event.recipe)}`,
+        durationMs: event.cooldownMs,
+        accentColor: event.recipe.markerColor
+      });
+      return;
+
+    case 'craft-completed':
+      processBar.complete();
+      return;
+
+    case 'next-craft-delayed':
+      processBar.start({
+        label: 'Пауза крафта',
+        durationMs: event.delayMs
+      });
       return;
   }
 }
@@ -334,6 +462,28 @@ function logMiningEvent(
   }
 }
 
+function logCraftingEvent(
+  event: ProfessionCraftingEvent,
+  addLog: (message: string, parts?: readonly BotLogLinePart[]) => void
+): void {
+  switch (event.type) {
+    case 'craft-started':
+      addLog(`Начат крафт ${event.amount} шт. ${formatProfessionRecipeLabel(event.recipe)}.`, [
+        'Начат крафт ',
+        `${event.amount} шт. `,
+        createRecipeLogPart(event.recipe),
+        '.'
+      ]);
+      return;
+
+    case 'no-recipe-selected':
+    case 'craft-request-started':
+    case 'craft-completed':
+    case 'next-craft-delayed':
+      return;
+  }
+}
+
 function createDangerLogParts(prefix: string, mob: ResourceMiningMobInfo | null): readonly BotLogLinePart[] {
   if (!mob) {
     return [`${prefix}опасность рядом.`];
@@ -356,6 +506,16 @@ function createResourceLogPart(resource: ResourceMiningResourceInfo): BotLogLine
   };
 }
 
+function createRecipeLogPart(recipe: ProfessionCraftingRecipeInfo): BotLogLinePart {
+  const label = formatProfessionRecipeLabel(recipe);
+
+  return {
+    text: label,
+    color: recipe.markerColor,
+    title: `Рецепт ${label}`
+  };
+}
+
 function createMobLogPart(mob: ResourceMiningMobInfo): BotLogLinePart {
   return {
     text: `${mob.name}, ур. ${mob.level}`,
@@ -368,6 +528,12 @@ function setMiningButtonActive(button: HTMLButtonElement, isActive: boolean): vo
   button.classList.toggle('is-active', isActive);
   button.setAttribute('aria-label', isActive ? 'Остановить добычу' : 'Начать добычу');
   button.innerHTML = `${getPickaxeIcon()}<span>${isActive ? 'Стоп' : 'Добыча'}</span>`;
+}
+
+function setCraftingButtonActive(button: HTMLButtonElement, isActive: boolean): void {
+  button.classList.toggle('is-active', isActive);
+  button.setAttribute('aria-label', isActive ? 'Остановить крафт' : 'Начать крафт');
+  button.innerHTML = `${getCraftIcon()}<span>${isActive ? 'Стоп' : 'Крафт'}</span>`;
 }
 
 function formatSeconds(durationMs: number): string {

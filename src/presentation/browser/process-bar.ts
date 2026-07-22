@@ -4,6 +4,7 @@ export interface ProcessBarElements {
   timer: HTMLElement;
   rail: HTMLElement;
   fill: HTMLElement;
+  idleLabel: string;
 }
 
 export interface ProcessBarStartOptions {
@@ -25,7 +26,7 @@ interface ActiveProcess {
   durationMs: number;
 }
 
-export function createProcessBar(): ProcessBarElements {
+export function createProcessBar(idleLabel = 'Ожидание'): ProcessBarElements {
   const root = document.createElement('div');
   root.className = 'dwar-process-bar is-idle';
 
@@ -57,7 +58,8 @@ export function createProcessBar(): ProcessBarElements {
     label,
     timer,
     rail,
-    fill
+    fill,
+    idleLabel
   };
 }
 
@@ -104,7 +106,7 @@ export function createProcessBarController(elements: ProcessBarElements): Proces
     activeProcess = null;
     elements.root.classList.add('is-idle');
     elements.root.classList.remove('is-active', 'is-busy', 'is-complete');
-    elements.label.textContent = 'Ожидание';
+    elements.label.textContent = elements.idleLabel;
     elements.timer.textContent = '00:00 / 00:00';
     elements.fill.style.transform = 'scaleX(0)';
     elements.rail.setAttribute('aria-valuenow', '0');

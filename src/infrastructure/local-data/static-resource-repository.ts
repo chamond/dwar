@@ -1,4 +1,4 @@
-import { BotResource, type BotResourceProps } from '../../domain/entities/bot-resource';
+import { BotResource, type BotResourceId, type BotResourceProps } from '../../domain/entities/bot-resource';
 import type { ResourceRepository } from '../../application/ports/resource-repository';
 
 const LOCAL_RESOURCE_RECORDS = [
@@ -30,6 +30,10 @@ export class StaticResourceRepository implements ResourceRepository {
 
   findAll(): readonly BotResource[] {
     return this.resources;
+  }
+
+  findById(id: BotResourceId): BotResource | null {
+    return this.resources.find((resource) => resource.getId() === id) ?? null;
   }
 
   findByArticleId(articleId: number): BotResource | null {

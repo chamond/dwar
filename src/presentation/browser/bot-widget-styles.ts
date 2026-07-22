@@ -53,7 +53,7 @@ export const BOT_WIDGET_STYLES = `
   .dwar-launcher:focus-visible,
   .dwar-panel__icon-button:focus-visible,
   .dwar-panel__resize:focus-visible,
-  .dwar-mining-button:focus-visible,
+  .dwar-action-button:focus-visible,
   .dwar-location-select__control:focus-visible,
   .dwar-resource-picker__toggle:focus-visible {
     outline: 2px solid #78d9c2;
@@ -71,9 +71,9 @@ export const BOT_WIDGET_STYLES = `
     z-index: 2147483647;
     display: flex;
     width: 356px;
-    height: 352px;
+    height: 408px;
     min-width: 296px;
-    min-height: 304px;
+    min-height: 364px;
     max-width: calc(100vw - 24px);
     max-height: calc(100vh - 24px);
     flex-direction: column;
@@ -184,7 +184,7 @@ export const BOT_WIDGET_STYLES = `
     border-bottom: 1px solid rgba(255, 255, 255, .07);
   }
 
-  .dwar-mining-button,
+  .dwar-action-button,
   .dwar-location-select__control,
   .dwar-resource-picker__toggle {
     height: 38px;
@@ -196,13 +196,22 @@ export const BOT_WIDGET_STYLES = `
     transition: border-color .14s ease, background-color .14s ease, color .14s ease;
   }
 
-  .dwar-mining-button {
+  .dwar-panel__action-buttons {
+    display: grid;
+    flex: 0 0 92px;
+    gap: 8px;
+  }
+
+  .dwar-action-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    flex: 0 0 auto;
     gap: 7px;
-    padding: 0 12px;
+    width: 100%;
+    padding: 0 10px;
+  }
+
+  .dwar-mining-button {
     color: #121620;
     background: linear-gradient(180deg, #f3c96b 0%, #d69b3f 100%);
     box-shadow: 0 8px 18px rgba(0, 0, 0, .26);
@@ -213,24 +222,35 @@ export const BOT_WIDGET_STYLES = `
     background: linear-gradient(180deg, #ffd982 0%, #dda948 100%);
   }
 
-  .dwar-mining-button.is-active {
+  .dwar-crafting-button {
+    color: #07110f;
+    background: linear-gradient(180deg, #78d9c2 0%, #39a88f 100%);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, .26);
+  }
+
+  .dwar-crafting-button:hover {
+    border-color: rgba(166, 255, 233, .52);
+    background: linear-gradient(180deg, #8cebd6 0%, #42b79c 100%);
+  }
+
+  .dwar-action-button.is-active {
     color: #ffe9e9;
     background: linear-gradient(180deg, #d65a63 0%, #8f2e38 100%);
     border-color: rgba(255, 173, 182, .44);
   }
 
-  .dwar-mining-button.is-active:hover {
+  .dwar-action-button.is-active:hover {
     background: linear-gradient(180deg, #e66a74 0%, #9f3741 100%);
   }
 
-  .dwar-mining-button:disabled {
+  .dwar-action-button:disabled {
     color: rgba(18, 22, 32, .62);
     cursor: wait;
     background: linear-gradient(180deg, #a88746 0%, #76592d 100%);
     box-shadow: none;
   }
 
-  .dwar-mining-button svg {
+  .dwar-action-button svg {
     width: 18px;
     height: 18px;
   }
@@ -419,11 +439,19 @@ export const BOT_WIDGET_STYLES = `
     scrollbar-color: #394353 #090d13;
   }
 
+  .dwar-process-bars {
+    flex: 0 0 auto;
+    background: #090d13;
+    border-top: 1px solid rgba(255, 255, 255, .06);
+  }
+
   .dwar-process-bar {
     --dwar-process-color: #78d9c2;
-    flex: 0 0 auto;
     padding: 6px 0 0;
     background: #090d13;
+  }
+
+  .dwar-process-bar + .dwar-process-bar {
     border-top: 1px solid rgba(255, 255, 255, .06);
   }
 
