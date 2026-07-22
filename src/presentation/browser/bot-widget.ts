@@ -150,6 +150,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
       return;
     }
 
+    humanAttentionAlarm.stop();
     addLog('Сирена отключена.');
   });
 
