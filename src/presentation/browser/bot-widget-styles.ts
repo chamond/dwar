@@ -184,11 +184,13 @@ export const BOT_WIDGET_STYLES = `
     height: 18px;
   }
 
-  .dwar-panel__alarm-toggle.is-muted {
+  .dwar-panel__alarm-toggle.is-muted,
+  .dwar-panel__alarm-toggle[aria-pressed="false"] {
     color: #697386;
   }
 
-  .dwar-panel__alarm-toggle.is-muted:hover {
+  .dwar-panel__alarm-toggle.is-muted:hover,
+  .dwar-panel__alarm-toggle[aria-pressed="false"]:hover {
     background: rgba(105, 115, 134, .13);
   }
 

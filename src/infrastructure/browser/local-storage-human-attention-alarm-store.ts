@@ -1,7 +1,7 @@
 import type { HumanAttentionAlarmStore } from '../../application/ports/human-attention-alarm-store';
 import { loadJsonFromLocalStorage, saveJsonToLocalStorage } from './local-storage-json';
 
-const STORAGE_KEY = 'dwar-bot.human-attention-alarm.v1';
+const STORAGE_KEY = 'dwar-bot.human-attention-alarm.v2';
 
 export class LocalStorageHumanAttentionAlarmStore implements HumanAttentionAlarmStore {
   load(): boolean | null {

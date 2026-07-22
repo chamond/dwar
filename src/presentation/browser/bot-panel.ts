@@ -118,11 +118,11 @@ function createPanelHeader(): PanelHeaderElements {
 
   const alarmToggleButton = document.createElement('button');
   alarmToggleButton.type = 'button';
-  alarmToggleButton.className = 'dwar-panel__icon-button dwar-panel__alarm-toggle';
+  alarmToggleButton.className = 'dwar-panel__icon-button dwar-panel__alarm-toggle is-muted';
   alarmToggleButton.dataset.dwarPanelAction = '';
-  alarmToggleButton.setAttribute('aria-label', 'Сирена включена');
-  alarmToggleButton.setAttribute('aria-pressed', 'true');
-  alarmToggleButton.setAttribute('title', 'Сирена включена');
+  alarmToggleButton.setAttribute('aria-label', 'Сирена отключена');
+  alarmToggleButton.setAttribute('aria-pressed', 'false');
+  alarmToggleButton.setAttribute('title', 'Сирена отключена');
   alarmToggleButton.innerHTML = getAlarmIcon();
 
   const closeButton = document.createElement('button');

@@ -93,7 +93,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   const miningProcessBar = createProcessBarController(botPanel.miningProcessBar);
   const craftingProcessBars = createCraftingProcessBarsController(botPanel.craftingProcessBars);
   const humanAttentionAlarm = createHumanAttentionAlarm();
-  let isHumanAttentionAlarmEnabled = dependencies.humanAttentionAlarmStore.load() ?? true;
+  let isHumanAttentionAlarmEnabled = dependencies.humanAttentionAlarmStore.load() ?? false;
   setHumanAttentionAlarmButtonEnabled(botPanel.alarmToggleButton, isHumanAttentionAlarmEnabled);
   attachMutuallyExclusivePickers(botPanel);
 
@@ -144,7 +144,13 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     dependencies.humanAttentionAlarmStore.save(isHumanAttentionAlarmEnabled);
     setHumanAttentionAlarmButtonEnabled(botPanel.alarmToggleButton, isHumanAttentionAlarmEnabled);
 
-    addLog(isHumanAttentionAlarmEnabled ? 'Сирена включена.' : 'Сирена отключена.');
+    if (isHumanAttentionAlarmEnabled) {
+      humanAttentionAlarm.play();
+      addLog('Сирена включена.');
+      return;
+    }
+
+    addLog('Сирена отключена.');
   });
 
   function startMining(): void {

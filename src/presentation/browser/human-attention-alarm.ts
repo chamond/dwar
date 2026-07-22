@@ -9,18 +9,16 @@ export function createHumanAttentionAlarm(): HumanAttentionAlarm {
 }
 
 class BrowserHumanAttentionAlarm implements HumanAttentionAlarm {
-  private readonly template: HTMLAudioElement;
+  private readonly source: string;
 
   constructor(source: string) {
-    this.template = new Audio(source);
-    this.template.preload = 'auto';
-    this.template.volume = 1;
+    this.source = source;
   }
 
   play(): void {
-    const audio = this.template.cloneNode(true) as HTMLAudioElement;
+    const audio = new Audio(this.source);
+    audio.preload = 'auto';
     audio.volume = 1;
-    audio.currentTime = 0;
 
     void audio.play().catch(() => undefined);
   }

@@ -42,9 +42,10 @@ crafting start buttons, compact multiselects for resources and profession
 recipes, and one shared crafting amount input defaulting to 10. It also shows
 separate progress bars for mining and every parallel crafting timer.
 Unexpected server responses trigger process shutdown and a red human-attention
-log tag. The panel header includes a persisted alarm toggle; when the alarm is
-enabled, the same unexpected-response path also plays the embedded siren sound.
-The alarm asset is embedded into the single output bundle.
+log tag. The panel header includes a persisted alarm toggle. The alarm is off
+by default; enabling it plays a test siren immediately, and future unexpected
+responses play the embedded siren sound while the toggle stays enabled. The
+alarm asset is embedded into the single output bundle.
 
 ## GitHub Pages Deploy
 
