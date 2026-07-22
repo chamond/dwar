@@ -10,7 +10,7 @@ export function createHumanAttentionAlarm(): HumanAttentionAlarm {
 }
 
 class BrowserHumanAttentionAlarm implements HumanAttentionAlarm {
-  private readonly activeAudios = new Set<ActiveAlarmAudio>();
+  private activeAudio: ActiveAlarmAudio | null = null;
   private readonly source: string;
 
   constructor(source: string) {
@@ -18,18 +18,27 @@ class BrowserHumanAttentionAlarm implements HumanAttentionAlarm {
   }
 
   play(): void {
+    if (this.activeAudio) {
+      return;
+    }
+
     const audio = new Audio(this.source);
+    audio.loop = true;
     audio.preload = 'auto';
     audio.volume = 1;
 
     const cleanup = (): void => {
-      this.activeAudios.delete(activeAudio);
+      if (this.activeAudio !== activeAudio) {
+        return;
+      }
+
+      this.activeAudio = null;
       audio.removeEventListener('ended', cleanup);
       audio.removeEventListener('error', cleanup);
     };
     const activeAudio: ActiveAlarmAudio = { audio, cleanup };
 
-    this.activeAudios.add(activeAudio);
+    this.activeAudio = activeAudio;
 
     audio.addEventListener('ended', cleanup);
     audio.addEventListener('error', cleanup);
@@ -38,13 +47,13 @@ class BrowserHumanAttentionAlarm implements HumanAttentionAlarm {
   }
 
   stop(): void {
-    for (const activeAudio of this.activeAudios) {
-      activeAudio.audio.pause();
-      activeAudio.audio.currentTime = 0;
-      activeAudio.cleanup();
+    if (!this.activeAudio) {
+      return;
     }
 
-    this.activeAudios.clear();
+    this.activeAudio.audio.pause();
+    this.activeAudio.audio.currentTime = 0;
+    this.activeAudio.cleanup();
   }
 }
 
