@@ -81,6 +81,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   let craftingAbortController: AbortController | null = null;
   const miningProcessBar = createProcessBarController(botPanel.miningProcessBar);
   const craftingProcessBar = createProcessBarController(botPanel.craftingProcessBar);
+  attachMutuallyExclusivePickers(botPanel);
 
   shadowRoot.append(createStyleElement(), launcher, botPanel.panel);
   document.documentElement.append(host);
@@ -205,6 +206,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     void dependencies.runProfessionCrafting
       .execute({
         getSelectedRecipeIds: () => botPanel.recipePicker.getSelectedRecipes().map(({ id }) => id),
+        getAmountPerRequest: () => botPanel.craftAmountInput.getAmount(),
         signal: controller.signal,
         observer: {
           handle: (event) => {
@@ -288,6 +290,20 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   });
 
   addLog('Скрипт загружен.');
+}
+
+function attachMutuallyExclusivePickers(botPanel: ReturnType<typeof createBotPanel>): void {
+  botPanel.resourcePicker.toggleButton.addEventListener('click', () => {
+    if (!botPanel.resourcePicker.menu.hidden) {
+      botPanel.recipePicker.close();
+    }
+  });
+
+  botPanel.recipePicker.toggleButton.addEventListener('click', () => {
+    if (!botPanel.recipePicker.menu.hidden) {
+      botPanel.resourcePicker.close();
+    }
+  });
 }
 
 function handleMiningEvent(

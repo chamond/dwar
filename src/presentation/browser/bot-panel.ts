@@ -3,6 +3,7 @@ import type { HuntLocationId, HuntLocationSnapshot } from '../../domain/entities
 import type { ProfessionRecipeId, ProfessionRecipeSnapshot } from '../../domain/entities/profession-recipe';
 import { getClearLogIcon } from './clear-log-icon';
 import { getCraftIcon } from './craft-icon';
+import { createCraftAmountInput, type CraftAmountInputElements } from './craft-amount-input';
 import { getPickaxeIcon } from './pickaxe-icon';
 import { createHuntLocationSelect, type HuntLocationSelectElements } from './hunt-location-select';
 import { createProcessBar, type ProcessBarElements } from './process-bar';
@@ -19,6 +20,7 @@ export interface BotPanelElements {
   closeButton: HTMLButtonElement;
   startMiningButton: HTMLButtonElement;
   startCraftingButton: HTMLButtonElement;
+  craftAmountInput: CraftAmountInputElements;
   resourcePicker: ResourcePickerElements;
   recipePicker: ProfessionRecipePickerElements;
   locationSelect: HuntLocationSelectElements;
@@ -37,6 +39,7 @@ interface MiningControlsElements {
   controls: HTMLElement;
   startMiningButton: HTMLButtonElement;
   startCraftingButton: HTMLButtonElement;
+  craftAmountInput: CraftAmountInputElements;
   resourcePicker: ResourcePickerElements;
   recipePicker: ProfessionRecipePickerElements;
   locationSelect: HuntLocationSelectElements;
@@ -80,6 +83,7 @@ export function createBotPanel(
     closeButton: headerElements.closeButton,
     startMiningButton: controlsElements.startMiningButton,
     startCraftingButton: controlsElements.startCraftingButton,
+    craftAmountInput: controlsElements.craftAmountInput,
     resourcePicker: controlsElements.resourcePicker,
     recipePicker: controlsElements.recipePicker,
     locationSelect: controlsElements.locationSelect,
@@ -155,6 +159,7 @@ function createBotControls(
     selectedRecipeIds: options.selectedRecipeIds,
     onSelectionChange: options.onRecipeSelectionChange
   });
+  const craftAmountInput = createCraftAmountInput();
 
   const locationSelect = createHuntLocationSelect(locations, {
     selectedLocationId: options.selectedLocationId,
@@ -167,13 +172,17 @@ function createBotControls(
 
   const selectorGroup = document.createElement('div');
   selectorGroup.className = 'dwar-panel__selectors';
-  selectorGroup.append(resourcePicker.root, recipePicker.root, locationSelect.root);
+  const recipeRow = document.createElement('div');
+  recipeRow.className = 'dwar-panel__recipe-row';
+  recipeRow.append(recipePicker.root, craftAmountInput.root);
+  selectorGroup.append(resourcePicker.root, recipeRow, locationSelect.root);
   controls.append(actionGroup, selectorGroup);
 
   return {
     controls,
     startMiningButton,
     startCraftingButton,
+    craftAmountInput,
     resourcePicker,
     recipePicker,
     locationSelect

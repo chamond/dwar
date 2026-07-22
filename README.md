@@ -39,7 +39,8 @@ The launcher position is saved in browser localStorage.
 The current local resource catalog contains stable bot ids for agate,
 aquamarine, and turquoise. The panel exposes independent mining and crafting
 start buttons, compact multiselects for resources and profession recipes, and
-separate progress bars for parallel mining and crafting timers.
+one shared crafting amount input defaulting to 10. It also shows separate
+progress bars for parallel mining and crafting timers.
 
 ## GitHub Pages Deploy
 

@@ -17,6 +17,7 @@ export interface ProfessionCraftingConfig {
 }
 
 export interface RunProfessionCraftingInput {
+  getAmountPerRequest?: (() => number) | undefined;
   getSelectedRecipeIds(): readonly ProfessionRecipeId[];
   observer?: ProfessionCraftingObserver;
   signal?: AbortSignal;
@@ -104,7 +105,7 @@ export class RunProfessionCraftingUseCase {
   }
 
   private async craftRecipe(recipe: ProfessionRecipe, input: RunProfessionCraftingInput): Promise<void> {
-    const amount = this.getCraftAmount(recipe);
+    const amount = this.getCraftAmount(recipe, input.getAmountPerRequest?.());
     const recipeInfo = createRecipeInfo(recipe);
 
     this.emit(input, {
@@ -138,8 +139,10 @@ export class RunProfessionCraftingUseCase {
     await this.delay.wait(this.config.postCraftDelayMs, input.signal);
   }
 
-  private getCraftAmount(recipe: ProfessionRecipe): number {
-    return Math.min(this.config.amountPerRequest, recipe.getMaxAmountPerRequest());
+  private getCraftAmount(recipe: ProfessionRecipe, requestedAmount: number | undefined): number {
+    const amount = normalizeCraftAmount(requestedAmount ?? this.config.amountPerRequest, this.config.amountPerRequest);
+
+    return Math.min(amount, this.config.amountPerRequest, recipe.getMaxAmountPerRequest());
   }
 
   private getSelectedRecipes(selectedRecipeIds: readonly ProfessionRecipeId[]): readonly ProfessionRecipe[] {
@@ -175,4 +178,12 @@ function createRecipeInfo(recipe: ProfessionRecipe): ProfessionCraftingRecipeInf
     markerColor: resource.getMarkerColor(),
     level: resource.getLevel()
   };
+}
+
+function normalizeCraftAmount(amount: number, fallbackAmount: number): number {
+  if (!Number.isFinite(amount)) {
+    return fallbackAmount;
+  }
+
+  return Math.max(1, Math.trunc(amount));
 }
