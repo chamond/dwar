@@ -97,6 +97,14 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   setHumanAttentionAlarmButtonEnabled(botPanel.alarmToggleButton, isHumanAttentionAlarmEnabled);
   attachMutuallyExclusivePickers(botPanel);
 
+  const activateHumanAttentionAlarm = (): void => {
+    isHumanAttentionAlarmEnabled = true;
+    dependencies.humanAttentionAlarmStore.save(true);
+    setHumanAttentionAlarmButtonEnabled(botPanel.alarmToggleButton, true);
+    humanAttentionAlarm.prepare();
+    humanAttentionAlarm.play();
+  };
+
   shadowRoot.append(createStyleElement(), launcher, botPanel.panel);
   document.documentElement.append(host);
   restoreLauncherPosition(launcher, dependencies.launcherPositionStore);
@@ -145,8 +153,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     setHumanAttentionAlarmButtonEnabled(botPanel.alarmToggleButton, isHumanAttentionAlarmEnabled);
 
     if (isHumanAttentionAlarmEnabled) {
-      humanAttentionAlarm.prepare();
-      humanAttentionAlarm.play();
+      activateHumanAttentionAlarm();
       addLog('Сирена включена.');
       return;
     }
@@ -169,9 +176,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
       return;
     }
 
-    if (isHumanAttentionAlarmEnabled) {
-      humanAttentionAlarm.prepare();
-    }
+    humanAttentionAlarm.prepare();
 
     const controller = new AbortController();
     miningAbortController = controller;
@@ -204,8 +209,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
             'Добыча',
             error,
             addLog,
-            humanAttentionAlarm,
-            isHumanAttentionAlarmEnabled
+            activateHumanAttentionAlarm
           )) {
             addLog(`Добыча остановлена из-за ошибки: ${getErrorMessage(error)}.`);
           }
@@ -270,9 +274,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
       return;
     }
 
-    if (isHumanAttentionAlarmEnabled) {
-      humanAttentionAlarm.prepare();
-    }
+    humanAttentionAlarm.prepare();
 
     const controller = new AbortController();
     craftingAbortController = controller;
@@ -299,8 +301,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
             'Крафт',
             error,
             addLog,
-            humanAttentionAlarm,
-            isHumanAttentionAlarmEnabled
+            activateHumanAttentionAlarm
           )) {
             addLog(`Крафт остановлен из-за ошибки: ${getErrorMessage(error)}.`);
           }
@@ -665,8 +666,7 @@ function handleUnexpectedServerResponse(
   processName: string,
   error: unknown,
   addLog: (message: string, parts?: readonly BotLogLinePart[]) => void,
-  alarm: HumanAttentionAlarm,
-  isAlarmEnabled: boolean
+  activateAlarm: () => void
 ): boolean {
   if (!isUnexpectedServerResponseError(error)) {
     return false;
@@ -675,8 +675,7 @@ function handleUnexpectedServerResponse(
   triggerHumanAttentionAlarm(
     `${processName} остановлена: неожиданный ответ сервера: ${getErrorMessage(error)}.`,
     addLog,
-    alarm,
-    isAlarmEnabled
+    activateAlarm
   );
 
   return true;
@@ -685,12 +684,9 @@ function handleUnexpectedServerResponse(
 function triggerHumanAttentionAlarm(
   message: string,
   addLog: (message: string, parts?: readonly BotLogLinePart[]) => void,
-  alarm: HumanAttentionAlarm,
-  isAlarmEnabled: boolean
+  activateAlarm: () => void
 ): void {
-  if (isAlarmEnabled) {
-    alarm.play();
-  }
+  activateAlarm();
 
   addLog(`${message} Требуется участие человека.`, [
     message,
