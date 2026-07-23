@@ -31,7 +31,8 @@ export function selectSafestResourceForMining(
   mobs: readonly HuntMob[],
   options: ResourceMiningSafetyOptions
 ): ResourceMiningSelection {
-  const candidateSafeties = resources.map((resource) => assessResourceMiningSafety(resource, mobs, options));
+  const availableResources = resources.filter(isResourceAvailableForMining);
+  const candidateSafeties = availableResources.map((resource) => assessResourceMiningSafety(resource, mobs, options));
   const safeCandidates = candidateSafeties.filter((safety) => safety.isSafe);
 
   return {
@@ -63,7 +64,7 @@ export function assessResourceMiningSafety(
     .sort((left, right) => left.distance - right.distance);
   const nearestDangerousMob = dangerousDistances[0] ?? null;
   const blockingMob = dangerousDistances.find(({ distance }) => distance <= options.dangerRadius) ?? null;
-  const isAvailable = !resource.isBeingFarmed();
+  const isAvailable = isResourceAvailableForMining(resource);
 
   return {
     resource,
@@ -74,6 +75,10 @@ export function assessResourceMiningSafety(
     blockingMob: blockingMob?.mob ?? null,
     blockingMobDistance: blockingMob?.distance ?? null
   };
+}
+
+function isResourceAvailableForMining(resource: HuntResourceNode): boolean {
+  return !resource.isBeingFarmed();
 }
 
 function compareResourceSafety(left: ResourceMiningSafety, right: ResourceMiningSafety): number {

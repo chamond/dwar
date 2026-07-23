@@ -145,6 +145,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     setHumanAttentionAlarmButtonEnabled(botPanel.alarmToggleButton, isHumanAttentionAlarmEnabled);
 
     if (isHumanAttentionAlarmEnabled) {
+      humanAttentionAlarm.prepare();
       humanAttentionAlarm.play();
       addLog('Сирена включена.');
       return;
@@ -166,6 +167,10 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     if (!selectedLocation) {
       addLog('Выберите локацию для добычи.');
       return;
+    }
+
+    if (isHumanAttentionAlarmEnabled) {
+      humanAttentionAlarm.prepare();
     }
 
     const controller = new AbortController();
@@ -263,6 +268,10 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
         delayMs: 3_000
       });
       return;
+    }
+
+    if (isHumanAttentionAlarmEnabled) {
+      humanAttentionAlarm.prepare();
     }
 
     const controller = new AbortController();
