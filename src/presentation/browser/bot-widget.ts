@@ -441,7 +441,6 @@ function getMiningPhase(event: ResourceMiningEvent): ProcessPhase {
       return 'busy';
 
     case 'no-safe-resource':
-    case 'next-mining-delayed':
       return 'pause';
 
     case 'farm-started':
@@ -501,7 +500,7 @@ function updateMiningProcessBar(event: ResourceMiningEvent, processBar: ProcessB
     case 'farm-started':
       processBar.start({
         label: `Добыча ${formatResourceLabel(event.resource)}`,
-        durationMs: event.miningDurationMs,
+        durationMs: event.durationMs,
         accentColor: event.resource.markerColor
       });
       return;
@@ -517,13 +516,6 @@ function updateMiningProcessBar(event: ResourceMiningEvent, processBar: ProcessB
 
     case 'farm-completed':
       processBar.complete();
-      return;
-
-    case 'next-mining-delayed':
-      processBar.start({
-        label: 'Пауза',
-        durationMs: event.delayMs
-      });
       return;
 
     case 'safety-check-completed':
@@ -568,10 +560,10 @@ function logMiningEvent(
       return;
 
     case 'farm-cancelled':
-      addLog(`Добыча отменена: ${formatResourceLabel(event.resource)} уже добывают.`, [
+      addLog(`Добыча отменена: ${formatResourceLabel(event.resource)} занят.`, [
         'Добыча отменена: ',
         createResourceLogPart(event.resource),
-        ' уже добывают.'
+        ' занят.'
       ]);
       return;
 
@@ -594,9 +586,6 @@ function logMiningEvent(
       ]);
       return;
 
-    case 'next-mining-delayed':
-      addLog(`Пауза перед следующей добычей ${formatSeconds(event.delayMs)}.`);
-      return;
   }
 }
 
@@ -617,7 +606,6 @@ function logCraftingEvent(
     case 'no-recipe-selected':
     case 'craft-request-started':
     case 'craft-completed':
-    case 'next-craft-delayed':
       return;
   }
 }

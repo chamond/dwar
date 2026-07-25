@@ -67,7 +67,7 @@ export class DwarHuntZoneXmlParser {
             x: getIntegerAttribute(element, 'x'),
             y: getIntegerAttribute(element, 'y')
           }),
-          isBeingFarmed: getBooleanAttribute(element, 'farming'),
+          isBeingFarmed: getIntegerAttribute(element, 'farming') !== 0,
           actionTitle: getOptionalAttribute(element, 'action_title')
         })
       ];

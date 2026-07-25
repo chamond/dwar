@@ -75,12 +75,12 @@ export type ResourceMiningEvent =
   | {
       type: 'farm-started';
       resource: ResourceMiningResourceInfo;
-      miningDurationMs: number;
+      durationMs: number;
     }
   | {
       type: 'farm-cancelled';
       resource: ResourceMiningResourceInfo;
-      reason: 'not-first-farmer';
+      reason: 'not-first-farmer' | 'resource-busy';
     }
   | {
       type: 'safety-check-started';
@@ -101,10 +101,6 @@ export type ResourceMiningEvent =
   | {
       type: 'farm-completed';
       resource: ResourceMiningResourceInfo;
-    }
-  | {
-      type: 'next-mining-delayed';
-      delayMs: number;
     };
 
 export class RunResourceMiningUseCase {
@@ -172,15 +168,7 @@ export class RunResourceMiningUseCase {
         continue;
       }
 
-      const isCompleted = await this.startMiningResource(selection.selectedSafety, location, input);
-
-      if (isCompleted && this.config.postMiningDelayMs > 0 && !input.signal?.aborted) {
-        this.emit(input, {
-          type: 'next-mining-delayed',
-          delayMs: this.config.postMiningDelayMs
-        });
-        await this.delay.wait(this.config.postMiningDelayMs, input.signal);
-      }
+      await this.startMiningResource(selection.selectedSafety, location, input);
     }
   }
 
@@ -188,7 +176,7 @@ export class RunResourceMiningUseCase {
     safety: ResourceMiningSafety,
     location: HuntLocation,
     input: RunResourceMiningInput
-  ): Promise<boolean> {
+  ): Promise<void> {
     const resource = safety.resource;
     const farmStart = await this.farmer.start(resource, { signal: input.signal });
 
@@ -199,35 +187,38 @@ export class RunResourceMiningUseCase {
         resource: createResourceInfo(resource),
         reason: 'not-first-farmer'
       });
-      return false;
+      return;
     }
 
+    const startedAtMs = this.nowMs();
     const miningDurationMs = this.getMiningDurationMs(resource);
+    const durationMs = miningDurationMs + this.config.postMiningDelayMs;
     this.emit(input, {
       type: 'farm-started',
       resource: createResourceInfo(resource),
-      miningDurationMs
+      durationMs
     });
 
-    const completed = await this.monitorResource(resource, location, miningDurationMs, input);
+    const completed = await this.monitorResource(resource, location, startedAtMs, miningDurationMs, input);
 
-    if (completed) {
-      this.emit(input, {
-        type: 'farm-completed',
-        resource: createResourceInfo(resource)
-      });
+    if (!completed) {
+      return;
     }
 
-    return completed;
+    await this.waitUntil(startedAtMs + durationMs, input.signal);
+    this.emit(input, {
+      type: 'farm-completed',
+      resource: createResourceInfo(resource)
+    });
   }
 
   private async monitorResource(
     resource: HuntResourceNode,
     location: HuntLocation,
+    startedAtMs: number,
     miningDurationMs: number,
     input: RunResourceMiningInput
   ): Promise<boolean> {
-    const startedAtMs = this.nowMs();
     const deadlineAtMs = startedAtMs + miningDurationMs;
     let nextSafetyCheckAtMs = startedAtMs + this.config.safetyCheckIntervalMs;
 
@@ -237,11 +228,7 @@ export class RunResourceMiningUseCase {
     }
 
     while (nextSafetyCheckAtMs < deadlineAtMs && !input.signal?.aborted) {
-      const waitMs = Math.max(0, nextSafetyCheckAtMs - this.nowMs());
-
-      if (waitMs > 0) {
-        await this.delay.wait(waitMs, input.signal);
-      }
+      await this.waitUntil(nextSafetyCheckAtMs, input.signal);
 
       if (this.nowMs() >= deadlineAtMs) {
         break;
@@ -255,6 +242,19 @@ export class RunResourceMiningUseCase {
       });
 
       const scan = await this.scanAndStore(location, input.signal);
+      const scannedResource = scan
+        .getResources()
+        .find((candidate) => candidate.getServerNumber() === resource.getServerNumber());
+
+      if (scannedResource?.isBeingFarmed()) {
+        await this.farmInterrupter.interrupt(resource, { signal: input.signal });
+        this.emit(input, {
+          type: 'farm-cancelled',
+          resource: createResourceInfo(resource),
+          reason: 'resource-busy'
+        });
+        return false;
+      }
 
       if (this.nowMs() >= deadlineAtMs) {
         break;
@@ -285,11 +285,7 @@ export class RunResourceMiningUseCase {
       nextSafetyCheckAtMs = this.skipMissedSafetyChecks(nextSafetyCheckAtMs, deadlineAtMs);
     }
 
-    const remainingMs = deadlineAtMs - this.nowMs();
-
-    if (remainingMs > 0) {
-      await this.delay.wait(remainingMs, input.signal);
-    }
+    await this.waitUntil(deadlineAtMs, input.signal);
 
     return true;
   }
@@ -307,6 +303,14 @@ export class RunResourceMiningUseCase {
 
   private nowMs(): number {
     return this.clock.now().getTime();
+  }
+
+  private async waitUntil(deadlineAtMs: number, signal: AbortSignal | undefined): Promise<void> {
+    const remainingMs = deadlineAtMs - this.nowMs();
+
+    if (remainingMs > 0) {
+      await this.delay.wait(remainingMs, signal);
+    }
   }
 
   private async scanAndStore(location: HuntLocation, signal: AbortSignal | undefined): Promise<HuntZoneScan> {

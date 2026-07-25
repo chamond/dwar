@@ -10,7 +10,7 @@ import {
 } from './process-bar';
 import { formatProfessionRecipeLabel } from './profession-recipe-label';
 
-type CraftingProcessPhase = 'busy' | 'active' | 'pause' | 'complete';
+type CraftingProcessPhase = 'busy' | 'active' | 'complete';
 
 interface CraftingProcessBarEntry {
   controller: ProcessBarController;
@@ -93,7 +93,7 @@ export function createCraftingProcessBarsController(container: HTMLElement): Cra
           entry.phase = 'active';
           entry.controller.start({
             label: `Крафт ${formatProfessionRecipeLabel(event.recipe)}`,
-            durationMs: event.cooldownMs,
+            durationMs: event.durationMs,
             accentColor: event.recipe.markerColor
           });
           return;
@@ -101,15 +101,6 @@ export function createCraftingProcessBarsController(container: HTMLElement): Cra
         case 'craft-completed':
           entry.phase = 'complete';
           entry.controller.complete();
-          return;
-
-        case 'next-craft-delayed':
-          entry.phase = 'pause';
-          entry.controller.start({
-            label: `Пауза ${formatProfessionRecipeLabel(event.recipe)}`,
-            durationMs: event.delayMs,
-            accentColor: event.recipe.markerColor
-          });
           return;
       }
     },

@@ -52,16 +52,11 @@ export type ProfessionCraftingEvent =
       type: 'craft-started';
       recipe: ProfessionCraftingRecipeInfo;
       amount: number;
-      cooldownMs: number;
+      durationMs: number;
     }
   | {
       type: 'craft-completed';
       recipe: ProfessionCraftingRecipeInfo;
-    }
-  | {
-      type: 'next-craft-delayed';
-      recipe: ProfessionCraftingRecipeInfo;
-      delayMs: number;
     };
 
 export class RunProfessionCraftingUseCase {
@@ -148,17 +143,6 @@ export class RunProfessionCraftingUseCase {
   private async runRecipeLoop(recipe: ProfessionRecipe, input: RunProfessionCraftingInput): Promise<void> {
     while (!input.signal?.aborted && this.isRecipeSelected(recipe, input)) {
       await this.craftRecipe(recipe, input);
-
-      if (this.config.postCraftDelayMs <= 0 || input.signal?.aborted || !this.isRecipeSelected(recipe, input)) {
-        continue;
-      }
-
-      this.emit(input, {
-        type: 'next-craft-delayed',
-        recipe: createRecipeInfo(recipe),
-        delayMs: this.config.postCraftDelayMs
-      });
-      await this.delay.wait(this.config.postCraftDelayMs, input.signal);
     }
   }
 
@@ -173,14 +157,14 @@ export class RunProfessionCraftingUseCase {
     });
     await this.crafter.craft(recipe, amount, { signal: input.signal });
 
-    const cooldownMs = amount * this.config.cooldownPerItemMs;
+    const durationMs = amount * this.config.cooldownPerItemMs + this.config.postCraftDelayMs;
     this.emit(input, {
       type: 'craft-started',
       recipe: recipeInfo,
       amount,
-      cooldownMs
+      durationMs
     });
-    await this.delay.wait(cooldownMs);
+    await this.delay.wait(durationMs);
     this.emit(input, {
       type: 'craft-completed',
       recipe: recipeInfo
