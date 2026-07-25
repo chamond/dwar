@@ -80,7 +80,7 @@ export type ResourceMiningEvent =
   | {
       type: 'farm-cancelled';
       resource: ResourceMiningResourceInfo;
-      reason: 'not-first-farmer' | 'resource-busy';
+      reason: 'not-first-farmer';
     }
   | {
       type: 'safety-check-started';
@@ -242,19 +242,6 @@ export class RunResourceMiningUseCase {
       });
 
       const scan = await this.scanAndStore(location, input.signal);
-      const scannedResource = scan
-        .getResources()
-        .find((candidate) => candidate.getServerNumber() === resource.getServerNumber());
-
-      if (scannedResource?.isBeingFarmed()) {
-        await this.farmInterrupter.interrupt(resource, { signal: input.signal });
-        this.emit(input, {
-          type: 'farm-cancelled',
-          resource: createResourceInfo(resource),
-          reason: 'resource-busy'
-        });
-        return false;
-      }
 
       if (this.nowMs() >= deadlineAtMs) {
         break;

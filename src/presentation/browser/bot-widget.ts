@@ -485,9 +485,6 @@ function handleCraftingEvent(
 function updateMiningProcessBar(event: ResourceMiningEvent, processBar: ProcessBarController): void {
   switch (event.type) {
     case 'scan-started':
-      processBar.busy({
-        label: 'Сканирование зоны'
-      });
       return;
 
     case 'no-safe-resource':
