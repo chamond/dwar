@@ -731,6 +731,14 @@ export const BOT_WIDGET_STYLES = `
     color: #7f8ca1;
   }
 
+  .dwar-log-line--success {
+    color: #9fdbbd;
+  }
+
+  .dwar-log-line--failure {
+    color: #f2a3aa;
+  }
+
   .dwar-log-tag {
     color: var(--dwar-log-tag-color);
     font-weight: 700;

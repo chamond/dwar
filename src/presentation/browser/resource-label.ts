@@ -4,5 +4,5 @@ export interface ResourceLabel {
 }
 
 export function formatResourceLabel(resource: ResourceLabel): string {
-  return `${resource.name} [${resource.level}]`;
+  return `${resource.name}[${resource.level}]`;
 }

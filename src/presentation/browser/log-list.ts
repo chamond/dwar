@@ -7,13 +7,20 @@ export interface BotLogTagPart {
 }
 
 export type BotLogLinePart = string | BotLogTagPart;
+export type BotLogLineTone = 'success' | 'failure';
+
+export interface BotLogLineOptions {
+  parts?: readonly BotLogLinePart[];
+  tone?: BotLogLineTone;
+}
 
 export function appendLogLine(
   logList: HTMLElement,
   entry: BotLogEntrySnapshot,
-  parts: readonly BotLogLinePart[] = [entry.message]
+  options: BotLogLineOptions = {}
 ): void {
-  logList.append(createLogLine(entry, parts));
+  const parts = options.parts ?? [entry.message];
+  logList.append(createLogLine(entry, parts, options.tone));
   logList.scrollTop = logList.scrollHeight;
 }
 
@@ -21,9 +28,18 @@ export function clearLogList(logList: HTMLElement): void {
   logList.replaceChildren();
 }
 
-function createLogLine(entry: BotLogEntrySnapshot, parts: readonly BotLogLinePart[]): HTMLElement {
+function createLogLine(
+  entry: BotLogEntrySnapshot,
+  parts: readonly BotLogLinePart[],
+  tone?: BotLogLineTone
+): HTMLElement {
   const line = document.createElement('div');
   line.className = 'dwar-log-line';
+
+  if (tone) {
+    line.classList.add(`dwar-log-line--${tone}`);
+  }
+
   line.append(createLogTime(entry.createdAt), ...parts.map((part) => createLogPart(part)));
 
   return line;

@@ -20,7 +20,12 @@ import type {
   ResourceMiningResourceInfo,
   RunResourceMiningUseCase
 } from '../../application/use-cases/run-resource-mining';
-import { appendLogLine, clearLogList, type BotLogLinePart } from './log-list';
+import {
+  appendLogLine,
+  clearLogList,
+  type BotLogLineOptions,
+  type BotLogLinePart
+} from './log-list';
 import { createBotPanel } from './bot-panel';
 import { createCraftingProcessBarsController, type CraftingProcessBarsController } from './crafting-process-bars';
 import { createLauncherButton } from './launcher-button';
@@ -53,6 +58,7 @@ export interface BotWidgetDependencies {
 }
 
 type ProcessPhase = 'idle' | 'busy' | 'active' | 'waiting' | 'pause' | 'complete';
+type AddBotLog = (message: string, options?: BotLogLineOptions) => void;
 
 export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   if (document.getElementById(ROOT_ID)) {
@@ -80,18 +86,15 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     }
   });
 
-  const createLogAppender = (logList: HTMLElement) => (
-    message: string,
-    parts?: readonly BotLogLinePart[]
-  ): void => {
+  const createLogAppender = (logList: HTMLElement): AddBotLog => (message, options = {}): void => {
     const entry = dependencies.createLogEntry.execute({ message }).toSnapshot();
-    appendLogLine(logList, entry, parts);
+    appendLogLine(logList, entry, options);
   };
   const addMiningLog = createLogAppender(botPanel.miningLogList);
   const addCraftingLog = createLogAppender(botPanel.craftingLogList);
-  const addActiveTabLog = (message: string, parts?: readonly BotLogLinePart[]): void => {
+  const addActiveTabLog: AddBotLog = (message, options): void => {
     const addLog = botPanel.tabs.getActiveTab() === 'mining' ? addMiningLog : addCraftingLog;
-    addLog(message, parts);
+    addLog(message, options);
   };
   let miningAbortController: AbortController | null = null;
   let craftingAbortController: AbortController | null = null;
@@ -486,7 +489,7 @@ function canStopMiningAfter(event: ResourceMiningEvent): boolean {
 
 function handleMiningEvent(
   event: ResourceMiningEvent,
-  addLog: (message: string, parts?: readonly BotLogLinePart[]) => void,
+  addLog: AddBotLog,
   processBar: ProcessBarController
 ): void {
   updateMiningProcessBar(event, processBar);
@@ -495,7 +498,7 @@ function handleMiningEvent(
 
 function handleCraftingEvent(
   event: ProfessionCraftingEvent,
-  addLog: (message: string, parts?: readonly BotLogLinePart[]) => void,
+  addLog: AddBotLog,
   processBars: CraftingProcessBarsController
 ): void {
   processBars.handle(event);
@@ -551,7 +554,7 @@ function updateMiningProcessBar(event: ResourceMiningEvent, processBar: ProcessB
 
 function logMiningEvent(
   event: ResourceMiningEvent,
-  addLog: (message: string, parts?: readonly BotLogLinePart[]) => void
+  addLog: AddBotLog
 ): void {
   switch (event.type) {
     case 'scan-started':
@@ -572,19 +575,29 @@ function logMiningEvent(
       return;
 
     case 'farm-started':
-      addLog(`Начата добыча ${formatResourceLabel(event.resource)} (num: ${event.resource.serverNumber}).`, [
-        'Начата добыча ',
-        createResourceLogPart(event.resource),
-        ` (num: ${event.resource.serverNumber}).`
-      ]);
+      addLog(
+        `Начата добыча ${formatResourceLabel(event.resource)} (num: ${event.resource.serverNumber}).`,
+        {
+          parts: [
+            'Начата добыча ',
+            createResourceLogPart(event.resource),
+            ` (num: ${event.resource.serverNumber}).`
+          ]
+        }
+      );
       return;
 
     case 'farm-cancelled':
-      addLog(`Добыча отменена: ${formatResourceLabel(event.resource)} занят.`, [
-        'Добыча отменена: ',
-        createResourceLogPart(event.resource),
-        ' занят.'
-      ]);
+      addLog(
+        `Добыча отменена: ${formatResourceLabel(event.resource)} занят.`,
+        {
+          parts: [
+            'Добыча отменена: ',
+            createResourceLogPart(event.resource),
+            ' занят.'
+          ]
+        }
+      );
       return;
 
     case 'monitoring-scan-started':
@@ -594,26 +607,38 @@ function logMiningEvent(
     case 'farm-interrupted':
       addLog(
         'Добыча прервана: рядом опасный моб.',
-        createDangerLogParts('Добыча прервана: рядом ', event.dangerousMob)
+        {
+          parts: createDangerLogParts('Добыча прервана: рядом ', event.dangerousMob)
+        }
       );
       return;
 
     case 'farm-completed':
-      addLog(`✓ Добыча завершена: ${formatResourceLabel(event.resource)}.`, [
-        createMiningOutcomeLogPart('success'),
-        ' Добыча завершена: ',
-        createResourceLogPart(event.resource),
-        '.'
-      ]);
+      addLog(
+        `Добыча завершена: ${formatResourceLabel(event.resource)}.`,
+        {
+          parts: [
+            'Добыча завершена: ',
+            createResourceLogPart(event.resource),
+            '.'
+          ],
+          tone: 'success'
+        }
+      );
       return;
 
     case 'farm-failed':
-      addLog(`✕ Добыча не удалась: ${formatResourceLabel(event.resource)}.`, [
-        createMiningOutcomeLogPart('failure'),
-        ' Добыча не удалась: ',
-        createResourceLogPart(event.resource),
-        '.'
-      ]);
+      addLog(
+        `Добыча не удалась: ${formatResourceLabel(event.resource)}.`,
+        {
+          parts: [
+            'Добыча не удалась: ',
+            createResourceLogPart(event.resource),
+            '.'
+          ],
+          tone: 'failure'
+        }
+      );
       return;
 
   }
@@ -621,31 +646,35 @@ function logMiningEvent(
 
 function logCraftingEvent(
   event: ProfessionCraftingEvent,
-  addLog: (message: string, parts?: readonly BotLogLinePart[]) => void
+  addLog: AddBotLog
 ): void {
   switch (event.type) {
     case 'craft-started':
       addLog(
         `Крафтим ${event.amount} шт. ${formatProfessionRecipeLabel(event.recipe)}, ресурсов остается: ${event.remainingResourceAmount}.`,
-        [
-          'Крафтим ',
-          `${event.amount} шт. `,
-          createRecipeLogPart(event.recipe),
-          `, ресурсов остается: ${event.remainingResourceAmount}.`
-        ]
+        {
+          parts: [
+            'Крафтим ',
+            `${event.amount} шт. `,
+            createRecipeLogPart(event.recipe),
+            `, ресурсов остается: ${event.remainingResourceAmount}.`
+          ]
+        }
       );
       return;
 
     case 'recipe-stopped':
       addLog(
         `Крафт ${formatProfessionRecipeLabel(event.recipe)} остановлен: ${formatCraftingResourceLabel(event.recipe)} отсутствует в рюкзаке.`,
-        [
-          'Крафт ',
-          createRecipeLogPart(event.recipe),
-          ' остановлен: ',
-          createCraftingResourceLogPart(event.recipe),
-          ' отсутствует в рюкзаке.'
-        ]
+        {
+          parts: [
+            'Крафт ',
+            createRecipeLogPart(event.recipe),
+            ' остановлен: ',
+            createCraftingResourceLogPart(event.recipe),
+            ' отсутствует в рюкзаке.'
+          ]
+        }
       );
       return;
 
@@ -679,16 +708,6 @@ function createResourceLogPart(resource: ResourceMiningResourceInfo): BotLogLine
   };
 }
 
-function createMiningOutcomeLogPart(outcome: 'success' | 'failure'): BotLogLinePart {
-  const isSuccess = outcome === 'success';
-
-  return {
-    text: isSuccess ? '✓' : '✕',
-    color: isSuccess ? '#48d597' : '#ff4f5f',
-    title: isSuccess ? 'Добыча завершена успешно' : 'Добыча не удалась'
-  };
-}
-
 function createRecipeLogPart(recipe: ProfessionCraftingRecipeInfo): BotLogLinePart {
   const label = formatProfessionRecipeLabel(recipe);
 
@@ -700,7 +719,10 @@ function createRecipeLogPart(recipe: ProfessionCraftingRecipeInfo): BotLogLinePa
 }
 
 function formatCraftingResourceLabel(recipe: ProfessionCraftingRecipeInfo): string {
-  return `${recipe.resourceName} [${recipe.level}]`;
+  return formatResourceLabel({
+    name: recipe.resourceName,
+    level: recipe.level
+  });
 }
 
 function createCraftingResourceLogPart(recipe: ProfessionCraftingRecipeInfo): BotLogLinePart {
@@ -724,7 +746,7 @@ function createMobLogPart(mob: ResourceMiningMobInfo): BotLogLinePart {
 function handleUnexpectedServerResponse(
   processName: string,
   error: unknown,
-  addLog: (message: string, parts?: readonly BotLogLinePart[]) => void,
+  addLog: AddBotLog,
   activateAlarm: () => void
 ): boolean {
   if (!isUnexpectedServerResponseError(error)) {
@@ -742,16 +764,21 @@ function handleUnexpectedServerResponse(
 
 function triggerHumanAttentionAlarm(
   message: string,
-  addLog: (message: string, parts?: readonly BotLogLinePart[]) => void,
+  addLog: AddBotLog,
   activateAlarm: () => void
 ): void {
   activateAlarm();
 
-  addLog(`${message} Требуется участие человека.`, [
-    message,
-    ' ',
-    createHumanAttentionLogPart()
-  ]);
+  addLog(
+    `${message} Требуется участие человека.`,
+    {
+      parts: [
+        message,
+        ' ',
+        createHumanAttentionLogPart()
+      ]
+    }
+  );
 }
 
 function createHumanAttentionLogPart(): BotLogLinePart {
