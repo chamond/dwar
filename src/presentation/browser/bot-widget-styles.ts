@@ -732,20 +732,8 @@ export const BOT_WIDGET_STYLES = `
   }
 
   .dwar-log-tag {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    max-width: 100%;
-    min-height: 18px;
-    margin: 0 2px;
-    padding: 0 6px;
     color: var(--dwar-log-tag-color);
-    background: color-mix(in srgb, var(--dwar-log-tag-color) 13%, transparent);
-    border: 1px solid color-mix(in srgb, var(--dwar-log-tag-color) 42%, transparent);
-    border-radius: 999px;
     font-weight: 700;
-    line-height: 1;
-    vertical-align: middle;
   }
 
   .dwar-log-line:last-child {

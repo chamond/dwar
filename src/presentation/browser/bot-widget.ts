@@ -599,16 +599,18 @@ function logMiningEvent(
       return;
 
     case 'farm-completed':
-      addLog(`Добыча завершена: ${formatResourceLabel(event.resource)}.`, [
-        'Добыча завершена: ',
+      addLog(`✓ Добыча завершена: ${formatResourceLabel(event.resource)}.`, [
+        createMiningOutcomeLogPart('success'),
+        ' Добыча завершена: ',
         createResourceLogPart(event.resource),
         '.'
       ]);
       return;
 
     case 'farm-failed':
-      addLog(`Добыча не удалась: ${formatResourceLabel(event.resource)}.`, [
-        'Добыча не удалась: ',
+      addLog(`✕ Добыча не удалась: ${formatResourceLabel(event.resource)}.`, [
+        createMiningOutcomeLogPart('failure'),
+        ' Добыча не удалась: ',
         createResourceLogPart(event.resource),
         '.'
       ]);
@@ -674,6 +676,16 @@ function createResourceLogPart(resource: ResourceMiningResourceInfo): BotLogLine
     text: label,
     color: resource.markerColor,
     title: `Ресурс ${label}`
+  };
+}
+
+function createMiningOutcomeLogPart(outcome: 'success' | 'failure'): BotLogLinePart {
+  const isSuccess = outcome === 'success';
+
+  return {
+    text: isSuccess ? '✓' : '✕',
+    color: isSuccess ? '#48d597' : '#ff4f5f',
+    title: isSuccess ? 'Добыча завершена успешно' : 'Добыча не удалась'
   };
 }
 
