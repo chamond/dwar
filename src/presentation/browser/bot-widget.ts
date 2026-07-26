@@ -576,10 +576,10 @@ function logMiningEvent(
       return;
 
     case 'farm-started':
-      addLog(`Начата добыча ${formatResourceLabel(event.resource)}.`, [
+      addLog(`Начата добыча ${formatResourceLabel(event.resource)} (num: ${event.resource.serverNumber}).`, [
         'Начата добыча ',
         createResourceLogPart(event.resource),
-        '.'
+        ` (num: ${event.resource.serverNumber}).`
       ]);
       return;
 
