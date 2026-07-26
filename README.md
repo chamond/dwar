@@ -17,6 +17,10 @@ The build produces one browser-loadable JavaScript file: `dist/index.js`.
 - `src/presentation` - delivery layer, currently a browser overlay widget.
 - `src/main.ts` - composition root where adapters and use cases are wired together.
 
+Asynchronous application flows use RxJS end to end. Ports return `Observable`,
+use cases expose event streams, and presentation controllers own and tear down
+their long-lived subscriptions.
+
 ## Build
 
 Install dependencies first:
@@ -53,11 +57,10 @@ request. It then crafts no more than the selected amount or the available
 resource count, waits for all recipe cooldowns before the next shared cycle,
 logs the calculated remainder, and stops only the affected recipe when that
 resource is absent.
-Unexpected server responses trigger process shutdown, programmatically enable
-the persisted alarm toggle, start a looping siren, and add a red
-human-attention log tag. The alarm is off by default; enabling it manually still
-starts a test siren immediately. The siren loops until the user disables the
-toggle manually. The alarm asset is embedded into the single output bundle.
+Unexpected server responses stop the affected process, open the panel, show a
+pulsing alarm overlay, start a looping siren, and add a red human-attention log
+tag. Clicking the alarm button stops the siren and hides the overlay. The alarm
+asset is embedded into the single output bundle.
 
 ## GitHub Pages Deploy
 

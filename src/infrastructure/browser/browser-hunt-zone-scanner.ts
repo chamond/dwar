@@ -1,3 +1,5 @@
+import { map, switchMap, take, type Observable } from 'rxjs';
+import { fromFetch } from 'rxjs/fetch';
 import { UnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
 import type { HuntZoneScanner } from '../../application/ports/hunt-zone-scanner';
 import type { HuntZoneScan } from '../../domain/entities/hunt-zone-scan';
@@ -8,21 +10,21 @@ import type { HuntZoneScanOptions } from '../../application/ports/hunt-zone-scan
 export class BrowserHuntZoneScanner implements HuntZoneScanner {
   constructor(private readonly parser: DwarHuntZoneXmlParser) {}
 
-  async scan(options: HuntZoneScanOptions): Promise<HuntZoneScan> {
+  scan(options: HuntZoneScanOptions): Observable<HuntZoneScan> {
     const requestInit: RequestInit = {
       method: HUNT_ZONE_DIAGNOSTICS_REQUEST.method
     };
 
-    if (options.signal) {
-      requestInit.signal = options.signal;
-    }
+    return fromFetch(buildHuntZoneDiagnosticsUrl(options.areaId), requestInit).pipe(
+      switchMap((response) => {
+        if (!response.ok) {
+          throw new UnexpectedServerResponseError(`Hunt zone scan failed with HTTP ${response.status}.`);
+        }
 
-    const response = await fetch(buildHuntZoneDiagnosticsUrl(options.areaId), requestInit);
-
-    if (!response.ok) {
-      throw new UnexpectedServerResponseError(`Hunt zone scan failed with HTTP ${response.status}.`);
-    }
-
-    return this.parser.parse(await response.text());
+        return response.text();
+      }),
+      map((responseText) => this.parser.parse(responseText)),
+      take(1)
+    );
   }
 }

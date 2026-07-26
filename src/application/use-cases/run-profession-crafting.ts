@@ -1,4 +1,22 @@
-import type { BotResourceId } from '../../domain/entities/bot-resource';
+import {
+  EMPTY,
+  catchError,
+  concat,
+  defer,
+  ignoreElements,
+  map,
+  merge,
+  of,
+  repeat,
+  switchMap,
+  take,
+  throwError,
+  type Observable
+} from 'rxjs';
+import type {
+  ProfessionCraftingEvent,
+  ProfessionCraftingRecipeInfo
+} from '../events/profession-crafting-event';
 import type { ProfessionRecipe, ProfessionRecipeId } from '../../domain/entities/profession-recipe';
 import type {
   BackpackItemQuantity,
@@ -27,53 +45,7 @@ export interface ProfessionCraftingConfig {
 export interface RunProfessionCraftingInput {
   getAmountPerRequest?: (() => number) | undefined;
   getSelectedRecipeIds(): readonly ProfessionRecipeId[];
-  observer?: ProfessionCraftingObserver;
-  signal?: AbortSignal;
 }
-
-export interface ProfessionCraftingObserver {
-  handle(event: ProfessionCraftingEvent): void;
-}
-
-export interface ProfessionCraftingRecipeInfo {
-  id: ProfessionRecipeId;
-  name: string;
-  recipeId: number;
-  resourceId: BotResourceId;
-  resourceName: string;
-  markerColor: string;
-  level: number;
-}
-
-export type ProfessionCraftingEvent =
-  | {
-      type: 'no-recipe-selected';
-      delayMs: number;
-    }
-  | {
-      type: 'backpack-check-started';
-      recipes: readonly ProfessionCraftingRecipeInfo[];
-    }
-  | {
-      type: 'craft-request-started';
-      recipe: ProfessionCraftingRecipeInfo;
-      amount: number;
-    }
-  | {
-      type: 'craft-started';
-      recipe: ProfessionCraftingRecipeInfo;
-      amount: number;
-      durationMs: number;
-      remainingResourceAmount: number;
-    }
-  | {
-      type: 'craft-completed';
-      recipe: ProfessionCraftingRecipeInfo;
-    }
-  | {
-      type: 'recipe-stopped';
-      recipe: ProfessionCraftingRecipeInfo;
-    };
 
 export class RunProfessionCraftingUseCase {
   private readonly config: ProfessionCraftingConfig;
@@ -99,102 +71,161 @@ export class RunProfessionCraftingUseCase {
     }
   }
 
-  async execute(input: RunProfessionCraftingInput): Promise<void> {
-    const stoppedRecipeIds = new Set<ProfessionRecipeId>();
+  execute(input: RunProfessionCraftingInput): Observable<ProfessionCraftingEvent> {
+    return defer(() => {
+      const stoppedRecipeIds = new Set<ProfessionRecipeId>();
 
-    while (!input.signal?.aborted) {
-      const selectedRecipes = this.getSelectedRecipes(input.getSelectedRecipeIds());
-      this.restoreDeselectedRecipes(selectedRecipes, stoppedRecipeIds);
-
-      if (selectedRecipes.length === 0) {
-        this.emit(input, {
-          type: 'no-recipe-selected',
-          delayMs: this.config.noSelectedRecipeDelayMs
-        });
-        await this.delay.wait(this.config.noSelectedRecipeDelayMs, input.signal);
-        continue;
-      }
-
-      const runnableRecipes = selectedRecipes.filter((recipe) => !stoppedRecipeIds.has(recipe.getId()));
-
-      if (runnableRecipes.length === 0) {
-        await this.delay.wait(this.config.selectionRefreshDelayMs, input.signal);
-        continue;
-      }
-
-      const lookups = await this.readBackpackQuantities(runnableRecipes, input);
-      const craftTasks: Promise<void>[] = [];
-
-      for (const { recipe, availableAmount } of lookups) {
-        if (availableAmount === 0) {
-          stoppedRecipeIds.add(recipe.getId());
-          this.emit(input, {
-            type: 'recipe-stopped',
-            recipe: createRecipeInfo(recipe)
-          });
-          continue;
-        }
-
-        craftTasks.push(this.craftRecipe(recipe, availableAmount, input));
-      }
-
-      await waitForCraftTasks(craftTasks);
-    }
+      return defer(() => this.runIteration(input, stoppedRecipeIds)).pipe(repeat());
+    });
   }
 
-  private async readBackpackQuantities(
-    recipes: readonly ProfessionRecipe[],
-    input: RunProfessionCraftingInput
-  ): Promise<readonly RecipeBackpackLookup[]> {
-    const recipeInfos = recipes.map(createRecipeInfo);
-    this.emit(input, {
+  private runIteration(
+    input: RunProfessionCraftingInput,
+    stoppedRecipeIds: Set<ProfessionRecipeId>
+  ): Observable<ProfessionCraftingEvent> {
+    const selectedRecipes = this.getSelectedRecipes(input.getSelectedRecipeIds());
+    this.restoreDeselectedRecipes(selectedRecipes, stoppedRecipeIds);
+
+    if (selectedRecipes.length === 0) {
+      const noRecipeEvent: ProfessionCraftingEvent = {
+        type: 'no-recipe-selected',
+        delayMs: this.config.noSelectedRecipeDelayMs
+      };
+
+      return concat(
+        of(noRecipeEvent),
+        this.delay.wait(this.config.noSelectedRecipeDelayMs).pipe(ignoreElements()),
+        of<ProfessionCraftingEvent>({ type: 'crafting-cycle-completed' })
+      );
+    }
+
+    const runnableRecipes = selectedRecipes.filter((recipe) => !stoppedRecipeIds.has(recipe.getId()));
+
+    if (runnableRecipes.length === 0) {
+      return concat(
+        this.delay.wait(this.config.selectionRefreshDelayMs).pipe(ignoreElements()),
+        of<ProfessionCraftingEvent>({ type: 'crafting-cycle-completed' })
+      );
+    }
+
+    const backpackCheckEvent: ProfessionCraftingEvent = {
       type: 'backpack-check-started',
-      recipes: recipeInfos
-    });
-    const quantities = await this.backpackItemQuantityReader.readQuantities(
+      recipes: runnableRecipes.map(createRecipeInfo)
+    };
+
+    return concat(
+      of(backpackCheckEvent),
+      this.readBackpackQuantities(runnableRecipes).pipe(
+        switchMap((lookups) => this.runCraftTasks(lookups, stoppedRecipeIds, input))
+      )
+    );
+  }
+
+  private readBackpackQuantities(
+    recipes: readonly ProfessionRecipe[]
+  ): Observable<readonly RecipeBackpackLookup[]> {
+    return this.backpackItemQuantityReader.readQuantities(
       recipes.map((recipe) => recipe.getResource().getArtifactId()),
       {
-        group: this.config.resourceBackpackGroup,
-        signal: input.signal
+        group: this.config.resourceBackpackGroup
       }
+    ).pipe(
+      map((quantities) => {
+        return recipes.map((recipe) => ({
+          recipe,
+          availableAmount: getRequiredQuantity(
+            quantities,
+            recipe.getResource().getArtifactId()
+          ).quantity
+        }));
+      }),
+      take(1)
     );
-    const lookups = recipes.map((recipe) => {
-      return {
-        recipe,
-        availableAmount: getRequiredQuantity(quantities, recipe.getResource().getArtifactId()).quantity
-      };
-    });
-
-    return lookups;
   }
 
-  private async craftRecipe(
+  private runCraftTasks(
+    lookups: readonly RecipeBackpackLookup[],
+    stoppedRecipeIds: Set<ProfessionRecipeId>,
+    input: RunProfessionCraftingInput
+  ): Observable<ProfessionCraftingEvent> {
+    const taskErrors: unknown[] = [];
+    const tasks = lookups.map(({ recipe, availableAmount }) => {
+      const task = availableAmount === 0
+        ? defer(() => {
+            stoppedRecipeIds.add(recipe.getId());
+
+            return of<ProfessionCraftingEvent>({
+              type: 'recipe-stopped',
+              recipe: createRecipeInfo(recipe)
+            });
+          })
+        : this.craftRecipe(recipe, availableAmount, input);
+
+      return task.pipe(
+        catchError((error: unknown) => {
+          taskErrors.push(error);
+          return EMPTY;
+        })
+      );
+    });
+
+    return concat(
+      merge(...tasks),
+      defer(() => {
+        if (taskErrors.length > 0) {
+          return throwError(() => taskErrors[0]);
+        }
+
+        return of<ProfessionCraftingEvent>({
+          type: 'crafting-cycle-completed'
+        });
+      })
+    );
+  }
+
+  private craftRecipe(
     recipe: ProfessionRecipe,
     availableResourceAmount: number,
     input: RunProfessionCraftingInput
-  ): Promise<void> {
-    const recipeInfo = createRecipeInfo(recipe);
-    const amount = this.getCraftAmount(recipe, input.getAmountPerRequest?.(), availableResourceAmount);
+  ): Observable<ProfessionCraftingEvent> {
+    return defer(() => {
+      const recipeInfo = createRecipeInfo(recipe);
+      const amount = this.getCraftAmount(
+        recipe,
+        input.getAmountPerRequest?.(),
+        availableResourceAmount
+      );
+      const requestStartedEvent: ProfessionCraftingEvent = {
+        type: 'craft-request-started',
+        recipe: recipeInfo,
+        amount
+      };
 
-    this.emit(input, {
-      type: 'craft-request-started',
-      recipe: recipeInfo,
-      amount
-    });
-    await this.crafter.craft(recipe, amount, { signal: input.signal });
+      return concat(
+        of(requestStartedEvent),
+        this.crafter.craft(recipe, amount).pipe(
+          switchMap(() => {
+            const durationMs = amount * this.config.cooldownPerItemMs + this.config.postCraftDelayMs;
+            const craftStartedEvent: ProfessionCraftingEvent = {
+              type: 'craft-started',
+              recipe: recipeInfo,
+              amount,
+              durationMs,
+              remainingResourceAmount: availableResourceAmount - amount
+            };
+            const craftCompletedEvent: ProfessionCraftingEvent = {
+              type: 'craft-completed',
+              recipe: recipeInfo
+            };
 
-    const durationMs = amount * this.config.cooldownPerItemMs + this.config.postCraftDelayMs;
-    this.emit(input, {
-      type: 'craft-started',
-      recipe: recipeInfo,
-      amount,
-      durationMs,
-      remainingResourceAmount: availableResourceAmount - amount
-    });
-    await this.delay.wait(durationMs);
-    this.emit(input, {
-      type: 'craft-completed',
-      recipe: recipeInfo
+            return concat(
+              of(craftStartedEvent),
+              this.delay.wait(durationMs).pipe(ignoreElements()),
+              of(craftCompletedEvent)
+            );
+          })
+        )
+      );
     });
   }
 
@@ -216,7 +247,10 @@ export class RunProfessionCraftingUseCase {
     requestedAmount: number | undefined,
     availableResourceAmount: number
   ): number {
-    const amount = normalizeCraftAmount(requestedAmount ?? this.config.amountPerRequest, this.config.amountPerRequest);
+    const amount = normalizeCraftAmount(
+      requestedAmount ?? this.config.amountPerRequest,
+      this.config.amountPerRequest
+    );
 
     return Math.min(
       amount,
@@ -226,7 +260,9 @@ export class RunProfessionCraftingUseCase {
     );
   }
 
-  private getSelectedRecipes(selectedRecipeIds: readonly ProfessionRecipeId[]): readonly ProfessionRecipe[] {
+  private getSelectedRecipes(
+    selectedRecipeIds: readonly ProfessionRecipeId[]
+  ): readonly ProfessionRecipe[] {
     if (selectedRecipeIds.length === 0) {
       return [];
     }
@@ -241,10 +277,6 @@ export class RunProfessionCraftingUseCase {
     }
 
     return selectedRecipes;
-  }
-
-  private emit(input: RunProfessionCraftingInput, event: ProfessionCraftingEvent): void {
-    input.observer?.handle(event);
   }
 }
 
@@ -278,15 +310,6 @@ function getRequiredQuantity(
   }
 
   return quantity;
-}
-
-async function waitForCraftTasks(tasks: readonly Promise<void>[]): Promise<void> {
-  const results = await Promise.allSettled(tasks);
-  const rejectedResult = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
-
-  if (rejectedResult) {
-    throw rejectedResult.reason;
-  }
 }
 
 function normalizeCraftAmount(amount: number, fallbackAmount: number): number {

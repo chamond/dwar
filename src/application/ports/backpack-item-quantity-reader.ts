@@ -1,6 +1,5 @@
 export interface BackpackItemQuantityReadOptions {
   group: number;
-  signal?: AbortSignal | undefined;
 }
 
 export interface BackpackItemQuantity {
@@ -12,5 +11,6 @@ export interface BackpackItemQuantityReader {
   readQuantities(
     artifactIds: readonly number[],
     options: BackpackItemQuantityReadOptions
-  ): Promise<readonly BackpackItemQuantity[]>;
+  ): Observable<readonly BackpackItemQuantity[]>;
 }
+import type { Observable } from 'rxjs';

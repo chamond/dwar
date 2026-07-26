@@ -1,3 +1,4 @@
+import { EMPTY, catchError, from, take, type Subscription } from 'rxjs';
 import sirenAudioSource from './assets/siren-alarm.ogg';
 
 export interface HumanAttentionAlarm {
@@ -23,7 +24,10 @@ class BrowserHumanAttentionAlarm implements HumanAttentionAlarm {
     const context = this.getAudioContext();
 
     if (context?.state === 'suspended') {
-      void context.resume().catch(() => undefined);
+      from(context.resume()).pipe(
+        catchError(() => EMPTY),
+        take(1)
+      ).subscribe();
     }
   }
 
@@ -56,6 +60,7 @@ class BrowserHumanAttentionAlarm implements HumanAttentionAlarm {
     audio.preload = 'auto';
     audio.volume = 1;
     let activeAlarm: ActiveAlarm | null = null;
+    let playSubscription: Subscription | null = null;
 
     const cleanup = (): void => {
       if (this.activeAlarm !== activeAlarm) {
@@ -63,6 +68,8 @@ class BrowserHumanAttentionAlarm implements HumanAttentionAlarm {
       }
 
       this.activeAlarm = null;
+      playSubscription?.unsubscribe();
+      playSubscription = null;
       audio.removeEventListener('ended', cleanup);
       audio.removeEventListener('error', fallbackToGeneratedSiren);
     };
@@ -88,7 +95,13 @@ class BrowserHumanAttentionAlarm implements HumanAttentionAlarm {
     audio.addEventListener('ended', cleanup);
     audio.addEventListener('error', fallbackToGeneratedSiren);
 
-    void audio.play().catch(fallbackToGeneratedSiren);
+    playSubscription = from(audio.play()).pipe(
+      catchError(() => {
+        fallbackToGeneratedSiren();
+        return EMPTY;
+      }),
+      take(1)
+    ).subscribe();
 
     return true;
   }
@@ -109,6 +122,7 @@ class BrowserHumanAttentionAlarm implements HumanAttentionAlarm {
     const sweepGain = context.createGain();
     const outputGain = context.createGain();
     let isStopped = false;
+    let resumeSubscription: Subscription | null = null;
 
     oscillator.type = 'sine';
     oscillator.frequency.value = 650;
@@ -128,6 +142,8 @@ class BrowserHumanAttentionAlarm implements HumanAttentionAlarm {
       }
 
       this.activeAlarm = null;
+      resumeSubscription?.unsubscribe();
+      resumeSubscription = null;
       oscillator.disconnect();
       sweep.disconnect();
       sweepGain.disconnect();
@@ -152,11 +168,16 @@ class BrowserHumanAttentionAlarm implements HumanAttentionAlarm {
     sweep.start();
 
     if (context.state === 'suspended') {
-      void context.resume().catch(() => {
-        if (this.activeAlarm === activeAlarm) {
-          activeAlarm.stop();
-        }
-      });
+      resumeSubscription = from(context.resume()).pipe(
+        catchError(() => {
+          if (this.activeAlarm === activeAlarm) {
+            activeAlarm.stop();
+          }
+
+          return EMPTY;
+        }),
+        take(1)
+      ).subscribe();
     }
   }
 

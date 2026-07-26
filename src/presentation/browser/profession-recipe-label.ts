@@ -1,4 +1,4 @@
-import type { ProfessionCraftingRecipeInfo } from '../../application/use-cases/run-profession-crafting';
+import type { ProfessionCraftingRecipeInfo } from '../../application/events/profession-crafting-event';
 import type { ProfessionRecipeSnapshot } from '../../domain/entities/profession-recipe';
 
 export function formatProfessionRecipeLabel(recipe: ProfessionRecipeSnapshot | ProfessionCraftingRecipeInfo): string {

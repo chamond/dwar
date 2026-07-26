@@ -1,25 +1,37 @@
 import {
   catchError,
-  firstValueFrom,
+  concat,
+  defer,
+  ignoreElements,
+  map,
   mergeMap,
   of,
+  repeat,
+  switchMap,
   take,
+  takeWhile,
+  tap,
   throwError,
   type Observable
 } from 'rxjs';
+import type {
+  ResourceMiningEvent,
+  ResourceMiningMobInfo,
+  ResourceMiningResourceInfo
+} from '../events/resource-mining-event';
 import type { BotResourceId } from '../../domain/entities/bot-resource';
 import type { HuntLocation, HuntLocationId } from '../../domain/entities/hunt-location';
 import type { HuntMob } from '../../domain/entities/hunt-mob';
 import type { HuntResourceFarmStart } from '../../domain/entities/hunt-resource-farm-start';
 import type { HuntResourceNode } from '../../domain/entities/hunt-resource-node';
 import type { HuntZoneScan } from '../../domain/entities/hunt-zone-scan';
+import { getMobAggressionProfile } from '../../domain/services/mob-aggression';
 import {
   assessResourceMiningSafety,
   isMobDangerousForMining,
   selectSafestResourceForMining,
   type ResourceMiningSafety
 } from '../../domain/services/resource-mining-safety';
-import { getMobAggressionProfile } from '../../domain/services/mob-aggression';
 import { isUnexpectedServerResponseError } from '../errors/unexpected-server-response-error';
 import type { Clock } from '../ports/clock';
 import type { CurrentPlayerSplinterDetector } from '../ports/current-player-splinter-detector';
@@ -34,7 +46,6 @@ import type { ResourceRepository } from '../ports/resource-repository';
 const DEFAULT_DANGER_RADIUS = 100;
 const DEFAULT_MONITORING_SCAN_INTERVAL_MS = 4_000;
 const DEFAULT_NO_SAFE_RESOURCE_DELAY_MS = 20_000;
-type MiningLoopDecision = 'continue' | 'stop';
 
 export interface ResourceMiningConfig {
   dangerRadius: number;
@@ -45,83 +56,15 @@ export interface ResourceMiningConfig {
 export interface RunResourceMiningInput {
   getSelectedResourceIds(): readonly BotResourceId[];
   selectedLocationId: HuntLocationId;
-  observer?: ResourceMiningObserver;
-  signal?: AbortSignal;
 }
 
-export interface ResourceMiningObserver {
-  handle(event: ResourceMiningEvent): void;
-}
-
-export interface ResourceMiningResourceInfo {
-  name: string;
-  markerColor: string;
-  serverNumber: string;
-  articleId: number;
-  level: number;
-}
-
-export interface ResourceMiningMobInfo {
-  name: string;
-  level: number;
-  aggressionLevel: number;
-  aggressionColor: string;
-}
-
-export type ResourceMiningEvent =
+type FarmStartResult =
   | {
-      type: 'scan-started';
+      type: 'farm-start';
+      farmStart: HuntResourceFarmStart;
     }
   | {
-      type: 'scan-completed';
-      totalMobCount: number;
-      dangerousMobCount: number;
-      selectedResourceCount: number;
-      safeResourceCount: number;
-    }
-  | {
-      type: 'no-safe-resource';
-      selectedResourceCount: number;
-      delayMs: number;
-    }
-  | {
-      type: 'farm-started';
-      resource: ResourceMiningResourceInfo;
-      durationMs: number;
-    }
-  | {
-      type: 'farm-cancelled';
-      resource: ResourceMiningResourceInfo;
-      reason: 'not-first-farmer';
-    }
-  | {
-      type: 'monitoring-scan-started';
-      resource: ResourceMiningResourceInfo;
-      elapsedMs: number;
-      nominalDurationElapsed: boolean;
-    }
-  | {
-      type: 'monitoring-scan-completed';
-      resource: ResourceMiningResourceInfo;
-      resourceState: 'being-mined' | 'available' | 'collected';
-      nominalDurationElapsed: boolean;
-    }
-  | {
-      type: 'farm-interrupted';
-      resource: ResourceMiningResourceInfo;
-      dangerousMob: ResourceMiningMobInfo | null;
-      dangerRadius: number;
-    }
-  | {
-      type: 'farm-completed';
-      resource: ResourceMiningResourceInfo;
-    }
-  | {
-      type: 'farm-failed';
-      resource: ResourceMiningResourceInfo;
-    }
-  | {
-      type: 'splinter-detected';
+      type: 'splinter';
     };
 
 export class RunResourceMiningUseCase {
@@ -150,106 +93,125 @@ export class RunResourceMiningUseCase {
     }
   }
 
-  async execute(input: RunResourceMiningInput): Promise<void> {
-    const location = this.getSelectedLocation(input.selectedLocationId);
+  execute(input: RunResourceMiningInput): Observable<ResourceMiningEvent> {
+    return defer(() => {
+      const location = this.getSelectedLocation(input.selectedLocationId);
 
-    while (!input.signal?.aborted) {
-      const selectedArticleIds = this.getSelectedArticleIds(input.getSelectedResourceIds());
-
-      if (selectedArticleIds.size === 0) {
-        this.emit(input, {
-          type: 'no-safe-resource',
-          selectedResourceCount: 0,
-          delayMs: this.config.noSafeResourceDelayMs
-        });
-        await this.delay.wait(this.config.noSafeResourceDelayMs, input.signal);
-        continue;
-      }
-
-      this.emit(input, {
-        type: 'scan-started'
-      });
-      const scan = await this.scanAndStore(location, input.signal);
-      const selectedResources = scan.getResourcesByArticleIds(selectedArticleIds);
-      const selection = selectSafestResourceForMining(selectedResources, scan.getMobs(), {
-        dangerRadius: this.config.dangerRadius
-      });
-
-      this.emit(input, {
-        type: 'scan-completed',
-        totalMobCount: scan.getMobs().length,
-        dangerousMobCount: scan.getMobs().filter(isMobDangerousForMining).length,
-        selectedResourceCount: selection.candidateCount,
-        safeResourceCount: selection.safeCandidateCount
-      });
-
-      if (!selection.selectedSafety) {
-        this.emit(input, {
-          type: 'no-safe-resource',
-          selectedResourceCount: selection.candidateCount,
-          delayMs: this.config.noSafeResourceDelayMs
-        });
-        await this.delay.wait(this.config.noSafeResourceDelayMs, input.signal);
-        continue;
-      }
-
-      const decision = await this.startMiningResource(selection.selectedSafety, location, input);
-
-      if (decision === 'stop') {
-        return;
-      }
-    }
+      return defer(() => this.runIteration(location, input)).pipe(
+        repeat(),
+        takeWhile((event) => event.type !== 'splinter-detected', true)
+      );
+    });
   }
 
-  private async startMiningResource(
-    safety: ResourceMiningSafety,
+  private runIteration(
     location: HuntLocation,
     input: RunResourceMiningInput
-  ): Promise<MiningLoopDecision> {
-    const resource = safety.resource;
-    const farmStart = await firstValueFrom(this.requestFarmStart(resource, input));
+  ): Observable<ResourceMiningEvent> {
+    const selectedArticleIds = this.getSelectedArticleIds(input.getSelectedResourceIds());
 
-    if (!farmStart) {
-      return 'stop';
+    if (selectedArticleIds.size === 0) {
+      return this.waitForSafeResource(0);
     }
 
-    if (!farmStart.isFirstFarmer()) {
-      await this.farmInterrupter.interrupt(resource, { signal: input.signal });
-      this.emit(input, {
-        type: 'farm-cancelled',
-        resource: createResourceInfo(resource),
-        reason: 'not-first-farmer'
-      });
-      return 'continue';
-    }
+    const scanStartedEvent: ResourceMiningEvent = {
+      type: 'scan-started'
+    };
 
-    const startedAtMs = this.nowMs();
-    const miningDurationMs = this.getMiningDurationMs(resource);
-    this.emit(input, {
-      type: 'farm-started',
-      resource: createResourceInfo(resource),
-      durationMs: miningDurationMs
-    });
+    return concat(
+      of(scanStartedEvent),
+      this.scanAndStore(location).pipe(
+        switchMap((scan) => {
+          const selectedResources = scan.getResourcesByArticleIds(selectedArticleIds);
+          const selection = selectSafestResourceForMining(selectedResources, scan.getMobs(), {
+            dangerRadius: this.config.dangerRadius
+          });
+          const scanCompletedEvent: ResourceMiningEvent = {
+            type: 'scan-completed',
+            totalMobCount: scan.getMobs().length,
+            dangerousMobCount: scan.getMobs().filter(isMobDangerousForMining).length,
+            selectedResourceCount: selection.candidateCount,
+            safeResourceCount: selection.safeCandidateCount
+          };
 
-    const outcome = await this.monitorResource(resource, location, startedAtMs, miningDurationMs, input);
+          if (!selection.selectedSafety) {
+            return concat(
+              of(scanCompletedEvent),
+              this.waitForSafeResource(selection.candidateCount)
+            );
+          }
 
-    if (outcome === 'interrupted') {
-      return 'continue';
-    }
-
-    this.emit(input, {
-      type: outcome === 'collected' ? 'farm-completed' : 'farm-failed',
-      resource: createResourceInfo(resource)
-    });
-
-    return 'continue';
+          return concat(
+            of(scanCompletedEvent),
+            this.startMiningResource(selection.selectedSafety, location)
+          );
+        })
+      )
+    );
   }
 
-  private requestFarmStart(
-    resource: HuntResourceNode,
-    input: RunResourceMiningInput
-  ): Observable<HuntResourceFarmStart | null> {
-    return this.farmer.start(resource, { signal: input.signal }).pipe(
+  private waitForSafeResource(selectedResourceCount: number): Observable<ResourceMiningEvent> {
+    const event: ResourceMiningEvent = {
+      type: 'no-safe-resource',
+      selectedResourceCount,
+      delayMs: this.config.noSafeResourceDelayMs
+    };
+
+    return concat(
+      of(event),
+      this.delay.wait(this.config.noSafeResourceDelayMs).pipe(ignoreElements())
+    );
+  }
+
+  private startMiningResource(
+    safety: ResourceMiningSafety,
+    location: HuntLocation
+  ): Observable<ResourceMiningEvent> {
+    const resource = safety.resource;
+
+    return this.requestFarmStart(resource).pipe(
+      switchMap((result) => {
+        if (result.type === 'splinter') {
+          return of<ResourceMiningEvent>({
+            type: 'splinter-detected'
+          });
+        }
+
+        if (!result.farmStart.isFirstFarmer()) {
+          const cancelledEvent: ResourceMiningEvent = {
+            type: 'farm-cancelled',
+            resource: createResourceInfo(resource),
+            reason: 'not-first-farmer'
+          };
+
+          return concat(
+            this.farmInterrupter.interrupt(resource).pipe(ignoreElements()),
+            of(cancelledEvent)
+          );
+        }
+
+        const startedAtMs = this.nowMs();
+        const miningDurationMs = resource.getResource().getMiningDurationMs();
+        const farmStartedEvent: ResourceMiningEvent = {
+          type: 'farm-started',
+          resource: createResourceInfo(resource),
+          durationMs: miningDurationMs
+        };
+
+        return concat(
+          of(farmStartedEvent),
+          this.monitorResource(resource, location, startedAtMs, miningDurationMs)
+        );
+      })
+    );
+  }
+
+  private requestFarmStart(resource: HuntResourceNode): Observable<FarmStartResult> {
+    return this.farmer.start(resource).pipe(
+      map((farmStart): FarmStartResult => ({
+        type: 'farm-start',
+        farmStart
+      })),
       catchError((error: unknown) => {
         if (!isUnexpectedServerResponseError(error)) {
           return throwError(() => error);
@@ -257,15 +219,14 @@ export class RunResourceMiningUseCase {
 
         return this.detectCurrentPlayerSplinter().pipe(
           catchError(() => of(false)),
-          mergeMap((hasSplinter) => {
+          mergeMap((hasSplinter): Observable<FarmStartResult> => {
             if (!hasSplinter) {
               return throwError(() => error);
             }
 
-            this.emit(input, {
-              type: 'splinter-detected'
+            return of({
+              type: 'splinter'
             });
-            return of(null);
           })
         );
       }),
@@ -273,78 +234,112 @@ export class RunResourceMiningUseCase {
     );
   }
 
-  private async monitorResource(
+  private monitorResource(
     resource: HuntResourceNode,
     location: HuntLocation,
     startedAtMs: number,
-    miningDurationMs: number,
-    input: RunResourceMiningInput
-  ): Promise<'collected' | 'failed' | 'interrupted'> {
-    const nominalDeadlineAtMs = startedAtMs + miningDurationMs;
-    let nextScanAtMs = startedAtMs + this.config.monitoringScanIntervalMs;
+    miningDurationMs: number
+  ): Observable<ResourceMiningEvent> {
+    return defer(() => {
+      const nominalDeadlineAtMs = startedAtMs + miningDurationMs;
+      let nextScanAtMs = startedAtMs + this.config.monitoringScanIntervalMs;
 
-    while (!input.signal?.aborted) {
-      await this.waitUntil(nextScanAtMs, input.signal);
+      const monitoringStep = defer(() => {
+        return concat(
+          this.waitUntil(nextScanAtMs).pipe(ignoreElements()),
+          defer(() => {
+            const scanStartedAtMs = this.nowMs();
+            const scanStartedEvent: ResourceMiningEvent = {
+              type: 'monitoring-scan-started',
+              resource: createResourceInfo(resource),
+              elapsedMs: scanStartedAtMs - startedAtMs,
+              nominalDurationElapsed: scanStartedAtMs >= nominalDeadlineAtMs
+            };
 
-      const scanStartedAtMs = this.nowMs();
-      this.emit(input, {
-        type: 'monitoring-scan-started',
-        resource: createResourceInfo(resource),
-        elapsedMs: scanStartedAtMs - startedAtMs,
-        nominalDurationElapsed: scanStartedAtMs >= nominalDeadlineAtMs
+            return concat(
+              of(scanStartedEvent),
+              this.scanAndStore(location).pipe(
+                switchMap((scan) => {
+                  const currentResource = scan.findResourceByServerNumber(resource.getServerNumber());
+                  const nominalDurationElapsed = this.nowMs() >= nominalDeadlineAtMs;
+
+                  if (!currentResource) {
+                    const scanCompletedEvent: ResourceMiningEvent = {
+                      type: 'monitoring-scan-completed',
+                      resource: createResourceInfo(resource),
+                      resourceState: 'collected',
+                      nominalDurationElapsed
+                    };
+                    const farmCompletedEvent: ResourceMiningEvent = {
+                      type: 'farm-completed',
+                      resource: createResourceInfo(resource)
+                    };
+
+                    return of(scanCompletedEvent, farmCompletedEvent);
+                  }
+
+                  if (!currentResource.isBeingFarmed()) {
+                    const scanCompletedEvent: ResourceMiningEvent = {
+                      type: 'monitoring-scan-completed',
+                      resource: createResourceInfo(resource),
+                      resourceState: 'available',
+                      nominalDurationElapsed
+                    };
+                    const farmFailedEvent: ResourceMiningEvent = {
+                      type: 'farm-failed',
+                      resource: createResourceInfo(resource)
+                    };
+
+                    return of(scanCompletedEvent, farmFailedEvent);
+                  }
+
+                  const miningSafety = assessResourceMiningSafety(resource, scan.getMobs(), {
+                    dangerRadius: this.config.dangerRadius
+                  });
+                  const scanCompletedEvent: ResourceMiningEvent = {
+                    type: 'monitoring-scan-completed',
+                    resource: createResourceInfo(resource),
+                    resourceState: 'being-mined',
+                    nominalDurationElapsed
+                  };
+
+                  if (!miningSafety.isSafe) {
+                    const interruptedEvent: ResourceMiningEvent = {
+                      type: 'farm-interrupted',
+                      resource: createResourceInfo(resource),
+                      dangerousMob: createMobInfo(
+                        miningSafety.blockingMob ?? miningSafety.nearestDangerousMob
+                      ),
+                      dangerRadius: this.config.dangerRadius
+                    };
+
+                    return concat(
+                      of(scanCompletedEvent),
+                      this.farmInterrupter.interrupt(resource).pipe(ignoreElements()),
+                      of(interruptedEvent)
+                    );
+                  }
+
+                  nextScanAtMs += this.config.monitoringScanIntervalMs;
+                  nextScanAtMs = this.skipMissedMonitoringScans(nextScanAtMs);
+
+                  return of(scanCompletedEvent);
+                })
+              )
+            );
+          })
+        );
       });
 
-      const scan = await this.scanAndStore(location, input.signal);
-      const currentResource = scan.findResourceByServerNumber(resource.getServerNumber());
-      const nominalDurationElapsed = this.nowMs() >= nominalDeadlineAtMs;
+      return monitoringStep.pipe(
+        repeat(),
+        takeWhile((event) => !isMonitoringTerminalEvent(event), true)
+      );
+    });
+  }
 
-      if (!currentResource) {
-        this.emit(input, {
-          type: 'monitoring-scan-completed',
-          resource: createResourceInfo(resource),
-          resourceState: 'collected',
-          nominalDurationElapsed
-        });
-        return 'collected';
-      }
-
-      if (!currentResource.isBeingFarmed()) {
-        this.emit(input, {
-          type: 'monitoring-scan-completed',
-          resource: createResourceInfo(resource),
-          resourceState: 'available',
-          nominalDurationElapsed
-        });
-        return 'failed';
-      }
-
-      const safety = assessResourceMiningSafety(resource, scan.getMobs(), {
-        dangerRadius: this.config.dangerRadius
-      });
-
-      this.emit(input, {
-        type: 'monitoring-scan-completed',
-        resource: createResourceInfo(resource),
-        resourceState: 'being-mined',
-        nominalDurationElapsed
-      });
-
-      if (!safety.isSafe) {
-        await this.farmInterrupter.interrupt(resource, { signal: input.signal });
-        this.emit(input, {
-          type: 'farm-interrupted',
-          resource: createResourceInfo(resource),
-          dangerousMob: createMobInfo(safety.blockingMob ?? safety.nearestDangerousMob),
-          dangerRadius: this.config.dangerRadius
-        });
-        return 'interrupted';
-      }
-
-      nextScanAtMs += this.config.monitoringScanIntervalMs;
-      nextScanAtMs = this.skipMissedMonitoringScans(nextScanAtMs);
-    }
-
-    throw createAbortError();
+  private waitUntil(deadlineAtMs: number): Observable<void> {
+    return this.delay.wait(Math.max(0, deadlineAtMs - this.nowMs()));
   }
 
   private skipMissedMonitoringScans(nextScanAtMs: number): number {
@@ -358,30 +353,19 @@ export class RunResourceMiningUseCase {
     return normalizedNextScanAtMs;
   }
 
+  private scanAndStore(location: HuntLocation): Observable<HuntZoneScan> {
+    return this.scanner.scan({
+      areaId: location.getAreaId()
+    }).pipe(
+      tap((scan) => {
+        this.scanStore.save(scan);
+      }),
+      take(1)
+    );
+  }
+
   private nowMs(): number {
     return this.clock.now().getTime();
-  }
-
-  private async waitUntil(deadlineAtMs: number, signal: AbortSignal | undefined): Promise<void> {
-    const remainingMs = deadlineAtMs - this.nowMs();
-
-    if (remainingMs > 0) {
-      await this.delay.wait(remainingMs, signal);
-    }
-  }
-
-  private async scanAndStore(location: HuntLocation, signal: AbortSignal | undefined): Promise<HuntZoneScan> {
-    const scan = await this.scanner.scan({
-      areaId: location.getAreaId(),
-      signal
-    });
-    this.scanStore.save(scan);
-
-    return scan;
-  }
-
-  private getMiningDurationMs(resource: HuntResourceNode): number {
-    return resource.getResource().getMiningDurationMs();
   }
 
   private getSelectedArticleIds(selectedResourceIds: readonly BotResourceId[]): ReadonlySet<number> {
@@ -411,10 +395,12 @@ export class RunResourceMiningUseCase {
 
     return location;
   }
+}
 
-  private emit(input: RunResourceMiningInput, event: ResourceMiningEvent): void {
-    input.observer?.handle(event);
-  }
+function isMonitoringTerminalEvent(event: ResourceMiningEvent): boolean {
+  return event.type === 'farm-completed'
+    || event.type === 'farm-failed'
+    || event.type === 'farm-interrupted';
 }
 
 function createResourceInfo(resource: HuntResourceNode): ResourceMiningResourceInfo {
@@ -440,11 +426,4 @@ function createMobInfo(mob: HuntMob | null): ResourceMiningMobInfo | null {
     aggressionLevel: mob.getAggressionLevel(),
     aggressionColor: getMobAggressionProfile(mob.getAggressionLevel()).color
   };
-}
-
-function createAbortError(): Error {
-  const error = new Error('Resource mining was stopped.');
-  error.name = 'AbortError';
-
-  return error;
 }

@@ -1,7 +1,7 @@
 import type {
   ProfessionCraftingEvent,
   ProfessionCraftingRecipeInfo
-} from '../../application/use-cases/run-profession-crafting';
+} from '../../application/events/profession-crafting-event';
 import type { ProfessionRecipeId } from '../../domain/entities/profession-recipe';
 import {
   createProcessBar,
@@ -77,6 +77,10 @@ export function createCraftingProcessBarsController(container: HTMLElement): Cra
           });
         }
 
+        return;
+      }
+
+      if (event.type === 'crafting-cycle-completed') {
         return;
       }
 

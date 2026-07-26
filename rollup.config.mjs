@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { minify, transform } from '@swc/core';
+import { minifySync, transformSync } from '@swc/core';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
@@ -45,12 +45,12 @@ function swcTypeScriptPlugin() {
 
       return readFileSync(id, 'utf8');
     },
-    async transform(code, id) {
+    transform(code, id) {
       if (!id.endsWith('.ts')) {
         return null;
       }
 
-      const result = await transform(code, {
+      const result = transformSync(code, {
         ...swcOptions,
         filename: id
       });
@@ -90,8 +90,8 @@ function dataUrlAssetPlugin() {
 function swcMinifyBundlePlugin() {
   return {
     name: 'swc-minify-bundle',
-    async renderChunk(code) {
-      const result = await minify(code, {
+    renderChunk(code) {
+      const result = minifySync(code, {
         compress: {
           defaults: true,
           drop_debugger: true,
