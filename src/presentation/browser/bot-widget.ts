@@ -737,7 +737,7 @@ function createCraftingResourceLogPart(recipe: ProfessionCraftingRecipeInfo): Bo
 
 function createMobLogPart(mob: ResourceMiningMobInfo): BotLogLinePart {
   return {
-    text: `${mob.name}, ур. ${mob.level}`,
+    text: `${mob.name}[${mob.level}]`,
     color: mob.aggressionColor,
     title: `Агрессия ${mob.aggressionLevel}`
   };
