@@ -51,9 +51,8 @@ tab contains the recipe multiselect and one shared amount input defaulting to
 reads the resource quantities for all selected recipes with one shared
 request. It then crafts no more than the selected amount or the available
 resource count, waits for all recipe cooldowns before the next shared cycle,
-logs detailed HTML
-selector diagnostics and the calculated remainder, and stops only the affected
-recipe when that resource is absent.
+logs the calculated remainder, and stops only the affected recipe when that
+resource is absent.
 Unexpected server responses trigger process shutdown, programmatically enable
 the persisted alarm toggle, start a looping siren, and add a red
 human-attention log tag. The alarm is off by default; enabling it manually still

@@ -1,6 +1,6 @@
 import { UnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
 import type {
-  BackpackItemQuantitiesReadResult,
+  BackpackItemQuantity,
   BackpackItemQuantityReadOptions,
   BackpackItemQuantityReader
 } from '../../application/ports/backpack-item-quantity-reader';
@@ -13,7 +13,7 @@ export class BrowserBackpackItemQuantityReader implements BackpackItemQuantityRe
   async readQuantities(
     artifactIds: readonly number[],
     options: BackpackItemQuantityReadOptions
-  ): Promise<BackpackItemQuantitiesReadResult> {
+  ): Promise<readonly BackpackItemQuantity[]> {
     if (artifactIds.length === 0) {
       throw new Error('At least one backpack artifact id is required.');
     }
@@ -33,11 +33,6 @@ export class BrowserBackpackItemQuantityReader implements BackpackItemQuantityRe
       throw new UnexpectedServerResponseError(`Backpack content request failed with HTTP ${response.status}.`);
     }
 
-    return {
-      requestUrl,
-      responseUrl: response.url,
-      contentType: response.headers.get('content-type') ?? '',
-      ...this.parser.parseItemQuantities(await response.text(), artifactIds)
-    };
+    return this.parser.parseItemQuantities(await response.text(), artifactIds);
   }
 }

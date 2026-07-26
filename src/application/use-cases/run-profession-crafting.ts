@@ -1,7 +1,7 @@
 import type { BotResourceId } from '../../domain/entities/bot-resource';
 import type { ProfessionRecipe, ProfessionRecipeId } from '../../domain/entities/profession-recipe';
 import type {
-  BackpackItemQuantityLookup,
+  BackpackItemQuantity,
   BackpackItemQuantityReader
 } from '../ports/backpack-item-quantity-reader';
 import type { Delay } from '../ports/delay';
@@ -45,16 +45,6 @@ export interface ProfessionCraftingRecipeInfo {
   level: number;
 }
 
-export interface ProfessionCraftingBackpackLookupInfo {
-  recipe: ProfessionCraftingRecipeInfo;
-  artifactId: number;
-  slotSelector: string;
-  quantitySelector: string;
-  matchedSlotCount: number;
-  quantityTexts: readonly string[];
-  quantity: number;
-}
-
 export type ProfessionCraftingEvent =
   | {
       type: 'no-recipe-selected';
@@ -62,21 +52,7 @@ export type ProfessionCraftingEvent =
     }
   | {
       type: 'backpack-check-started';
-      group: number;
       recipes: readonly ProfessionCraftingRecipeInfo[];
-    }
-  | {
-      type: 'backpack-check-completed';
-      group: number;
-      requestUrl: string;
-      responseUrl: string;
-      contentType: string;
-      htmlLength: number;
-      documentTitle: string;
-      artifactSlotCount: number;
-      identifiedArtifactSlotCount: number;
-      detectedArtifactIds: readonly string[];
-      lookups: readonly ProfessionCraftingBackpackLookupInfo[];
     }
   | {
       type: 'craft-request-started';
@@ -149,8 +125,8 @@ export class RunProfessionCraftingUseCase {
       const lookups = await this.readBackpackQuantities(runnableRecipes, input);
       const craftTasks: Promise<void>[] = [];
 
-      for (const { recipe, lookup } of lookups) {
-        if (lookup.quantity === 0) {
+      for (const { recipe, availableAmount } of lookups) {
+        if (availableAmount === 0) {
           stoppedRecipeIds.add(recipe.getId());
           this.emit(input, {
             type: 'recipe-stopped',
@@ -159,7 +135,7 @@ export class RunProfessionCraftingUseCase {
           continue;
         }
 
-        craftTasks.push(this.craftRecipe(recipe, lookup.quantity, input));
+        craftTasks.push(this.craftRecipe(recipe, availableAmount, input));
       }
 
       await waitForCraftTasks(craftTasks);
@@ -173,10 +149,9 @@ export class RunProfessionCraftingUseCase {
     const recipeInfos = recipes.map(createRecipeInfo);
     this.emit(input, {
       type: 'backpack-check-started',
-      group: this.config.resourceBackpackGroup,
       recipes: recipeInfos
     });
-    const result = await this.backpackItemQuantityReader.readQuantities(
+    const quantities = await this.backpackItemQuantityReader.readQuantities(
       recipes.map((recipe) => recipe.getResource().getArtifactId()),
       {
         group: this.config.resourceBackpackGroup,
@@ -186,22 +161,8 @@ export class RunProfessionCraftingUseCase {
     const lookups = recipes.map((recipe) => {
       return {
         recipe,
-        lookup: getRequiredLookup(result.lookups, recipe.getResource().getArtifactId())
+        availableAmount: getRequiredQuantity(quantities, recipe.getResource().getArtifactId()).quantity
       };
-    });
-
-    this.emit(input, {
-      type: 'backpack-check-completed',
-      group: this.config.resourceBackpackGroup,
-      requestUrl: result.requestUrl,
-      responseUrl: result.responseUrl,
-      contentType: result.contentType,
-      htmlLength: result.htmlLength,
-      documentTitle: result.documentTitle,
-      artifactSlotCount: result.artifactSlotCount,
-      identifiedArtifactSlotCount: result.identifiedArtifactSlotCount,
-      detectedArtifactIds: result.detectedArtifactIds,
-      lookups: lookups.map(({ recipe, lookup }) => createBackpackLookupInfo(recipe, lookup))
     });
 
     return lookups;
@@ -289,7 +250,7 @@ export class RunProfessionCraftingUseCase {
 
 interface RecipeBackpackLookup {
   recipe: ProfessionRecipe;
-  lookup: BackpackItemQuantityLookup;
+  availableAmount: number;
 }
 
 function createRecipeInfo(recipe: ProfessionRecipe): ProfessionCraftingRecipeInfo {
@@ -306,32 +267,17 @@ function createRecipeInfo(recipe: ProfessionRecipe): ProfessionCraftingRecipeInf
   };
 }
 
-function createBackpackLookupInfo(
-  recipe: ProfessionRecipe,
-  lookup: BackpackItemQuantityLookup
-): ProfessionCraftingBackpackLookupInfo {
-  return {
-    recipe: createRecipeInfo(recipe),
-    artifactId: lookup.artifactId,
-    slotSelector: lookup.slotSelector,
-    quantitySelector: lookup.quantitySelector,
-    matchedSlotCount: lookup.matchedSlotCount,
-    quantityTexts: lookup.quantityTexts,
-    quantity: lookup.quantity
-  };
-}
-
-function getRequiredLookup(
-  lookups: readonly BackpackItemQuantityLookup[],
+function getRequiredQuantity(
+  quantities: readonly BackpackItemQuantity[],
   artifactId: number
-): BackpackItemQuantityLookup {
-  const lookup = lookups.find((candidate) => candidate.artifactId === artifactId);
+): BackpackItemQuantity {
+  const quantity = quantities.find((candidate) => candidate.artifactId === artifactId);
 
-  if (!lookup) {
+  if (!quantity) {
     throw new Error(`Backpack quantity result is missing artifact ${artifactId}.`);
   }
 
-  return lookup;
+  return quantity;
 }
 
 async function waitForCraftTasks(tasks: readonly Promise<void>[]): Promise<void> {

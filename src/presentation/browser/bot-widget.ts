@@ -10,7 +10,6 @@ import type { ListHuntLocationsUseCase } from '../../application/use-cases/list-
 import type { ListProfessionRecipesUseCase } from '../../application/use-cases/list-profession-recipes';
 import type { ListResourcesUseCase } from '../../application/use-cases/list-resources';
 import type {
-  ProfessionCraftingBackpackLookupInfo,
   ProfessionCraftingEvent,
   ProfessionCraftingRecipeInfo,
   RunProfessionCraftingUseCase
@@ -623,31 +622,6 @@ function logCraftingEvent(
   addLog: (message: string, parts?: readonly BotLogLinePart[]) => void
 ): void {
   switch (event.type) {
-    case 'backpack-check-started':
-      addLog(
-        `Проверяем рюкзак одним запросом: group=${event.group}; ресурсы: ` +
-        `${event.recipes.map(formatCraftingResourceLabel).join(', ')}.`
-      );
-      return;
-
-    case 'backpack-check-completed':
-      addLog(
-        `Ответ рюкзака: GET ${event.requestUrl}; конечный URL: ${event.responseUrl}; ` +
-        `Content-Type: ${JSON.stringify(event.contentType)}; title: ${JSON.stringify(event.documentTitle)}; ` +
-        `HTML: ${event.htmlLength} символов; ` +
-        `селектор "span.artifact-slot": ${event.artifactSlotCount}; ` +
-        `селектор "span.artifact-slot[artifact-id]": ${event.identifiedArtifactSlotCount}.`
-      );
-
-      for (const lookup of event.lookups) {
-        logBackpackLookup(lookup, addLog);
-      }
-
-      if (event.lookups.some((lookup) => lookup.matchedSlotCount === 0)) {
-        addLog(formatDetectedArtifactIds(event.detectedArtifactIds));
-      }
-      return;
-
     case 'craft-started':
       addLog(
         `Крафтим ${event.amount} шт. ${formatProfessionRecipeLabel(event.recipe)}, ресурсов остается: ${event.remainingResourceAmount}.`,
@@ -674,42 +648,11 @@ function logCraftingEvent(
       return;
 
     case 'no-recipe-selected':
+    case 'backpack-check-started':
     case 'craft-request-started':
     case 'craft-completed':
       return;
   }
-}
-
-function logBackpackLookup(
-  lookup: ProfessionCraftingBackpackLookupInfo,
-  addLog: (message: string, parts?: readonly BotLogLinePart[]) => void
-): void {
-  const resourceLabel = formatCraftingResourceLabel(lookup.recipe);
-  const quantityTexts = lookup.quantityTexts.length > 0
-    ? lookup.quantityTexts.map((text) => JSON.stringify(text)).join(', ')
-    : '<ячейка не найдена>';
-  const details =
-    `, artifactId=${lookup.artifactId}; ячейка "${lookup.slotSelector}": ${lookup.matchedSlotCount}; ` +
-    `количество внутри "${lookup.quantitySelector}"; текст: ${quantityTexts}; ` +
-    `распознано: ${lookup.quantity}.`;
-
-  addLog(`Поиск ${resourceLabel}${details}`, [
-    'Поиск ',
-    createCraftingResourceLogPart(lookup.recipe),
-    details
-  ]);
-}
-
-function formatDetectedArtifactIds(artifactIds: readonly string[]): string {
-  if (artifactIds.length === 0) {
-    return 'В HTML не найдено ни одного artifact-id у span.artifact-slot.';
-  }
-
-  const visibleArtifactIds = artifactIds.slice(0, 30);
-  const omittedCount = artifactIds.length - visibleArtifactIds.length;
-  const suffix = omittedCount > 0 ? `; еще: ${omittedCount}` : '';
-
-  return `Обнаруженные artifact-id (${artifactIds.length}): ${visibleArtifactIds.join(', ')}${suffix}.`;
 }
 
 function createDangerLogParts(prefix: string, mob: ResourceMiningMobInfo | null): readonly BotLogLinePart[] {

@@ -80,10 +80,6 @@ export function createCraftingProcessBarsController(container: HTMLElement): Cra
         return;
       }
 
-      if (event.type === 'backpack-check-completed') {
-        return;
-      }
-
       hideIdle();
       const controller = getController(event.recipe);
 
