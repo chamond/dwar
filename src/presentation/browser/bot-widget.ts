@@ -257,8 +257,8 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     miningStopRequested = true;
     setMiningButtonActive(botPanel.startMiningButton, false);
 
-    if (miningPhase === 'active') {
-      addMiningLog('Добыча остановится после текущего сбора.');
+    if (miningPhase === 'active' || miningPhase === 'waiting') {
+      addMiningLog('Добыча остановится после результата текущего сбора.');
       return;
     }
 
@@ -481,11 +481,7 @@ function canStopMiningAfter(event: ResourceMiningEvent): boolean {
   return event.type === 'farm-completed'
     || event.type === 'farm-failed'
     || event.type === 'farm-cancelled'
-    || event.type === 'farm-interrupted'
-    || (
-      (event.type === 'monitoring-scan-started' || event.type === 'monitoring-scan-completed')
-      && event.nominalDurationElapsed
-    );
+    || event.type === 'farm-interrupted';
 }
 
 function handleMiningEvent(
