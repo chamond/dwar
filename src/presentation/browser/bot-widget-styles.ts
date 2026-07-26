@@ -53,6 +53,7 @@ export const BOT_WIDGET_STYLES = `
   .dwar-launcher:focus-visible,
   .dwar-panel__icon-button:focus-visible,
   .dwar-panel__resize:focus-visible,
+  .dwar-tabs__button:focus-visible,
   .dwar-action-button:focus-visible,
   .dwar-craft-amount:focus-within,
   .dwar-location-select__control:focus-visible,
@@ -198,6 +199,78 @@ export const BOT_WIDGET_STYLES = `
     color: #aeb8c7;
   }
 
+  .dwar-tabs {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    flex-direction: column;
+  }
+
+  .dwar-tabs__list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    flex: 0 0 auto;
+    padding: 5px 7px 0;
+    background: #121923;
+    border-bottom: 1px solid rgba(255, 255, 255, .07);
+  }
+
+  .dwar-tabs__button {
+    position: relative;
+    height: 34px;
+    padding: 0 12px;
+    color: #7f8ca1;
+    background: transparent;
+    border: 0;
+    border-radius: 6px 6px 0 0;
+    cursor: pointer;
+    font: 800 12px/1 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    transition: color .14s ease, background-color .14s ease;
+  }
+
+  .dwar-tabs__button::after {
+    position: absolute;
+    right: 10px;
+    bottom: 0;
+    left: 10px;
+    height: 2px;
+    content: "";
+    background: transparent;
+    border-radius: 999px 999px 0 0;
+  }
+
+  .dwar-tabs__button:hover {
+    color: #dbe3f1;
+    background: rgba(255, 255, 255, .035);
+  }
+
+  .dwar-tabs__button.is-active {
+    color: #f7f8fb;
+    background: rgba(120, 217, 194, .055);
+  }
+
+  .dwar-tabs__button.is-active::after {
+    background: #78d9c2;
+    box-shadow: 0 0 10px rgba(120, 217, 194, .58);
+  }
+
+  .dwar-tabs__panels {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .dwar-tabs__panel {
+    display: flex;
+    width: 100%;
+    min-height: 0;
+    flex-direction: column;
+  }
+
+  .dwar-tabs__panel[hidden] {
+    display: none;
+  }
+
   .dwar-panel__controls {
     display: flex;
     align-items: flex-start;
@@ -223,7 +296,8 @@ export const BOT_WIDGET_STYLES = `
 
   .dwar-panel__action-buttons {
     display: grid;
-    flex: 0 0 92px;
+    flex: 0 0 112px;
+    align-content: start;
     gap: 8px;
   }
 
@@ -258,6 +332,20 @@ export const BOT_WIDGET_STYLES = `
     background: linear-gradient(180deg, #8cebd6 0%, #42b79c 100%);
   }
 
+  .dwar-mining-check-button {
+    color: #dbe3f1;
+    background: linear-gradient(180deg, #273343 0%, #18212d 100%);
+    border-color: rgba(243, 201, 107, .22);
+    box-shadow: none;
+    font-size: 11px;
+  }
+
+  .dwar-mining-check-button:hover {
+    color: #ffffff;
+    background: linear-gradient(180deg, #303e51 0%, #202b39 100%);
+    border-color: rgba(243, 201, 107, .45);
+  }
+
   .dwar-action-button.is-active {
     color: #ffe9e9;
     background: linear-gradient(180deg, #d65a63 0%, #8f2e38 100%);
@@ -273,6 +361,14 @@ export const BOT_WIDGET_STYLES = `
     cursor: wait;
     background: linear-gradient(180deg, #a88746 0%, #76592d 100%);
     box-shadow: none;
+  }
+
+  .dwar-mining-check-button:disabled,
+  .dwar-mining-check-button:disabled:hover {
+    color: #596475;
+    background: #141b25;
+    border-color: rgba(255, 255, 255, .07);
+    cursor: not-allowed;
   }
 
   .dwar-action-button svg {

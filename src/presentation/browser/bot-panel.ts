@@ -13,21 +13,28 @@ import {
   type ProfessionRecipePickerElements
 } from './profession-recipe-picker';
 import { createResourcePicker, type ResourcePickerElements } from './resource-picker';
+import { createTabs, type TabsElements } from './tabs';
+
+export type BotPanelTabId = 'mining' | 'crafting';
 
 export interface BotPanelElements {
   panel: HTMLElement;
   header: HTMLElement;
-  clearLogButton: HTMLButtonElement;
   closeButton: HTMLButtonElement;
   alarmToggleButton: HTMLButtonElement;
+  tabs: TabsElements<BotPanelTabId>;
   startMiningButton: HTMLButtonElement;
+  checkMiningButton: HTMLButtonElement;
   startCraftingButton: HTMLButtonElement;
   craftAmountInput: CraftAmountInputElements;
   resourcePicker: ResourcePickerElements;
   recipePicker: ProfessionRecipePickerElements;
   locationSelect: HuntLocationSelectElements;
-  logList: HTMLElement;
+  miningClearLogButton: HTMLButtonElement;
+  miningLogList: HTMLElement;
   miningProcessBar: ProcessBarElements;
+  craftingClearLogButton: HTMLButtonElement;
+  craftingLogList: HTMLElement;
   craftingProcessBars: HTMLElement;
   resizeHandle: HTMLButtonElement;
 }
@@ -38,14 +45,23 @@ interface PanelHeaderElements {
   alarmToggleButton: HTMLButtonElement;
 }
 
-interface MiningControlsElements {
-  controls: HTMLElement;
+interface MiningTabElements {
+  root: HTMLElement;
   startMiningButton: HTMLButtonElement;
+  checkMiningButton: HTMLButtonElement;
+  resourcePicker: ResourcePickerElements;
+  locationSelect: HuntLocationSelectElements;
+  logSection: LogSectionElements;
+  processBar: ProcessBarElements;
+}
+
+interface CraftingTabElements {
+  root: HTMLElement;
   startCraftingButton: HTMLButtonElement;
   craftAmountInput: CraftAmountInputElements;
-  resourcePicker: ResourcePickerElements;
   recipePicker: ProfessionRecipePickerElements;
-  locationSelect: HuntLocationSelectElements;
+  logSection: LogSectionElements;
+  processBars: HTMLElement;
 }
 
 interface LogSectionElements {
@@ -73,27 +89,42 @@ export function createBotPanel(
   panel.className = 'dwar-panel';
   panel.hidden = true;
   const headerElements = createPanelHeader();
-  const controlsElements = createBotControls(resources, recipes, locations, options);
-  const logSectionElements = createLogSection();
-  const processBars = createProcessBars();
+  const miningTab = createMiningTab(resources, locations, options);
+  const craftingTab = createCraftingTab(recipes, options);
+  const tabs = createTabs<BotPanelTabId>([
+    {
+      id: 'mining',
+      label: 'Добыча',
+      panel: miningTab.root
+    },
+    {
+      id: 'crafting',
+      label: 'Крафт',
+      panel: craftingTab.root
+    }
+  ], 'mining');
   const resizeHandle = createResizeHandle();
-  panel.append(headerElements.header, controlsElements.controls, logSectionElements.root, processBars.root, resizeHandle);
+  panel.append(headerElements.header, tabs.root, resizeHandle);
 
   return {
     panel,
     header: headerElements.header,
-    clearLogButton: logSectionElements.clearLogButton,
     closeButton: headerElements.closeButton,
     alarmToggleButton: headerElements.alarmToggleButton,
-    startMiningButton: controlsElements.startMiningButton,
-    startCraftingButton: controlsElements.startCraftingButton,
-    craftAmountInput: controlsElements.craftAmountInput,
-    resourcePicker: controlsElements.resourcePicker,
-    recipePicker: controlsElements.recipePicker,
-    locationSelect: controlsElements.locationSelect,
-    logList: logSectionElements.logList,
-    miningProcessBar: processBars.miningProcessBar,
-    craftingProcessBars: processBars.craftingProcessBars,
+    tabs,
+    startMiningButton: miningTab.startMiningButton,
+    checkMiningButton: miningTab.checkMiningButton,
+    startCraftingButton: craftingTab.startCraftingButton,
+    craftAmountInput: craftingTab.craftAmountInput,
+    resourcePicker: miningTab.resourcePicker,
+    recipePicker: craftingTab.recipePicker,
+    locationSelect: miningTab.locationSelect,
+    miningClearLogButton: miningTab.logSection.clearLogButton,
+    miningLogList: miningTab.logSection.logList,
+    miningProcessBar: miningTab.processBar,
+    craftingClearLogButton: craftingTab.logSection.clearLogButton,
+    craftingLogList: craftingTab.logSection.logList,
+    craftingProcessBars: craftingTab.processBars,
     resizeHandle
   };
 }
@@ -143,12 +174,12 @@ function createPanelHeader(): PanelHeaderElements {
   };
 }
 
-function createBotControls(
+function createMiningTab(
   resources: readonly BotResourceSnapshot[],
-  recipes: readonly ProfessionRecipeSnapshot[],
   locations: readonly HuntLocationSnapshot[],
   options: BotPanelOptions
-): MiningControlsElements {
+): MiningTabElements {
+  const root = document.createElement('div');
   const controls = document.createElement('div');
   controls.className = 'dwar-panel__controls';
 
@@ -158,22 +189,17 @@ function createBotControls(
   startMiningButton.setAttribute('aria-label', 'Начать добычу');
   startMiningButton.innerHTML = `${getPickaxeIcon()}<span>Добыча</span>`;
 
-  const startCraftingButton = document.createElement('button');
-  startCraftingButton.type = 'button';
-  startCraftingButton.className = 'dwar-action-button dwar-crafting-button';
-  startCraftingButton.setAttribute('aria-label', 'Начать крафт');
-  startCraftingButton.innerHTML = `${getCraftIcon()}<span>Крафт</span>`;
+  const checkMiningButton = document.createElement('button');
+  checkMiningButton.type = 'button';
+  checkMiningButton.className = 'dwar-action-button dwar-mining-check-button';
+  checkMiningButton.textContent = 'Проверить добычу';
+  checkMiningButton.setAttribute('aria-label', 'Проверка доступна во время добычи');
+  checkMiningButton.disabled = true;
 
   const resourcePicker = createResourcePicker(resources, {
     selectedResourceIds: options.selectedResourceIds,
     onSelectionChange: options.onResourceSelectionChange
   });
-
-  const recipePicker = createProfessionRecipePicker(recipes, {
-    selectedRecipeIds: options.selectedRecipeIds,
-    onSelectionChange: options.onRecipeSelectionChange
-  });
-  const craftAmountInput = createCraftAmountInput();
 
   const locationSelect = createHuntLocationSelect(locations, {
     selectedLocationId: options.selectedLocationId,
@@ -182,37 +208,90 @@ function createBotControls(
 
   const actionGroup = document.createElement('div');
   actionGroup.className = 'dwar-panel__action-buttons';
-  actionGroup.append(startMiningButton, startCraftingButton);
+  actionGroup.append(startMiningButton, checkMiningButton);
+
+  const selectorGroup = document.createElement('div');
+  selectorGroup.className = 'dwar-panel__selectors';
+  selectorGroup.append(resourcePicker.root, locationSelect.root);
+  controls.append(actionGroup, selectorGroup);
+
+  const logSection = createLogSection('Лог добычи');
+  const processBars = createProcessBarsRoot();
+  const processBar = createProcessBar('Добыча: ожидание');
+  processBars.append(processBar.root);
+  root.append(controls, logSection.root, processBars);
+
+  return {
+    root,
+    startMiningButton,
+    checkMiningButton,
+    resourcePicker,
+    locationSelect,
+    logSection,
+    processBar
+  };
+}
+
+function createCraftingTab(
+  recipes: readonly ProfessionRecipeSnapshot[],
+  options: BotPanelOptions
+): CraftingTabElements {
+  const root = document.createElement('div');
+  const controls = document.createElement('div');
+  controls.className = 'dwar-panel__controls';
+
+  const startCraftingButton = document.createElement('button');
+  startCraftingButton.type = 'button';
+  startCraftingButton.className = 'dwar-action-button dwar-crafting-button';
+  startCraftingButton.setAttribute('aria-label', 'Начать крафт');
+  startCraftingButton.innerHTML = `${getCraftIcon()}<span>Крафт</span>`;
+
+  const recipePicker = createProfessionRecipePicker(recipes, {
+    selectedRecipeIds: options.selectedRecipeIds,
+    onSelectionChange: options.onRecipeSelectionChange
+  });
+  const craftAmountInput = createCraftAmountInput();
+
+  const actionGroup = document.createElement('div');
+  actionGroup.className = 'dwar-panel__action-buttons';
+  actionGroup.append(startCraftingButton);
 
   const selectorGroup = document.createElement('div');
   selectorGroup.className = 'dwar-panel__selectors';
   const recipeRow = document.createElement('div');
   recipeRow.className = 'dwar-panel__recipe-row';
   recipeRow.append(recipePicker.root, craftAmountInput.root);
-  selectorGroup.append(resourcePicker.root, recipeRow, locationSelect.root);
+  selectorGroup.append(recipeRow);
   controls.append(actionGroup, selectorGroup);
 
+  const logSection = createLogSection('Лог крафта');
+  const processBarsRoot = createProcessBarsRoot();
+  const processBars = document.createElement('div');
+  processBars.className = 'dwar-crafting-process-bars';
+  processBarsRoot.append(processBars);
+  root.append(controls, logSection.root, processBarsRoot);
+
   return {
-    controls,
-    startMiningButton,
+    root,
     startCraftingButton,
     craftAmountInput,
-    resourcePicker,
     recipePicker,
-    locationSelect
+    logSection,
+    processBars
   };
 }
 
-function createLogList(): HTMLElement {
+function createLogList(ariaLabel: string): HTMLElement {
   const logList = document.createElement('div');
   logList.className = 'dwar-panel__logs';
   logList.setAttribute('role', 'log');
   logList.setAttribute('aria-live', 'polite');
+  logList.setAttribute('aria-label', ariaLabel);
 
   return logList;
 }
 
-function createLogSection(): LogSectionElements {
+function createLogSection(ariaLabel: string): LogSectionElements {
   const root = document.createElement('div');
   root.className = 'dwar-panel__log-section';
 
@@ -227,7 +306,7 @@ function createLogSection(): LogSectionElements {
   clearLogButton.setAttribute('title', 'Очистить лог');
   clearLogButton.innerHTML = getClearLogIcon();
 
-  const logList = createLogList();
+  const logList = createLogList(ariaLabel);
   toolbar.append(clearLogButton);
   root.append(toolbar, logList);
 
@@ -238,24 +317,11 @@ function createLogSection(): LogSectionElements {
   };
 }
 
-function createProcessBars(): {
-  root: HTMLElement;
-  miningProcessBar: ProcessBarElements;
-  craftingProcessBars: HTMLElement;
-} {
+function createProcessBarsRoot(): HTMLElement {
   const root = document.createElement('div');
   root.className = 'dwar-process-bars';
 
-  const miningProcessBar = createProcessBar('Добыча: ожидание');
-  const craftingProcessBars = document.createElement('div');
-  craftingProcessBars.className = 'dwar-crafting-process-bars';
-  root.append(miningProcessBar.root, craftingProcessBars);
-
-  return {
-    root,
-    miningProcessBar,
-    craftingProcessBars
-  };
+  return root;
 }
 
 function createResizeHandle(): HTMLButtonElement {

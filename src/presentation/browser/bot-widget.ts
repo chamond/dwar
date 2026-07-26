@@ -5,6 +5,7 @@ import type { PanelSizeStore } from '../../application/ports/panel-size-store';
 import type { ProfessionRecipeSelectionStore } from '../../application/ports/profession-recipe-selection-store';
 import type { ResourceSelectionStore } from '../../application/ports/resource-selection-store';
 import type { HuntLocationSelectionStore } from '../../application/ports/hunt-location-selection-store';
+import type { CheckResourceMiningUseCase } from '../../application/use-cases/check-resource-mining';
 import type { CreateBotLogEntryUseCase } from '../../application/use-cases/create-bot-log-entry';
 import type { ListHuntLocationsUseCase } from '../../application/use-cases/list-hunt-locations';
 import type { ListProfessionRecipesUseCase } from '../../application/use-cases/list-profession-recipes';
@@ -38,6 +39,7 @@ import { keepPanelInViewport, positionPanelNearLauncher } from './panel-position
 import { attachResizablePanel, keepPanelSizeInViewport, restorePanelSize } from './resizable-panel';
 
 export interface BotWidgetDependencies {
+  checkResourceMining: CheckResourceMiningUseCase;
   createLogEntry: CreateBotLogEntryUseCase;
   humanAttentionAlarmStore: HumanAttentionAlarmStore;
   listHuntLocations: ListHuntLocationsUseCase;
@@ -80,12 +82,23 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     }
   });
 
-  const addLog = (message: string, parts?: readonly BotLogLinePart[]): void => {
+  const createLogAppender = (logList: HTMLElement) => (
+    message: string,
+    parts?: readonly BotLogLinePart[]
+  ): void => {
     const entry = dependencies.createLogEntry.execute({ message }).toSnapshot();
-    appendLogLine(botPanel.logList, entry, parts);
+    appendLogLine(logList, entry, parts);
+  };
+  const addMiningLog = createLogAppender(botPanel.miningLogList);
+  const addCraftingLog = createLogAppender(botPanel.craftingLogList);
+  const addActiveTabLog = (message: string, parts?: readonly BotLogLinePart[]): void => {
+    const addLog = botPanel.tabs.getActiveTab() === 'mining' ? addMiningLog : addCraftingLog;
+    addLog(message, parts);
   };
   let miningAbortController: AbortController | null = null;
+  let miningCheckAbortController: AbortController | null = null;
   let craftingAbortController: AbortController | null = null;
+  let activeMiningResource: ResourceMiningResourceInfo | null = null;
   let miningPhase: ProcessPhase = 'idle';
   let miningStopRequested = false;
   let craftingStopRequested = false;
@@ -128,7 +141,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
 
     if (botPanel.panel.hidden) {
       showPanel(botPanel.panel, launcher);
-      addLog('Интерфейс открыт.');
+      addActiveTabLog('Интерфейс открыт.');
       return;
     }
 
@@ -143,8 +156,12 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     hidePanel(botPanel.panel, launcher);
   });
 
-  botPanel.clearLogButton.addEventListener('click', () => {
-    clearLogList(botPanel.logList);
+  botPanel.miningClearLogButton.addEventListener('click', () => {
+    clearLogList(botPanel.miningLogList);
+  });
+
+  botPanel.craftingClearLogButton.addEventListener('click', () => {
+    clearLogList(botPanel.craftingLogList);
   });
 
   botPanel.alarmToggleButton.addEventListener('click', () => {
@@ -154,12 +171,12 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
 
     if (isHumanAttentionAlarmEnabled) {
       activateHumanAttentionAlarm();
-      addLog('Сирена включена.');
+      addActiveTabLog('Сирена включена.');
       return;
     }
 
     humanAttentionAlarm.stop();
-    addLog('Сирена отключена.');
+    addActiveTabLog('Сирена отключена.');
   });
 
   function startMining(): void {
@@ -167,12 +184,12 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     const selectedLocation = botPanel.locationSelect.getSelectedLocation();
 
     if (selectedResources.length === 0) {
-      addLog('Выберите хотя бы один ресурс для добычи.');
+      addMiningLog('Выберите хотя бы один ресурс для добычи.');
       return;
     }
 
     if (!selectedLocation) {
-      addLog('Выберите локацию для добычи.');
+      addMiningLog('Выберите локацию для добычи.');
       return;
     }
 
@@ -183,7 +200,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     miningStopRequested = false;
     botPanel.resourcePicker.close();
     setMiningButtonActive(botPanel.startMiningButton, true);
-    addLog(
+    addMiningLog(
       `Добыча запущена: ${selectedResources.map(formatResourceLabel).join(', ')}. Локация: ${selectedLocation.name}.`
     );
 
@@ -195,7 +212,8 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
         observer: {
           handle: (event) => {
             miningPhase = getMiningPhase(event);
-            handleMiningEvent(event, addLog, miningProcessBar);
+            updateActiveMiningResource(event);
+            handleMiningEvent(event, addMiningLog, miningProcessBar);
 
             if (miningStopRequested && isMiningAttemptFinished(event)) {
               controller.abort();
@@ -208,10 +226,10 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
           if (!handleUnexpectedServerResponse(
             'Добыча',
             error,
-            addLog,
+            addMiningLog,
             activateHumanAttentionAlarm
           )) {
-            addLog(`Добыча остановлена из-за ошибки: ${getErrorMessage(error)}.`);
+            addMiningLog(`Добыча остановлена из-за ошибки: ${getErrorMessage(error)}.`);
           }
         }
       })
@@ -224,10 +242,11 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
         setMiningButtonActive(botPanel.startMiningButton, false);
         miningPhase = 'idle';
         miningStopRequested = false;
+        setActiveMiningResource(null);
         miningProcessBar.reset();
 
         if (controller.signal.aborted) {
-          addLog('Добыча остановлена.');
+          addMiningLog('Добыча остановлена.');
         }
       });
   }
@@ -245,11 +264,11 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     setMiningButtonActive(botPanel.startMiningButton, false);
 
     if (miningPhase === 'active') {
-      addLog('Добыча остановится после текущего сбора.');
+      addMiningLog('Добыча остановится после текущего сбора.');
       return;
     }
 
-    addLog('Останавливаю добычу.');
+    addMiningLog('Останавливаю добычу.');
     miningAbortController.abort();
   }
 
@@ -260,7 +279,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
 
     miningStopRequested = false;
     setMiningButtonActive(botPanel.startMiningButton, true);
-    addLog('Добыча продолжена.');
+    addMiningLog('Добыча продолжена.');
   }
 
   function startCrafting(): void {
@@ -291,7 +310,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
         signal: controller.signal,
         observer: {
           handle: (event) => {
-            handleCraftingEvent(event, addLog, craftingProcessBars);
+            handleCraftingEvent(event, addCraftingLog, craftingProcessBars);
           }
         }
       })
@@ -300,10 +319,10 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
           if (!handleUnexpectedServerResponse(
             'Крафт',
             error,
-            addLog,
+            addCraftingLog,
             activateHumanAttentionAlarm
           )) {
-            addLog(`Крафт остановлен из-за ошибки: ${getErrorMessage(error)}.`);
+            addCraftingLog(`Крафт остановлен из-за ошибки: ${getErrorMessage(error)}.`);
           }
         }
       })
@@ -347,10 +366,89 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
 
     craftingRestartRequested = !craftingRestartRequested;
     setCraftingButtonActive(botPanel.startCraftingButton, craftingRestartRequested);
-    addLog(craftingRestartRequested
+    addCraftingLog(craftingRestartRequested
       ? 'Крафт продолжится после текущего отката.'
       : 'Продолжение крафта отменено.'
     );
+  }
+
+  function updateActiveMiningResource(event: ResourceMiningEvent): void {
+    switch (event.type) {
+      case 'farm-started':
+        setActiveMiningResource(event.resource);
+        return;
+
+      case 'farm-cancelled':
+      case 'farm-interrupted':
+      case 'farm-completed':
+        setActiveMiningResource(null);
+        return;
+
+      case 'scan-started':
+      case 'scan-completed':
+      case 'no-safe-resource':
+      case 'safety-check-started':
+      case 'safety-check-completed':
+        return;
+    }
+  }
+
+  function setActiveMiningResource(resource: ResourceMiningResourceInfo | null): void {
+    activeMiningResource = resource;
+    updateMiningCheckButton();
+  }
+
+  function updateMiningCheckButton(): void {
+    const isEnabled = activeMiningResource !== null && miningCheckAbortController === null;
+    botPanel.checkMiningButton.disabled = !isEnabled;
+    botPanel.checkMiningButton.setAttribute(
+      'aria-label',
+      isEnabled ? 'Проверить текущую добычу' : 'Проверка доступна во время добычи'
+    );
+  }
+
+  async function checkCurrentMining(): Promise<void> {
+    const resource = activeMiningResource;
+
+    if (!resource || miningCheckAbortController) {
+      return;
+    }
+
+    const controller = new AbortController();
+    miningCheckAbortController = controller;
+    updateMiningCheckButton();
+
+    try {
+      const status = await dependencies.checkResourceMining.execute({
+        resourceServerNumber: resource.serverNumber,
+        signal: controller.signal
+      });
+      const snapshot = status.toSnapshot();
+      addMiningLog(
+        `Проверка добычи: name=${snapshot.name}, first_farmer=${snapshot.firstFarmer ? 1 : 0}, farm=${snapshot.farmStatus}, status=${snapshot.status}.`
+      );
+    } catch (error) {
+      if (isAbortError(error)) {
+        return;
+      }
+
+      if (handleUnexpectedServerResponse(
+        'Проверка добычи',
+        error,
+        addMiningLog,
+        activateHumanAttentionAlarm
+      )) {
+        miningAbortController?.abort();
+        return;
+      }
+
+      addMiningLog(`Проверка добычи завершилась ошибкой: ${getErrorMessage(error)}.`);
+    } finally {
+      if (miningCheckAbortController === controller) {
+        miningCheckAbortController = null;
+        updateMiningCheckButton();
+      }
+    }
   }
 
   botPanel.startMiningButton.addEventListener('click', () => {
@@ -379,6 +477,10 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     }
 
     startCrafting();
+  });
+
+  botPanel.checkMiningButton.addEventListener('click', () => {
+    void checkCurrentMining();
   });
 
   attachDraggablePanel({
@@ -418,7 +520,8 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     }
   });
 
-  addLog('Скрипт загружен.');
+  addMiningLog('Скрипт загружен.');
+  addCraftingLog('Скрипт загружен.');
 }
 
 function attachMutuallyExclusivePickers(botPanel: ReturnType<typeof createBotPanel>): void {

@@ -37,10 +37,11 @@ Load that file on the game page to mount the floating pickaxe button and bot pan
 The launcher position is saved in browser localStorage.
 
 The current local resource catalog contains stable bot ids and mining duration
-for agate, aquamarine, and turquoise. The panel exposes independent mining and
-crafting start buttons, compact multiselects for resources and profession
-recipes, and one shared crafting amount input defaulting to 10. It also shows
-separate progress bars for mining and every parallel crafting timer.
+for agate, aquamarine, and turquoise. The panel separates mining and crafting
+into tabs with independent logs, clear buttons, controls, and progress bars.
+The mining tab includes a manual current-farm check that becomes available
+after a resource starts; the crafting tab contains the recipe multiselect and
+one shared amount input defaulting to 10.
 Unexpected server responses trigger process shutdown, programmatically enable
 the persisted alarm toggle, start a looping siren, and add a red
 human-attention log tag. The alarm is off by default; enabling it manually still

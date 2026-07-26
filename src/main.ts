@@ -1,3 +1,4 @@
+import { CheckResourceMiningUseCase } from './application/use-cases/check-resource-mining';
 import { CreateBotLogEntryUseCase } from './application/use-cases/create-bot-log-entry';
 import { ListHuntLocationsUseCase } from './application/use-cases/list-hunt-locations';
 import { ListProfessionRecipesUseCase } from './application/use-cases/list-profession-recipes';
@@ -5,6 +6,7 @@ import { ListResourcesUseCase } from './application/use-cases/list-resources';
 import { RunProfessionCraftingUseCase } from './application/use-cases/run-profession-crafting';
 import { RunResourceMiningUseCase } from './application/use-cases/run-resource-mining';
 import { BrowserHuntResourceFarmer } from './infrastructure/browser/browser-hunt-resource-farmer';
+import { BrowserHuntResourceFarmChecker } from './infrastructure/browser/browser-hunt-resource-farm-checker';
 import { BrowserHuntResourceFarmInterrupter } from './infrastructure/browser/browser-hunt-resource-farm-interrupter';
 import { BrowserHuntZoneScanner } from './infrastructure/browser/browser-hunt-zone-scanner';
 import { BrowserDelay } from './infrastructure/browser/browser-delay';
@@ -42,6 +44,7 @@ function bootstrap(): void {
   const huntZoneScanner = new BrowserHuntZoneScanner(huntZoneXmlParser);
   const huntZoneScanStore = new InMemoryHuntZoneScanStore();
   const huntResourceFarmer = new BrowserHuntResourceFarmer();
+  const huntResourceFarmChecker = new BrowserHuntResourceFarmChecker();
   const huntResourceFarmInterrupter = new BrowserHuntResourceFarmInterrupter();
   const professionRecipeCrafter = new BrowserProfessionRecipeCrafter();
   const delay = new BrowserDelay();
@@ -60,8 +63,10 @@ function bootstrap(): void {
     professionRecipeCrafter,
     delay
   );
+  const checkResourceMining = new CheckResourceMiningUseCase(huntResourceFarmChecker);
 
   mountBotWidget({
+    checkResourceMining,
     createLogEntry,
     humanAttentionAlarmStore,
     listHuntLocations,
