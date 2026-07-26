@@ -33,6 +33,10 @@ export class HuntZoneScan {
     return this.resources.filter((resource) => articleIds.has(resource.getArticleId()));
   }
 
+  findResourceByServerNumber(serverNumber: string): HuntResourceNode | null {
+    return this.resources.find((resource) => resource.getServerNumber() === serverNumber) ?? null;
+  }
+
   toSnapshot(): HuntZoneScanSnapshot {
     return {
       mobs: this.mobs.map((mob) => mob.toSnapshot()),

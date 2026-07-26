@@ -5,7 +5,6 @@ import type { PanelSizeStore } from '../../application/ports/panel-size-store';
 import type { ProfessionRecipeSelectionStore } from '../../application/ports/profession-recipe-selection-store';
 import type { ResourceSelectionStore } from '../../application/ports/resource-selection-store';
 import type { HuntLocationSelectionStore } from '../../application/ports/hunt-location-selection-store';
-import type { CheckResourceMiningUseCase } from '../../application/use-cases/check-resource-mining';
 import type { CreateBotLogEntryUseCase } from '../../application/use-cases/create-bot-log-entry';
 import type { ListHuntLocationsUseCase } from '../../application/use-cases/list-hunt-locations';
 import type { ListProfessionRecipesUseCase } from '../../application/use-cases/list-profession-recipes';
@@ -39,7 +38,6 @@ import { keepPanelInViewport, positionPanelNearLauncher } from './panel-position
 import { attachResizablePanel, keepPanelSizeInViewport, restorePanelSize } from './resizable-panel';
 
 export interface BotWidgetDependencies {
-  checkResourceMining: CheckResourceMiningUseCase;
   createLogEntry: CreateBotLogEntryUseCase;
   humanAttentionAlarmStore: HumanAttentionAlarmStore;
   listHuntLocations: ListHuntLocationsUseCase;
@@ -54,7 +52,7 @@ export interface BotWidgetDependencies {
   runResourceMining: RunResourceMiningUseCase;
 }
 
-type ProcessPhase = 'idle' | 'busy' | 'active' | 'pause' | 'complete';
+type ProcessPhase = 'idle' | 'busy' | 'active' | 'waiting' | 'pause' | 'complete';
 
 export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   if (document.getElementById(ROOT_ID)) {
@@ -96,9 +94,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     addLog(message, parts);
   };
   let miningAbortController: AbortController | null = null;
-  let miningCheckAbortController: AbortController | null = null;
   let craftingAbortController: AbortController | null = null;
-  let activeMiningResource: ResourceMiningResourceInfo | null = null;
   let miningPhase: ProcessPhase = 'idle';
   let miningStopRequested = false;
   let craftingStopRequested = false;
@@ -212,10 +208,9 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
         observer: {
           handle: (event) => {
             miningPhase = getMiningPhase(event);
-            updateActiveMiningResource(event);
             handleMiningEvent(event, addMiningLog, miningProcessBar);
 
-            if (miningStopRequested && isMiningAttemptFinished(event)) {
+            if (miningStopRequested && canStopMiningAfter(event)) {
               controller.abort();
             }
           }
@@ -242,7 +237,6 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
         setMiningButtonActive(botPanel.startMiningButton, false);
         miningPhase = 'idle';
         miningStopRequested = false;
-        setActiveMiningResource(null);
         miningProcessBar.reset();
 
         if (controller.signal.aborted) {
@@ -372,85 +366,6 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     );
   }
 
-  function updateActiveMiningResource(event: ResourceMiningEvent): void {
-    switch (event.type) {
-      case 'farm-started':
-        setActiveMiningResource(event.resource);
-        return;
-
-      case 'farm-cancelled':
-      case 'farm-interrupted':
-      case 'farm-completed':
-        setActiveMiningResource(null);
-        return;
-
-      case 'scan-started':
-      case 'scan-completed':
-      case 'no-safe-resource':
-      case 'safety-check-started':
-      case 'safety-check-completed':
-        return;
-    }
-  }
-
-  function setActiveMiningResource(resource: ResourceMiningResourceInfo | null): void {
-    activeMiningResource = resource;
-    updateMiningCheckButton();
-  }
-
-  function updateMiningCheckButton(): void {
-    const isEnabled = activeMiningResource !== null && miningCheckAbortController === null;
-    botPanel.checkMiningButton.disabled = !isEnabled;
-    botPanel.checkMiningButton.setAttribute(
-      'aria-label',
-      isEnabled ? 'Проверить текущую добычу' : 'Проверка доступна во время добычи'
-    );
-  }
-
-  async function checkCurrentMining(): Promise<void> {
-    const resource = activeMiningResource;
-
-    if (!resource || miningCheckAbortController) {
-      return;
-    }
-
-    const controller = new AbortController();
-    miningCheckAbortController = controller;
-    updateMiningCheckButton();
-
-    try {
-      const status = await dependencies.checkResourceMining.execute({
-        resourceServerNumber: resource.serverNumber,
-        signal: controller.signal
-      });
-      const snapshot = status.toSnapshot();
-      addMiningLog(
-        `Проверка добычи: name=${snapshot.name}, first_farmer=${snapshot.firstFarmer ? 1 : 0}, farm=${snapshot.farmStatus}, status=${snapshot.status}.`
-      );
-    } catch (error) {
-      if (isAbortError(error)) {
-        return;
-      }
-
-      if (handleUnexpectedServerResponse(
-        'Проверка добычи',
-        error,
-        addMiningLog,
-        activateHumanAttentionAlarm
-      )) {
-        miningAbortController?.abort();
-        return;
-      }
-
-      addMiningLog(`Проверка добычи завершилась ошибкой: ${getErrorMessage(error)}.`);
-    } finally {
-      if (miningCheckAbortController === controller) {
-        miningCheckAbortController = null;
-        updateMiningCheckButton();
-      }
-    }
-  }
-
   botPanel.startMiningButton.addEventListener('click', () => {
     if (miningAbortController && !miningAbortController.signal.aborted) {
       if (miningStopRequested) {
@@ -477,10 +392,6 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     }
 
     startCrafting();
-  });
-
-  botPanel.checkMiningButton.addEventListener('click', () => {
-    void checkCurrentMining();
   });
 
   attachDraggablePanel({
@@ -547,11 +458,14 @@ function getMiningPhase(event: ResourceMiningEvent): ProcessPhase {
       return 'pause';
 
     case 'farm-started':
-    case 'safety-check-started':
-    case 'safety-check-completed':
       return 'active';
 
+    case 'monitoring-scan-started':
+    case 'monitoring-scan-completed':
+      return event.nominalDurationElapsed ? 'waiting' : 'active';
+
     case 'farm-completed':
+    case 'farm-failed':
       return 'complete';
 
     case 'scan-completed':
@@ -563,8 +477,15 @@ function getMiningPhase(event: ResourceMiningEvent): ProcessPhase {
   }
 }
 
-function isMiningAttemptFinished(event: ResourceMiningEvent): boolean {
-  return event.type === 'farm-completed' || event.type === 'farm-cancelled' || event.type === 'farm-interrupted';
+function canStopMiningAfter(event: ResourceMiningEvent): boolean {
+  return event.type === 'farm-completed'
+    || event.type === 'farm-failed'
+    || event.type === 'farm-cancelled'
+    || event.type === 'farm-interrupted'
+    || (
+      (event.type === 'monitoring-scan-started' || event.type === 'monitoring-scan-completed')
+      && event.nominalDurationElapsed
+    );
 }
 
 function handleMiningEvent(
@@ -610,18 +531,21 @@ function updateMiningProcessBar(event: ResourceMiningEvent, processBar: ProcessB
       processBar.reset();
       return;
 
-    case 'safety-check-started':
+    case 'monitoring-scan-started':
       processBar.setLabel(`Проверка ${formatResourceLabel(event.resource)}`);
       return;
 
     case 'farm-completed':
+    case 'farm-failed':
       processBar.complete();
       return;
 
-    case 'safety-check-completed':
-      if (event.isSafe) {
-        processBar.setLabel(`Добыча ${formatResourceLabel(event.resource)}`);
-      }
+    case 'monitoring-scan-completed':
+      processBar.setLabel(
+        event.nominalDurationElapsed
+          ? `Ожидание результата ${formatResourceLabel(event.resource)}`
+          : `Добыча ${formatResourceLabel(event.resource)}`
+      );
       return;
 
     case 'scan-completed':
@@ -667,8 +591,8 @@ function logMiningEvent(
       ]);
       return;
 
-    case 'safety-check-started':
-    case 'safety-check-completed':
+    case 'monitoring-scan-started':
+    case 'monitoring-scan-completed':
       return;
 
     case 'farm-interrupted':
@@ -681,6 +605,14 @@ function logMiningEvent(
     case 'farm-completed':
       addLog(`Добыча завершена: ${formatResourceLabel(event.resource)}.`, [
         'Добыча завершена: ',
+        createResourceLogPart(event.resource),
+        '.'
+      ]);
+      return;
+
+    case 'farm-failed':
+      addLog(`Добыча не удалась: ${formatResourceLabel(event.resource)}.`, [
+        'Добыча не удалась: ',
         createResourceLogPart(event.resource),
         '.'
       ]);

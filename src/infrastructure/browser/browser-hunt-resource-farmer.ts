@@ -1,8 +1,8 @@
 import { UnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
 import type { HuntResourceFarmer, HuntResourceFarmOptions } from '../../application/ports/hunt-resource-farmer';
-import type { HuntResourceFarmStatus } from '../../domain/entities/hunt-resource-farm-status';
+import type { HuntResourceFarmStart } from '../../domain/entities/hunt-resource-farm-start';
 import type { HuntResourceNode } from '../../domain/entities/hunt-resource-node';
-import { DwarHuntResourceFarmStatusXmlParser } from './dwar-hunt-resource-farm-status-xml-parser';
+import { DwarHuntResourceFarmStartXmlParser } from './dwar-hunt-resource-farm-start-xml-parser';
 import {
   buildHuntResourceFarmBody,
   buildHuntResourceFarmUrl,
@@ -10,9 +10,9 @@ import {
 } from './hunt-resource-farm-request';
 
 export class BrowserHuntResourceFarmer implements HuntResourceFarmer {
-  constructor(private readonly parser: DwarHuntResourceFarmStatusXmlParser = new DwarHuntResourceFarmStatusXmlParser()) {}
+  constructor(private readonly parser: DwarHuntResourceFarmStartXmlParser = new DwarHuntResourceFarmStartXmlParser()) {}
 
-  async start(resource: HuntResourceNode, options: HuntResourceFarmOptions = {}): Promise<HuntResourceFarmStatus> {
+  async start(resource: HuntResourceNode, options: HuntResourceFarmOptions = {}): Promise<HuntResourceFarmStart> {
     const requestInit: RequestInit = {
       method: HUNT_RESOURCE_FARM_REQUEST.method,
       body: buildHuntResourceFarmBody(resource.getServerNumber())

@@ -332,20 +332,6 @@ export const BOT_WIDGET_STYLES = `
     background: linear-gradient(180deg, #8cebd6 0%, #42b79c 100%);
   }
 
-  .dwar-mining-check-button {
-    color: #dbe3f1;
-    background: linear-gradient(180deg, #273343 0%, #18212d 100%);
-    border-color: rgba(243, 201, 107, .22);
-    box-shadow: none;
-    font-size: 11px;
-  }
-
-  .dwar-mining-check-button:hover {
-    color: #ffffff;
-    background: linear-gradient(180deg, #303e51 0%, #202b39 100%);
-    border-color: rgba(243, 201, 107, .45);
-  }
-
   .dwar-action-button.is-active {
     color: #ffe9e9;
     background: linear-gradient(180deg, #d65a63 0%, #8f2e38 100%);
@@ -361,14 +347,6 @@ export const BOT_WIDGET_STYLES = `
     cursor: wait;
     background: linear-gradient(180deg, #a88746 0%, #76592d 100%);
     box-shadow: none;
-  }
-
-  .dwar-mining-check-button:disabled,
-  .dwar-mining-check-button:disabled:hover {
-    color: #596475;
-    background: #141b25;
-    border-color: rgba(255, 255, 255, .07);
-    cursor: not-allowed;
   }
 
   .dwar-action-button svg {

@@ -24,7 +24,6 @@ export interface BotPanelElements {
   alarmToggleButton: HTMLButtonElement;
   tabs: TabsElements<BotPanelTabId>;
   startMiningButton: HTMLButtonElement;
-  checkMiningButton: HTMLButtonElement;
   startCraftingButton: HTMLButtonElement;
   craftAmountInput: CraftAmountInputElements;
   resourcePicker: ResourcePickerElements;
@@ -48,7 +47,6 @@ interface PanelHeaderElements {
 interface MiningTabElements {
   root: HTMLElement;
   startMiningButton: HTMLButtonElement;
-  checkMiningButton: HTMLButtonElement;
   resourcePicker: ResourcePickerElements;
   locationSelect: HuntLocationSelectElements;
   logSection: LogSectionElements;
@@ -113,7 +111,6 @@ export function createBotPanel(
     alarmToggleButton: headerElements.alarmToggleButton,
     tabs,
     startMiningButton: miningTab.startMiningButton,
-    checkMiningButton: miningTab.checkMiningButton,
     startCraftingButton: craftingTab.startCraftingButton,
     craftAmountInput: craftingTab.craftAmountInput,
     resourcePicker: miningTab.resourcePicker,
@@ -189,13 +186,6 @@ function createMiningTab(
   startMiningButton.setAttribute('aria-label', 'Начать добычу');
   startMiningButton.innerHTML = `${getPickaxeIcon()}<span>Добыча</span>`;
 
-  const checkMiningButton = document.createElement('button');
-  checkMiningButton.type = 'button';
-  checkMiningButton.className = 'dwar-action-button dwar-mining-check-button';
-  checkMiningButton.textContent = 'Проверить добычу';
-  checkMiningButton.setAttribute('aria-label', 'Проверка доступна во время добычи');
-  checkMiningButton.disabled = true;
-
   const resourcePicker = createResourcePicker(resources, {
     selectedResourceIds: options.selectedResourceIds,
     onSelectionChange: options.onResourceSelectionChange
@@ -208,7 +198,7 @@ function createMiningTab(
 
   const actionGroup = document.createElement('div');
   actionGroup.className = 'dwar-panel__action-buttons';
-  actionGroup.append(startMiningButton, checkMiningButton);
+  actionGroup.append(startMiningButton);
 
   const selectorGroup = document.createElement('div');
   selectorGroup.className = 'dwar-panel__selectors';
@@ -224,7 +214,6 @@ function createMiningTab(
   return {
     root,
     startMiningButton,
-    checkMiningButton,
     resourcePicker,
     locationSelect,
     logSection,

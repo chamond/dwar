@@ -19,15 +19,13 @@ import type { ResourceRepository } from '../ports/resource-repository';
 import type { Clock } from '../ports/clock';
 
 const DEFAULT_DANGER_RADIUS = 100;
-const DEFAULT_SAFETY_CHECK_INTERVAL_MS = 5_000;
+const DEFAULT_MONITORING_SCAN_INTERVAL_MS = 4_000;
 const DEFAULT_NO_SAFE_RESOURCE_DELAY_MS = 20_000;
-const DEFAULT_POST_MINING_DELAY_MS = 2_000;
 
 export interface ResourceMiningConfig {
   dangerRadius: number;
-  safetyCheckIntervalMs: number;
+  monitoringScanIntervalMs: number;
   noSafeResourceDelayMs: number;
-  postMiningDelayMs: number;
 }
 
 export interface RunResourceMiningInput {
@@ -83,14 +81,16 @@ export type ResourceMiningEvent =
       reason: 'not-first-farmer';
     }
   | {
-      type: 'safety-check-started';
+      type: 'monitoring-scan-started';
       resource: ResourceMiningResourceInfo;
       elapsedMs: number;
+      nominalDurationElapsed: boolean;
     }
   | {
-      type: 'safety-check-completed';
+      type: 'monitoring-scan-completed';
       resource: ResourceMiningResourceInfo;
-      isSafe: boolean;
+      resourceState: 'being-mined' | 'available' | 'collected';
+      nominalDurationElapsed: boolean;
     }
   | {
       type: 'farm-interrupted';
@@ -100,6 +100,10 @@ export type ResourceMiningEvent =
     }
   | {
       type: 'farm-completed';
+      resource: ResourceMiningResourceInfo;
+    }
+  | {
+      type: 'farm-failed';
       resource: ResourceMiningResourceInfo;
     };
 
@@ -119,10 +123,13 @@ export class RunResourceMiningUseCase {
   ) {
     this.config = {
       dangerRadius: config.dangerRadius ?? DEFAULT_DANGER_RADIUS,
-      safetyCheckIntervalMs: config.safetyCheckIntervalMs ?? DEFAULT_SAFETY_CHECK_INTERVAL_MS,
-      noSafeResourceDelayMs: config.noSafeResourceDelayMs ?? DEFAULT_NO_SAFE_RESOURCE_DELAY_MS,
-      postMiningDelayMs: config.postMiningDelayMs ?? DEFAULT_POST_MINING_DELAY_MS
+      monitoringScanIntervalMs: config.monitoringScanIntervalMs ?? DEFAULT_MONITORING_SCAN_INTERVAL_MS,
+      noSafeResourceDelayMs: config.noSafeResourceDelayMs ?? DEFAULT_NO_SAFE_RESOURCE_DELAY_MS
     };
+
+    if (this.config.monitoringScanIntervalMs <= 0) {
+      throw new Error('Mining monitoring scan interval must be greater than zero.');
+    }
   }
 
   async execute(input: RunResourceMiningInput): Promise<void> {
@@ -192,22 +199,20 @@ export class RunResourceMiningUseCase {
 
     const startedAtMs = this.nowMs();
     const miningDurationMs = this.getMiningDurationMs(resource);
-    const durationMs = miningDurationMs + this.config.postMiningDelayMs;
     this.emit(input, {
       type: 'farm-started',
       resource: createResourceInfo(resource),
-      durationMs
+      durationMs: miningDurationMs
     });
 
-    const completed = await this.monitorResource(resource, location, startedAtMs, miningDurationMs, input);
+    const outcome = await this.monitorResource(resource, location, startedAtMs, miningDurationMs, input);
 
-    if (!completed) {
+    if (outcome === 'interrupted') {
       return;
     }
 
-    await this.waitUntil(startedAtMs + durationMs, input.signal);
     this.emit(input, {
-      type: 'farm-completed',
+      type: outcome === 'collected' ? 'farm-completed' : 'farm-failed',
       resource: createResourceInfo(resource)
     });
   }
@@ -218,33 +223,43 @@ export class RunResourceMiningUseCase {
     startedAtMs: number,
     miningDurationMs: number,
     input: RunResourceMiningInput
-  ): Promise<boolean> {
-    const deadlineAtMs = startedAtMs + miningDurationMs;
-    let nextSafetyCheckAtMs = startedAtMs + this.config.safetyCheckIntervalMs;
+  ): Promise<'collected' | 'failed' | 'interrupted'> {
+    const nominalDeadlineAtMs = startedAtMs + miningDurationMs;
+    let nextScanAtMs = startedAtMs + this.config.monitoringScanIntervalMs;
 
-    if (this.config.safetyCheckIntervalMs <= 0) {
-      await this.delay.wait(miningDurationMs, input.signal);
-      return true;
-    }
+    while (!input.signal?.aborted) {
+      await this.waitUntil(nextScanAtMs, input.signal);
 
-    while (nextSafetyCheckAtMs < deadlineAtMs && !input.signal?.aborted) {
-      await this.waitUntil(nextSafetyCheckAtMs, input.signal);
-
-      if (this.nowMs() >= deadlineAtMs) {
-        break;
-      }
-
-      const elapsedMs = Math.min(this.nowMs() - startedAtMs, miningDurationMs);
+      const scanStartedAtMs = this.nowMs();
       this.emit(input, {
-        type: 'safety-check-started',
+        type: 'monitoring-scan-started',
         resource: createResourceInfo(resource),
-        elapsedMs
+        elapsedMs: scanStartedAtMs - startedAtMs,
+        nominalDurationElapsed: scanStartedAtMs >= nominalDeadlineAtMs
       });
 
       const scan = await this.scanAndStore(location, input.signal);
+      const currentResource = scan.findResourceByServerNumber(resource.getServerNumber());
+      const nominalDurationElapsed = this.nowMs() >= nominalDeadlineAtMs;
 
-      if (this.nowMs() >= deadlineAtMs) {
-        break;
+      if (!currentResource) {
+        this.emit(input, {
+          type: 'monitoring-scan-completed',
+          resource: createResourceInfo(resource),
+          resourceState: 'collected',
+          nominalDurationElapsed
+        });
+        return 'collected';
+      }
+
+      if (!currentResource.isBeingFarmed()) {
+        this.emit(input, {
+          type: 'monitoring-scan-completed',
+          resource: createResourceInfo(resource),
+          resourceState: 'available',
+          nominalDurationElapsed
+        });
+        return 'failed';
       }
 
       const safety = assessResourceMiningSafety(resource, scan.getMobs(), {
@@ -252,9 +267,10 @@ export class RunResourceMiningUseCase {
       });
 
       this.emit(input, {
-        type: 'safety-check-completed',
+        type: 'monitoring-scan-completed',
         resource: createResourceInfo(resource),
-        isSafe: safety.isSafe
+        resourceState: 'being-mined',
+        nominalDurationElapsed
       });
 
       if (!safety.isSafe) {
@@ -265,27 +281,25 @@ export class RunResourceMiningUseCase {
           dangerousMob: createMobInfo(safety.blockingMob ?? safety.nearestDangerousMob),
           dangerRadius: this.config.dangerRadius
         });
-        return false;
+        return 'interrupted';
       }
 
-      nextSafetyCheckAtMs += this.config.safetyCheckIntervalMs;
-      nextSafetyCheckAtMs = this.skipMissedSafetyChecks(nextSafetyCheckAtMs, deadlineAtMs);
+      nextScanAtMs += this.config.monitoringScanIntervalMs;
+      nextScanAtMs = this.skipMissedMonitoringScans(nextScanAtMs);
     }
 
-    await this.waitUntil(deadlineAtMs, input.signal);
-
-    return true;
+    throw createAbortError();
   }
 
-  private skipMissedSafetyChecks(nextSafetyCheckAtMs: number, deadlineAtMs: number): number {
-    let normalizedNextSafetyCheckAtMs = nextSafetyCheckAtMs;
+  private skipMissedMonitoringScans(nextScanAtMs: number): number {
+    let normalizedNextScanAtMs = nextScanAtMs;
     const nowMs = this.nowMs();
 
-    while (normalizedNextSafetyCheckAtMs <= nowMs && normalizedNextSafetyCheckAtMs < deadlineAtMs) {
-      normalizedNextSafetyCheckAtMs += this.config.safetyCheckIntervalMs;
+    while (normalizedNextScanAtMs <= nowMs) {
+      normalizedNextScanAtMs += this.config.monitoringScanIntervalMs;
     }
 
-    return normalizedNextSafetyCheckAtMs;
+    return normalizedNextScanAtMs;
   }
 
   private nowMs(): number {
@@ -370,4 +384,11 @@ function createMobInfo(mob: HuntMob | null): ResourceMiningMobInfo | null {
     aggressionLevel: mob.getAggressionLevel(),
     aggressionColor: getMobAggressionProfile(mob.getAggressionLevel()).color
   };
+}
+
+function createAbortError(): Error {
+  const error = new Error('Resource mining was stopped.');
+  error.name = 'AbortError';
+
+  return error;
 }
