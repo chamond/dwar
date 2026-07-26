@@ -1,5 +1,6 @@
 import { UnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
 import type {
+  BackpackItemQuantitiesReadResult,
   BackpackItemQuantityReadOptions,
   BackpackItemQuantityReader
 } from '../../application/ports/backpack-item-quantity-reader';
@@ -9,7 +10,14 @@ import { DwarBackpackHtmlParser } from './dwar-backpack-html-parser';
 export class BrowserBackpackItemQuantityReader implements BackpackItemQuantityReader {
   constructor(private readonly parser: DwarBackpackHtmlParser) {}
 
-  async readQuantity(artifactId: number, options: BackpackItemQuantityReadOptions): Promise<number> {
+  async readQuantities(
+    artifactIds: readonly number[],
+    options: BackpackItemQuantityReadOptions
+  ): Promise<BackpackItemQuantitiesReadResult> {
+    if (artifactIds.length === 0) {
+      throw new Error('At least one backpack artifact id is required.');
+    }
+
     const requestInit: RequestInit = {
       method: BACKPACK_CONTENT_REQUEST.method
     };
@@ -18,12 +26,18 @@ export class BrowserBackpackItemQuantityReader implements BackpackItemQuantityRe
       requestInit.signal = options.signal;
     }
 
-    const response = await fetch(buildBackpackContentUrl(options.group), requestInit);
+    const requestUrl = buildBackpackContentUrl(options.group);
+    const response = await fetch(requestUrl, requestInit);
 
     if (!response.ok) {
       throw new UnexpectedServerResponseError(`Backpack content request failed with HTTP ${response.status}.`);
     }
 
-    return this.parser.parseItemQuantity(await response.text(), artifactId);
+    return {
+      requestUrl,
+      responseUrl: response.url,
+      contentType: response.headers.get('content-type') ?? '',
+      ...this.parser.parseItemQuantities(await response.text(), artifactIds)
+    };
   }
 }

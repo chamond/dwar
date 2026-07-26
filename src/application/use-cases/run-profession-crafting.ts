@@ -1,6 +1,9 @@
 import type { BotResourceId } from '../../domain/entities/bot-resource';
 import type { ProfessionRecipe, ProfessionRecipeId } from '../../domain/entities/profession-recipe';
-import type { BackpackItemQuantityReader } from '../ports/backpack-item-quantity-reader';
+import type {
+  BackpackItemQuantityLookup,
+  BackpackItemQuantityReader
+} from '../ports/backpack-item-quantity-reader';
 import type { Delay } from '../ports/delay';
 import type { ProfessionRecipeCrafter } from '../ports/profession-recipe-crafter';
 import type { ProfessionRecipeRepository } from '../ports/profession-recipe-repository';
@@ -42,14 +45,38 @@ export interface ProfessionCraftingRecipeInfo {
   level: number;
 }
 
+export interface ProfessionCraftingBackpackLookupInfo {
+  recipe: ProfessionCraftingRecipeInfo;
+  artifactId: number;
+  slotSelector: string;
+  quantitySelector: string;
+  matchedSlotCount: number;
+  quantityTexts: readonly string[];
+  quantity: number;
+}
+
 export type ProfessionCraftingEvent =
   | {
       type: 'no-recipe-selected';
       delayMs: number;
     }
   | {
-      type: 'resource-check-started';
-      recipe: ProfessionCraftingRecipeInfo;
+      type: 'backpack-check-started';
+      group: number;
+      recipes: readonly ProfessionCraftingRecipeInfo[];
+    }
+  | {
+      type: 'backpack-check-completed';
+      group: number;
+      requestUrl: string;
+      responseUrl: string;
+      contentType: string;
+      htmlLength: number;
+      documentTitle: string;
+      artifactSlotCount: number;
+      identifiedArtifactSlotCount: number;
+      detectedArtifactIds: readonly string[];
+      lookups: readonly ProfessionCraftingBackpackLookupInfo[];
     }
   | {
       type: 'craft-request-started';
@@ -97,125 +124,95 @@ export class RunProfessionCraftingUseCase {
   }
 
   async execute(input: RunProfessionCraftingInput): Promise<void> {
-    const abort = createAbortHandle(input.signal);
-    const runInput: RunProfessionCraftingInput = {
-      ...input,
-      signal: abort.signal
-    };
-    const activeTasks = new Map<ProfessionRecipeId, Promise<void>>();
     const stoppedRecipeIds = new Set<ProfessionRecipeId>();
-    let taskError: unknown = null;
 
-    try {
-      while (!abort.signal.aborted) {
-        const selectedRecipes = this.getSelectedRecipes(input.getSelectedRecipeIds());
-        const selectedRecipeIds = new Set(selectedRecipes.map((recipe) => recipe.getId()));
+    while (!input.signal?.aborted) {
+      const selectedRecipes = this.getSelectedRecipes(input.getSelectedRecipeIds());
+      this.restoreDeselectedRecipes(selectedRecipes, stoppedRecipeIds);
 
-        for (const stoppedRecipeId of stoppedRecipeIds) {
-          if (!selectedRecipeIds.has(stoppedRecipeId)) {
-            stoppedRecipeIds.delete(stoppedRecipeId);
-          }
-        }
+      if (selectedRecipes.length === 0) {
+        this.emit(input, {
+          type: 'no-recipe-selected',
+          delayMs: this.config.noSelectedRecipeDelayMs
+        });
+        await this.delay.wait(this.config.noSelectedRecipeDelayMs, input.signal);
+        continue;
+      }
 
-        for (const recipe of selectedRecipes) {
-          const recipeId = recipe.getId();
+      const runnableRecipes = selectedRecipes.filter((recipe) => !stoppedRecipeIds.has(recipe.getId()));
 
-          if (activeTasks.has(recipeId) || stoppedRecipeIds.has(recipeId)) {
-            continue;
-          }
+      if (runnableRecipes.length === 0) {
+        await this.delay.wait(this.config.selectionRefreshDelayMs, input.signal);
+        continue;
+      }
 
-          const task = this.runRecipeLoop(recipe, runInput)
-            .then((outcome) => {
-              if (outcome === 'resource-unavailable') {
-                stoppedRecipeIds.add(recipeId);
-              }
-            })
-            .catch((error) => {
-              if (!isAbortError(error)) {
-                taskError = error;
-                abort.abort();
-              }
-            })
-            .finally(() => {
-              activeTasks.delete(recipeId);
-            });
-          activeTasks.set(recipeId, task);
-        }
+      const lookups = await this.readBackpackQuantities(runnableRecipes, input);
+      const craftTasks: Promise<void>[] = [];
 
-        if (taskError) {
-          break;
-        }
-
-        if (activeTasks.size === 0) {
-          if (selectedRecipes.length === 0) {
-            this.emit(runInput, {
-              type: 'no-recipe-selected',
-              delayMs: this.config.noSelectedRecipeDelayMs
-            });
-            await this.delay.wait(this.config.noSelectedRecipeDelayMs, abort.signal);
-            continue;
-          }
-
-          await this.delay.wait(this.config.selectionRefreshDelayMs, abort.signal);
+      for (const { recipe, lookup } of lookups) {
+        if (lookup.quantity === 0) {
+          stoppedRecipeIds.add(recipe.getId());
+          this.emit(input, {
+            type: 'recipe-stopped',
+            recipe: createRecipeInfo(recipe)
+          });
           continue;
         }
 
-        await this.delay.wait(this.config.selectionRefreshDelayMs, abort.signal);
+        craftTasks.push(this.craftRecipe(recipe, lookup.quantity, input));
       }
-    } catch (error) {
-      if (!isAbortError(error)) {
-        taskError = error;
-      }
-    } finally {
-      abort.dispose();
-      abort.abort();
-      await Promise.allSettled(activeTasks.values());
-    }
 
-    if (taskError) {
-      throw taskError;
+      await waitForCraftTasks(craftTasks);
     }
   }
 
-  private async runRecipeLoop(
-    recipe: ProfessionRecipe,
+  private async readBackpackQuantities(
+    recipes: readonly ProfessionRecipe[],
     input: RunProfessionCraftingInput
-  ): Promise<'selection-ended' | 'resource-unavailable'> {
-    while (!input.signal?.aborted && this.isRecipeSelected(recipe, input)) {
-      const wasCrafted = await this.craftRecipe(recipe, input);
-
-      if (!wasCrafted) {
-        return 'resource-unavailable';
-      }
-    }
-
-    return 'selection-ended';
-  }
-
-  private async craftRecipe(recipe: ProfessionRecipe, input: RunProfessionCraftingInput): Promise<boolean> {
-    const recipeInfo = createRecipeInfo(recipe);
-
+  ): Promise<readonly RecipeBackpackLookup[]> {
+    const recipeInfos = recipes.map(createRecipeInfo);
     this.emit(input, {
-      type: 'resource-check-started',
-      recipe: recipeInfo
+      type: 'backpack-check-started',
+      group: this.config.resourceBackpackGroup,
+      recipes: recipeInfos
     });
-    const availableResourceAmount = await this.backpackItemQuantityReader.readQuantity(
-      recipe.getResource().getArtifactId(),
+    const result = await this.backpackItemQuantityReader.readQuantities(
+      recipes.map((recipe) => recipe.getResource().getArtifactId()),
       {
         group: this.config.resourceBackpackGroup,
         signal: input.signal
       }
     );
+    const lookups = recipes.map((recipe) => {
+      return {
+        recipe,
+        lookup: getRequiredLookup(result.lookups, recipe.getResource().getArtifactId())
+      };
+    });
 
-    if (availableResourceAmount === 0) {
-      this.emit(input, {
-        type: 'recipe-stopped',
-        recipe: recipeInfo
-      });
+    this.emit(input, {
+      type: 'backpack-check-completed',
+      group: this.config.resourceBackpackGroup,
+      requestUrl: result.requestUrl,
+      responseUrl: result.responseUrl,
+      contentType: result.contentType,
+      htmlLength: result.htmlLength,
+      documentTitle: result.documentTitle,
+      artifactSlotCount: result.artifactSlotCount,
+      identifiedArtifactSlotCount: result.identifiedArtifactSlotCount,
+      detectedArtifactIds: result.detectedArtifactIds,
+      lookups: lookups.map(({ recipe, lookup }) => createBackpackLookupInfo(recipe, lookup))
+    });
 
-      return false;
-    }
+    return lookups;
+  }
 
+  private async craftRecipe(
+    recipe: ProfessionRecipe,
+    availableResourceAmount: number,
+    input: RunProfessionCraftingInput
+  ): Promise<void> {
+    const recipeInfo = createRecipeInfo(recipe);
     const amount = this.getCraftAmount(recipe, input.getAmountPerRequest?.(), availableResourceAmount);
 
     this.emit(input, {
@@ -238,8 +235,19 @@ export class RunProfessionCraftingUseCase {
       type: 'craft-completed',
       recipe: recipeInfo
     });
+  }
 
-    return true;
+  private restoreDeselectedRecipes(
+    selectedRecipes: readonly ProfessionRecipe[],
+    stoppedRecipeIds: Set<ProfessionRecipeId>
+  ): void {
+    const selectedRecipeIds = new Set(selectedRecipes.map((recipe) => recipe.getId()));
+
+    for (const stoppedRecipeId of stoppedRecipeIds) {
+      if (!selectedRecipeIds.has(stoppedRecipeId)) {
+        stoppedRecipeIds.delete(stoppedRecipeId);
+      }
+    }
   }
 
   private getCraftAmount(
@@ -274,13 +282,14 @@ export class RunProfessionCraftingUseCase {
     return selectedRecipes;
   }
 
-  private isRecipeSelected(recipe: ProfessionRecipe, input: RunProfessionCraftingInput): boolean {
-    return input.getSelectedRecipeIds().includes(recipe.getId());
-  }
-
   private emit(input: RunProfessionCraftingInput, event: ProfessionCraftingEvent): void {
     input.observer?.handle(event);
   }
+}
+
+interface RecipeBackpackLookup {
+  recipe: ProfessionRecipe;
+  lookup: BackpackItemQuantityLookup;
 }
 
 function createRecipeInfo(recipe: ProfessionRecipe): ProfessionCraftingRecipeInfo {
@@ -297,60 +306,47 @@ function createRecipeInfo(recipe: ProfessionRecipe): ProfessionCraftingRecipeInf
   };
 }
 
+function createBackpackLookupInfo(
+  recipe: ProfessionRecipe,
+  lookup: BackpackItemQuantityLookup
+): ProfessionCraftingBackpackLookupInfo {
+  return {
+    recipe: createRecipeInfo(recipe),
+    artifactId: lookup.artifactId,
+    slotSelector: lookup.slotSelector,
+    quantitySelector: lookup.quantitySelector,
+    matchedSlotCount: lookup.matchedSlotCount,
+    quantityTexts: lookup.quantityTexts,
+    quantity: lookup.quantity
+  };
+}
+
+function getRequiredLookup(
+  lookups: readonly BackpackItemQuantityLookup[],
+  artifactId: number
+): BackpackItemQuantityLookup {
+  const lookup = lookups.find((candidate) => candidate.artifactId === artifactId);
+
+  if (!lookup) {
+    throw new Error(`Backpack quantity result is missing artifact ${artifactId}.`);
+  }
+
+  return lookup;
+}
+
+async function waitForCraftTasks(tasks: readonly Promise<void>[]): Promise<void> {
+  const results = await Promise.allSettled(tasks);
+  const rejectedResult = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+
+  if (rejectedResult) {
+    throw rejectedResult.reason;
+  }
+}
+
 function normalizeCraftAmount(amount: number, fallbackAmount: number): number {
   if (!Number.isFinite(amount)) {
     return fallbackAmount;
   }
 
   return Math.max(1, Math.trunc(amount));
-}
-
-interface AbortHandle {
-  signal: AbortSignal;
-  abort(): void;
-  dispose(): void;
-}
-
-function createAbortHandle(sourceSignal: AbortSignal | undefined): AbortHandle {
-  const controller = new AbortController();
-
-  if (!sourceSignal) {
-    return {
-      signal: controller.signal,
-      abort(): void {
-        controller.abort();
-      },
-      dispose(): void {
-        return undefined;
-      }
-    };
-  }
-
-  const abort = (): void => {
-    controller.abort();
-  };
-
-  if (sourceSignal.aborted) {
-    controller.abort();
-  } else {
-    sourceSignal.addEventListener('abort', abort, { once: true });
-  }
-
-  return {
-    signal: controller.signal,
-    abort(): void {
-      controller.abort();
-    },
-    dispose(): void {
-      sourceSignal.removeEventListener('abort', abort);
-    }
-  };
-}
-
-function isAbortError(error: unknown): boolean {
-  if (error instanceof Error) {
-    return error.name === 'AbortError';
-  }
-
-  return typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError';
 }

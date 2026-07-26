@@ -67,17 +67,27 @@ export function createCraftingProcessBarsController(container: HTMLElement): Cra
         return;
       }
 
+      if (event.type === 'backpack-check-started') {
+        hideIdle();
+
+        for (const recipe of event.recipes) {
+          getController(recipe).busy({
+            label: `Проверка ресурсов: ${formatProfessionRecipeLabel(recipe)}`,
+            accentColor: recipe.markerColor
+          });
+        }
+
+        return;
+      }
+
+      if (event.type === 'backpack-check-completed') {
+        return;
+      }
+
       hideIdle();
       const controller = getController(event.recipe);
 
       switch (event.type) {
-        case 'resource-check-started':
-          controller.busy({
-            label: `Проверка ресурсов: ${formatProfessionRecipeLabel(event.recipe)}`,
-            accentColor: event.recipe.markerColor
-          });
-          return;
-
         case 'craft-request-started':
           controller.busy({
             label: `Отправка ${formatProfessionRecipeLabel(event.recipe)}`,

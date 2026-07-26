@@ -47,10 +47,13 @@ node returns to an available state. Its progress bar uses the resource's
 20-second nominal duration; if the node is still being farmed when the bar
 fills, scans continue while the filled bar waits for the result. The crafting
 tab contains the recipe multiselect and one shared amount input defaulting to
-10. Before each recipe request, the bot loads backpack group 3 and reads the
-recipe resource quantity by artifact id. It crafts no more than the selected
-amount or the available resource count, logs the calculated remainder, and
-stops only the affected recipe when that resource is absent.
+10. At the start of each crafting cycle, the bot loads backpack group 3 and
+reads the resource quantities for all selected recipes with one shared
+request. It then crafts no more than the selected amount or the available
+resource count, waits for all recipe cooldowns before the next shared cycle,
+logs detailed HTML
+selector diagnostics and the calculated remainder, and stops only the affected
+recipe when that resource is absent.
 Unexpected server responses trigger process shutdown, programmatically enable
 the persisted alarm toggle, start a looping siren, and add a red
 human-attention log tag. The alarm is off by default; enabling it manually still
