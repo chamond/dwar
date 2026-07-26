@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { minify, transform } from '@swc/core';
+import { nodeResolve } from '@rollup/plugin-node-resolve';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const swcOptions = JSON.parse(readFileSync(new URL('./.swcrc', import.meta.url), 'utf8'));
@@ -131,5 +132,12 @@ export default {
     name: 'DwarBot',
     sourcemap: false
   },
-  plugins: [dataUrlAssetPlugin(), swcTypeScriptPlugin(), swcMinifyBundlePlugin()]
+  plugins: [
+    dataUrlAssetPlugin(),
+    nodeResolve({
+      browser: true
+    }),
+    swcTypeScriptPlugin(),
+    swcMinifyBundlePlugin()
+  ]
 };

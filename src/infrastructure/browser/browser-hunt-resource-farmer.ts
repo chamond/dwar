@@ -1,3 +1,5 @@
+import { map, switchMap, take, type Observable } from 'rxjs';
+import { fromFetch } from 'rxjs/fetch';
 import { UnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
 import type { HuntResourceFarmer, HuntResourceFarmOptions } from '../../application/ports/hunt-resource-farmer';
 import type { HuntResourceFarmStart } from '../../domain/entities/hunt-resource-farm-start';
@@ -12,7 +14,7 @@ import {
 export class BrowserHuntResourceFarmer implements HuntResourceFarmer {
   constructor(private readonly parser: DwarHuntResourceFarmStartXmlParser = new DwarHuntResourceFarmStartXmlParser()) {}
 
-  async start(resource: HuntResourceNode, options: HuntResourceFarmOptions = {}): Promise<HuntResourceFarmStart> {
+  start(resource: HuntResourceNode, options: HuntResourceFarmOptions = {}): Observable<HuntResourceFarmStart> {
     const requestInit: RequestInit = {
       method: HUNT_RESOURCE_FARM_REQUEST.method,
       body: buildHuntResourceFarmBody(resource.getServerNumber())
@@ -22,12 +24,16 @@ export class BrowserHuntResourceFarmer implements HuntResourceFarmer {
       requestInit.signal = options.signal;
     }
 
-    const response = await fetch(buildHuntResourceFarmUrl(resource.getServerNumber()), requestInit);
+    return fromFetch(buildHuntResourceFarmUrl(resource.getServerNumber()), requestInit).pipe(
+      switchMap((response) => {
+        if (!response.ok) {
+          throw new UnexpectedServerResponseError(`Resource mining start failed with HTTP ${response.status}.`);
+        }
 
-    if (!response.ok) {
-      throw new UnexpectedServerResponseError(`Resource mining start failed with HTTP ${response.status}.`);
-    }
-
-    return this.parser.parse(await response.text());
+        return response.text();
+      }),
+      map((responseText) => this.parser.parse(responseText)),
+      take(1)
+    );
   }
 }

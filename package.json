@@ -16,9 +16,13 @@
     "node": ">=20.11"
   },
   "devDependencies": {
+    "@rollup/plugin-node-resolve": "^16.0.3",
     "@swc/core": "^1.7.0",
     "@types/node": "^22.0.0",
     "rollup": "^4.0.0",
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "rxjs": "^7.8.2"
   }
 }

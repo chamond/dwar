@@ -478,6 +478,7 @@ function getMiningPhase(event: ResourceMiningEvent): ProcessPhase {
 
     case 'farm-cancelled':
     case 'farm-interrupted':
+    case 'splinter-detected':
       return 'idle';
   }
 }
@@ -529,6 +530,7 @@ function updateMiningProcessBar(event: ResourceMiningEvent, processBar: ProcessB
 
     case 'farm-cancelled':
     case 'farm-interrupted':
+    case 'splinter-detected':
       processBar.reset();
       return;
 
@@ -641,6 +643,12 @@ function logMiningEvent(
           tone: 'failure'
         }
       );
+      return;
+
+    case 'splinter-detected':
+      addLog('Добыча остановлена: обнаружена заноза.', {
+        tone: 'failure'
+      });
       return;
 
   }

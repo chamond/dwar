@@ -1,6 +1,16 @@
+import {
+  catchError,
+  firstValueFrom,
+  mergeMap,
+  of,
+  take,
+  throwError,
+  type Observable
+} from 'rxjs';
 import type { BotResourceId } from '../../domain/entities/bot-resource';
 import type { HuntLocation, HuntLocationId } from '../../domain/entities/hunt-location';
 import type { HuntMob } from '../../domain/entities/hunt-mob';
+import type { HuntResourceFarmStart } from '../../domain/entities/hunt-resource-farm-start';
 import type { HuntResourceNode } from '../../domain/entities/hunt-resource-node';
 import type { HuntZoneScan } from '../../domain/entities/hunt-zone-scan';
 import {
@@ -10,18 +20,21 @@ import {
   type ResourceMiningSafety
 } from '../../domain/services/resource-mining-safety';
 import { getMobAggressionProfile } from '../../domain/services/mob-aggression';
+import { isUnexpectedServerResponseError } from '../errors/unexpected-server-response-error';
+import type { Clock } from '../ports/clock';
+import type { CurrentPlayerSplinterDetector } from '../ports/current-player-splinter-detector';
+import type { Delay } from '../ports/delay';
 import type { HuntLocationRepository } from '../ports/hunt-location-repository';
 import type { HuntResourceFarmer } from '../ports/hunt-resource-farmer';
 import type { HuntResourceFarmInterrupter } from '../ports/hunt-resource-farm-interrupter';
 import type { HuntZoneScanner } from '../ports/hunt-zone-scanner';
 import type { HuntZoneScanStore } from '../ports/hunt-zone-scan-store';
-import type { Delay } from '../ports/delay';
 import type { ResourceRepository } from '../ports/resource-repository';
-import type { Clock } from '../ports/clock';
 
 const DEFAULT_DANGER_RADIUS = 100;
 const DEFAULT_MONITORING_SCAN_INTERVAL_MS = 4_000;
 const DEFAULT_NO_SAFE_RESOURCE_DELAY_MS = 20_000;
+type MiningLoopDecision = 'continue' | 'stop';
 
 export interface ResourceMiningConfig {
   dangerRadius: number;
@@ -106,6 +119,9 @@ export type ResourceMiningEvent =
   | {
       type: 'farm-failed';
       resource: ResourceMiningResourceInfo;
+    }
+  | {
+      type: 'splinter-detected';
     };
 
 export class RunResourceMiningUseCase {
@@ -120,6 +136,7 @@ export class RunResourceMiningUseCase {
     private readonly farmInterrupter: HuntResourceFarmInterrupter,
     private readonly delay: Delay,
     private readonly clock: Clock,
+    private readonly detectCurrentPlayerSplinter: CurrentPlayerSplinterDetector,
     config: Partial<ResourceMiningConfig> = {}
   ) {
     this.config = {
@@ -176,7 +193,11 @@ export class RunResourceMiningUseCase {
         continue;
       }
 
-      await this.startMiningResource(selection.selectedSafety, location, input);
+      const decision = await this.startMiningResource(selection.selectedSafety, location, input);
+
+      if (decision === 'stop') {
+        return;
+      }
     }
   }
 
@@ -184,9 +205,13 @@ export class RunResourceMiningUseCase {
     safety: ResourceMiningSafety,
     location: HuntLocation,
     input: RunResourceMiningInput
-  ): Promise<void> {
+  ): Promise<MiningLoopDecision> {
     const resource = safety.resource;
-    const farmStart = await this.farmer.start(resource, { signal: input.signal });
+    const farmStart = await firstValueFrom(this.requestFarmStart(resource, input));
+
+    if (!farmStart) {
+      return 'stop';
+    }
 
     if (!farmStart.isFirstFarmer()) {
       await this.farmInterrupter.interrupt(resource, { signal: input.signal });
@@ -195,7 +220,7 @@ export class RunResourceMiningUseCase {
         resource: createResourceInfo(resource),
         reason: 'not-first-farmer'
       });
-      return;
+      return 'continue';
     }
 
     const startedAtMs = this.nowMs();
@@ -209,13 +234,43 @@ export class RunResourceMiningUseCase {
     const outcome = await this.monitorResource(resource, location, startedAtMs, miningDurationMs, input);
 
     if (outcome === 'interrupted') {
-      return;
+      return 'continue';
     }
 
     this.emit(input, {
       type: outcome === 'collected' ? 'farm-completed' : 'farm-failed',
       resource: createResourceInfo(resource)
     });
+
+    return 'continue';
+  }
+
+  private requestFarmStart(
+    resource: HuntResourceNode,
+    input: RunResourceMiningInput
+  ): Observable<HuntResourceFarmStart | null> {
+    return this.farmer.start(resource, { signal: input.signal }).pipe(
+      catchError((error: unknown) => {
+        if (!isUnexpectedServerResponseError(error)) {
+          return throwError(() => error);
+        }
+
+        return this.detectCurrentPlayerSplinter().pipe(
+          catchError(() => of(false)),
+          mergeMap((hasSplinter) => {
+            if (!hasSplinter) {
+              return throwError(() => error);
+            }
+
+            this.emit(input, {
+              type: 'splinter-detected'
+            });
+            return of(null);
+          })
+        );
+      }),
+      take(1)
+    );
   }
 
   private async monitorResource(

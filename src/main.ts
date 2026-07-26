@@ -10,6 +10,7 @@ import { BrowserHuntResourceFarmInterrupter } from './infrastructure/browser/bro
 import { BrowserHuntZoneScanner } from './infrastructure/browser/browser-hunt-zone-scanner';
 import { BrowserDelay } from './infrastructure/browser/browser-delay';
 import { BrowserProfessionRecipeCrafter } from './infrastructure/browser/browser-profession-recipe-crafter';
+import { detectCurrentPlayerSplinter } from './infrastructure/browser/detect-current-player-splinter';
 import { DwarBackpackHtmlParser } from './infrastructure/browser/dwar-backpack-html-parser';
 import { DwarHuntZoneXmlParser } from './infrastructure/browser/dwar-hunt-zone-xml-parser';
 import { LocalStorageHuntLocationSelectionStore } from './infrastructure/browser/local-storage-hunt-location-selection-store';
@@ -54,7 +55,8 @@ function bootstrap(): void {
     huntResourceFarmer,
     huntResourceFarmInterrupter,
     delay,
-    clock
+    clock,
+    detectCurrentPlayerSplinter
   );
   const runProfessionCrafting = new RunProfessionCraftingUseCase(
     professionRecipeRepository,
