@@ -623,15 +623,32 @@ function logCraftingEvent(
 ): void {
   switch (event.type) {
     case 'craft-started':
-      addLog(`Начат крафт ${event.amount} шт. ${formatProfessionRecipeLabel(event.recipe)}.`, [
-        'Начат крафт ',
-        `${event.amount} шт. `,
-        createRecipeLogPart(event.recipe),
-        '.'
-      ]);
+      addLog(
+        `Крафтим ${event.amount} шт. ${formatProfessionRecipeLabel(event.recipe)}, ресурсов остается: ${event.remainingResourceAmount}.`,
+        [
+          'Крафтим ',
+          `${event.amount} шт. `,
+          createRecipeLogPart(event.recipe),
+          `, ресурсов остается: ${event.remainingResourceAmount}.`
+        ]
+      );
+      return;
+
+    case 'recipe-stopped':
+      addLog(
+        `Крафт ${formatProfessionRecipeLabel(event.recipe)} остановлен: ${formatCraftingResourceLabel(event.recipe)} отсутствует в рюкзаке.`,
+        [
+          'Крафт ',
+          createRecipeLogPart(event.recipe),
+          ' остановлен: ',
+          createCraftingResourceLogPart(event.recipe),
+          ' отсутствует в рюкзаке.'
+        ]
+      );
       return;
 
     case 'no-recipe-selected':
+    case 'resource-check-started':
     case 'craft-request-started':
     case 'craft-completed':
       return;
@@ -667,6 +684,20 @@ function createRecipeLogPart(recipe: ProfessionCraftingRecipeInfo): BotLogLinePa
     text: label,
     color: recipe.markerColor,
     title: `Рецепт ${label}`
+  };
+}
+
+function formatCraftingResourceLabel(recipe: ProfessionCraftingRecipeInfo): string {
+  return `${recipe.resourceName} [${recipe.level}]`;
+}
+
+function createCraftingResourceLogPart(recipe: ProfessionCraftingRecipeInfo): BotLogLinePart {
+  const label = formatCraftingResourceLabel(recipe);
+
+  return {
+    text: label,
+    color: recipe.markerColor,
+    title: `Ресурс ${label}`
   };
 }
 

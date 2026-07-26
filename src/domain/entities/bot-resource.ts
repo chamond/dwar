@@ -5,6 +5,7 @@ export interface BotResourceProps {
   name: string;
   markerColor: string;
   articleId: number;
+  artifactId: number;
   level: number;
   miningDurationMs: number;
 }
@@ -14,6 +15,7 @@ export interface BotResourceSnapshot {
   name: string;
   markerColor: string;
   articleId: number;
+  artifactId: number;
   level: number;
   miningDurationMs: number;
 }
@@ -24,6 +26,7 @@ export class BotResource {
     private readonly name: string,
     private readonly markerColor: string,
     private readonly articleId: number,
+    private readonly artifactId: number,
     private readonly level: number,
     private readonly miningDurationMs: number
   ) {}
@@ -44,6 +47,10 @@ export class BotResource {
       throw new Error('Resource article id must be a positive integer.');
     }
 
+    if (!Number.isSafeInteger(props.artifactId) || props.artifactId <= 0) {
+      throw new Error('Resource artifact id must be a positive safe integer.');
+    }
+
     if (!Number.isInteger(props.level) || props.level < 0) {
       throw new Error('Resource level must be a non-negative integer.');
     }
@@ -52,7 +59,15 @@ export class BotResource {
       throw new Error('Resource mining duration must be a positive integer.');
     }
 
-    return new BotResource(props.id, name, markerColor, props.articleId, props.level, props.miningDurationMs);
+    return new BotResource(
+      props.id,
+      name,
+      markerColor,
+      props.articleId,
+      props.artifactId,
+      props.level,
+      props.miningDurationMs
+    );
   }
 
   getId(): BotResourceId {
@@ -61,6 +76,10 @@ export class BotResource {
 
   getArticleId(): number {
     return this.articleId;
+  }
+
+  getArtifactId(): number {
+    return this.artifactId;
   }
 
   getName(): string {
@@ -85,6 +104,7 @@ export class BotResource {
       name: this.name,
       markerColor: this.markerColor,
       articleId: this.articleId,
+      artifactId: this.artifactId,
       level: this.level,
       miningDurationMs: this.miningDurationMs
     };

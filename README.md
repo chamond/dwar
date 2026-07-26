@@ -36,9 +36,10 @@ The compiled output is `dist/index.js`.
 Load that file on the game page to mount the floating pickaxe button and bot panel.
 The launcher position is saved in browser localStorage.
 
-The current local resource catalog contains stable bot ids and mining duration
-for agate, aquamarine, and turquoise. The panel separates mining and crafting
-into tabs with independent logs, clear buttons, controls, and progress bars.
+The current local resource catalog contains stable bot ids, mining duration,
+and distinct backpack artifact ids for agate, aquamarine, and turquoise. The
+panel separates mining and crafting into tabs with independent logs, clear
+buttons, controls, and progress bars.
 During mining, one zone scan every four seconds checks both nearby danger and
 the current resource node by its server number. The bot considers the resource
 collected when its node disappears and considers the attempt failed when the
@@ -46,7 +47,10 @@ node returns to an available state. Its progress bar uses the resource's
 20-second nominal duration; if the node is still being farmed when the bar
 fills, scans continue while the filled bar waits for the result. The crafting
 tab contains the recipe multiselect and one shared amount input defaulting to
-10.
+10. Before each recipe request, the bot loads backpack group 3 and reads the
+recipe resource quantity by artifact id. It crafts no more than the selected
+amount or the available resource count, logs the calculated remainder, and
+stops only the affected recipe when that resource is absent.
 Unexpected server responses trigger process shutdown, programmatically enable
 the persisted alarm toggle, start a looping siren, and add a red
 human-attention log tag. The alarm is off by default; enabling it manually still

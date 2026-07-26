@@ -10,13 +10,6 @@ import {
 } from './process-bar';
 import { formatProfessionRecipeLabel } from './profession-recipe-label';
 
-type CraftingProcessPhase = 'busy' | 'active' | 'complete';
-
-interface CraftingProcessBarEntry {
-  controller: ProcessBarController;
-  phase: CraftingProcessPhase;
-}
-
 export interface CraftingProcessBarsController {
   handle(event: ProfessionCraftingEvent): void;
   reset(): void;
@@ -25,7 +18,7 @@ export interface CraftingProcessBarsController {
 export function createCraftingProcessBarsController(container: HTMLElement): CraftingProcessBarsController {
   const idleElements = createProcessBar('Крафт: ожидание');
   const idleController = createProcessBarController(idleElements);
-  const entries = new Map<ProfessionRecipeId, CraftingProcessBarEntry>();
+  const entries = new Map<ProfessionRecipeId, ProcessBarController>();
 
   const showIdle = (): void => {
     if (idleElements.root.parentElement !== container) {
@@ -43,22 +36,19 @@ export function createCraftingProcessBarsController(container: HTMLElement): Cra
     idleController.reset();
   };
 
-  const getEntry = (recipe: ProfessionCraftingRecipeInfo): CraftingProcessBarEntry => {
-    const existingEntry = entries.get(recipe.id);
+  const getController = (recipe: ProfessionCraftingRecipeInfo): ProcessBarController => {
+    const existingController = entries.get(recipe.id);
 
-    if (existingEntry) {
-      return existingEntry;
+    if (existingController) {
+      return existingController;
     }
 
     const elements = createProcessBar(`Крафт: ${formatProfessionRecipeLabel(recipe)}`);
-    const entry: CraftingProcessBarEntry = {
-      controller: createProcessBarController(elements),
-      phase: 'busy'
-    };
-    entries.set(recipe.id, entry);
+    const controller = createProcessBarController(elements);
+    entries.set(recipe.id, controller);
     container.append(elements.root);
 
-    return entry;
+    return controller;
   };
 
   reset();
@@ -78,20 +68,25 @@ export function createCraftingProcessBarsController(container: HTMLElement): Cra
       }
 
       hideIdle();
-      const entry = getEntry(event.recipe);
+      const controller = getController(event.recipe);
 
       switch (event.type) {
+        case 'resource-check-started':
+          controller.busy({
+            label: `Проверка ресурсов: ${formatProfessionRecipeLabel(event.recipe)}`,
+            accentColor: event.recipe.markerColor
+          });
+          return;
+
         case 'craft-request-started':
-          entry.phase = 'busy';
-          entry.controller.busy({
+          controller.busy({
             label: `Отправка ${formatProfessionRecipeLabel(event.recipe)}`,
             accentColor: event.recipe.markerColor
           });
           return;
 
         case 'craft-started':
-          entry.phase = 'active';
-          entry.controller.start({
+          controller.start({
             label: `Крафт ${formatProfessionRecipeLabel(event.recipe)}`,
             durationMs: event.durationMs,
             accentColor: event.recipe.markerColor
@@ -99,8 +94,12 @@ export function createCraftingProcessBarsController(container: HTMLElement): Cra
           return;
 
         case 'craft-completed':
-          entry.phase = 'complete';
-          entry.controller.complete();
+          controller.complete();
+          return;
+
+        case 'recipe-stopped':
+          controller.reset();
+          controller.setLabel(`Нет ресурсов: ${formatProfessionRecipeLabel(event.recipe)}`);
           return;
       }
     },
