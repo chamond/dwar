@@ -54,7 +54,7 @@ export function assessResourceMiningSafety(
   options: ResourceMiningSafetyOptions
 ): ResourceMiningSafety {
   const dangerousDistances = mobs
-    .filter((mob) => mob.getAggressionLevel() > 0)
+    .filter(isMobDangerousForMining)
     .map((mob): MobDistance => {
       return {
         mob,
@@ -75,6 +75,10 @@ export function assessResourceMiningSafety(
     blockingMob: blockingMob?.mob ?? null,
     blockingMobDistance: blockingMob?.distance ?? null
   };
+}
+
+export function isMobDangerousForMining(mob: HuntMob): boolean {
+  return mob.getAggressionLevel() > 0 && !mob.isFriendly();
 }
 
 function isResourceAvailableForMining(resource: HuntResourceNode): boolean {

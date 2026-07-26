@@ -1,6 +1,8 @@
 import type { MapPositionSnapshot } from './map-position';
 import { MapPosition } from './map-position';
 
+const FRIENDLY_MOB_KIND = 1;
+
 export interface HuntMobProps {
   id: string;
   name: string;
@@ -74,6 +76,10 @@ export class HuntMob {
 
   getKind(): number {
     return this.props.kind;
+  }
+
+  isFriendly(): boolean {
+    return this.props.kind === FRIENDLY_MOB_KIND;
   }
 
   getAggressionLevel(): number {

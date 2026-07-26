@@ -1,10 +1,13 @@
 import type { BotResourceId, BotResourceSnapshot } from '../../domain/entities/bot-resource';
 import type { HuntLocationId, HuntLocationSnapshot } from '../../domain/entities/hunt-location';
 import type { ProfessionRecipeId, ProfessionRecipeSnapshot } from '../../domain/entities/profession-recipe';
-import { getAlarmIcon } from './alarm-icon';
 import { getClearLogIcon } from './clear-log-icon';
 import { getCraftIcon } from './craft-icon';
 import { createCraftAmountInput, type CraftAmountInputElements } from './craft-amount-input';
+import {
+  createHumanAttentionAlarmOverlay,
+  type HumanAttentionAlarmOverlayElements
+} from './human-attention-alarm-overlay';
 import { getPickaxeIcon } from './pickaxe-icon';
 import { createHuntLocationSelect, type HuntLocationSelectElements } from './hunt-location-select';
 import { createProcessBar, type ProcessBarElements } from './process-bar';
@@ -21,7 +24,7 @@ export interface BotPanelElements {
   panel: HTMLElement;
   header: HTMLElement;
   closeButton: HTMLButtonElement;
-  alarmToggleButton: HTMLButtonElement;
+  humanAttentionAlarmOverlay: HumanAttentionAlarmOverlayElements;
   tabs: TabsElements<BotPanelTabId>;
   startMiningButton: HTMLButtonElement;
   startCraftingButton: HTMLButtonElement;
@@ -41,7 +44,6 @@ export interface BotPanelElements {
 interface PanelHeaderElements {
   header: HTMLElement;
   closeButton: HTMLButtonElement;
-  alarmToggleButton: HTMLButtonElement;
 }
 
 interface MiningTabElements {
@@ -102,13 +104,14 @@ export function createBotPanel(
     }
   ], 'mining');
   const resizeHandle = createResizeHandle();
-  panel.append(headerElements.header, tabs.root, resizeHandle);
+  const humanAttentionAlarmOverlay = createHumanAttentionAlarmOverlay();
+  panel.append(headerElements.header, tabs.root, resizeHandle, humanAttentionAlarmOverlay.root);
 
   return {
     panel,
     header: headerElements.header,
     closeButton: headerElements.closeButton,
-    alarmToggleButton: headerElements.alarmToggleButton,
+    humanAttentionAlarmOverlay,
     tabs,
     startMiningButton: miningTab.startMiningButton,
     startCraftingButton: craftingTab.startCraftingButton,
@@ -144,15 +147,6 @@ function createPanelHeader(): PanelHeaderElements {
   const actions = document.createElement('div');
   actions.className = 'dwar-panel__actions';
 
-  const alarmToggleButton = document.createElement('button');
-  alarmToggleButton.type = 'button';
-  alarmToggleButton.className = 'dwar-panel__icon-button dwar-panel__alarm-toggle is-muted';
-  alarmToggleButton.dataset.dwarPanelAction = '';
-  alarmToggleButton.setAttribute('aria-label', 'Сирена отключена');
-  alarmToggleButton.setAttribute('aria-pressed', 'false');
-  alarmToggleButton.setAttribute('title', 'Сирена отключена');
-  alarmToggleButton.innerHTML = getAlarmIcon();
-
   const closeButton = document.createElement('button');
   closeButton.type = 'button';
   closeButton.className = 'dwar-panel__icon-button dwar-panel__close';
@@ -161,13 +155,12 @@ function createPanelHeader(): PanelHeaderElements {
   closeButton.innerHTML = '&times;';
 
   title.append(status, titleText);
-  actions.append(alarmToggleButton, closeButton);
+  actions.append(closeButton);
   header.append(title, actions);
 
   return {
     header,
-    closeButton,
-    alarmToggleButton
+    closeButton
   };
 }
 

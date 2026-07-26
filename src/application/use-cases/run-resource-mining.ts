@@ -5,6 +5,7 @@ import type { HuntResourceNode } from '../../domain/entities/hunt-resource-node'
 import type { HuntZoneScan } from '../../domain/entities/hunt-zone-scan';
 import {
   assessResourceMiningSafety,
+  isMobDangerousForMining,
   selectSafestResourceForMining,
   type ResourceMiningSafety
 } from '../../domain/services/resource-mining-safety';
@@ -61,7 +62,7 @@ export type ResourceMiningEvent =
   | {
       type: 'scan-completed';
       totalMobCount: number;
-      aggressiveMobCount: number;
+      dangerousMobCount: number;
       selectedResourceCount: number;
       safeResourceCount: number;
     }
@@ -160,7 +161,7 @@ export class RunResourceMiningUseCase {
       this.emit(input, {
         type: 'scan-completed',
         totalMobCount: scan.getMobs().length,
-        aggressiveMobCount: scan.getMobs().filter((mob) => mob.getAggressionLevel() > 0).length,
+        dangerousMobCount: scan.getMobs().filter(isMobDangerousForMining).length,
         selectedResourceCount: selection.candidateCount,
         safeResourceCount: selection.safeCandidateCount
       });

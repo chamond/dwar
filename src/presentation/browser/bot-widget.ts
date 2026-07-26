@@ -1,5 +1,4 @@
 import { isUnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
-import type { HumanAttentionAlarmStore } from '../../application/ports/human-attention-alarm-store';
 import type { LauncherPositionStore } from '../../application/ports/launcher-position-store';
 import type { PanelSizeStore } from '../../application/ports/panel-size-store';
 import type { ProfessionRecipeSelectionStore } from '../../application/ports/profession-recipe-selection-store';
@@ -44,7 +43,6 @@ import { attachResizablePanel, keepPanelSizeInViewport, restorePanelSize } from 
 
 export interface BotWidgetDependencies {
   createLogEntry: CreateBotLogEntryUseCase;
-  humanAttentionAlarmStore: HumanAttentionAlarmStore;
   listHuntLocations: ListHuntLocationsUseCase;
   listProfessionRecipes: ListProfessionRecipesUseCase;
   listResources: ListResourcesUseCase;
@@ -105,16 +103,20 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   const miningProcessBar = createProcessBarController(botPanel.miningProcessBar);
   const craftingProcessBars = createCraftingProcessBarsController(botPanel.craftingProcessBars);
   const humanAttentionAlarm = createHumanAttentionAlarm();
-  let isHumanAttentionAlarmEnabled = dependencies.humanAttentionAlarmStore.load() ?? false;
-  setHumanAttentionAlarmButtonEnabled(botPanel.alarmToggleButton, isHumanAttentionAlarmEnabled);
   attachMutuallyExclusivePickers(botPanel);
 
   const activateHumanAttentionAlarm = (): void => {
-    isHumanAttentionAlarmEnabled = true;
-    dependencies.humanAttentionAlarmStore.save(true);
-    setHumanAttentionAlarmButtonEnabled(botPanel.alarmToggleButton, true);
     humanAttentionAlarm.prepare();
     humanAttentionAlarm.play();
+    botPanel.resourcePicker.close();
+    botPanel.recipePicker.close();
+    botPanel.humanAttentionAlarmOverlay.root.hidden = false;
+
+    if (botPanel.panel.hidden) {
+      showPanel(botPanel.panel, launcher);
+    }
+
+    botPanel.humanAttentionAlarmOverlay.stopButton.focus({ preventScroll: true });
   };
 
   shadowRoot.append(createStyleElement(), launcher, botPanel.panel);
@@ -135,6 +137,15 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   launcher.addEventListener('click', (event) => {
     if (launcherDrag.consumeDragClick()) {
       event.preventDefault();
+      return;
+    }
+
+    if (!botPanel.humanAttentionAlarmOverlay.root.hidden) {
+      if (botPanel.panel.hidden) {
+        showPanel(botPanel.panel, launcher);
+      }
+
+      botPanel.humanAttentionAlarmOverlay.stopButton.focus({ preventScroll: true });
       return;
     }
 
@@ -163,18 +174,9 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     clearLogList(botPanel.craftingLogList);
   });
 
-  botPanel.alarmToggleButton.addEventListener('click', () => {
-    isHumanAttentionAlarmEnabled = !isHumanAttentionAlarmEnabled;
-    dependencies.humanAttentionAlarmStore.save(isHumanAttentionAlarmEnabled);
-    setHumanAttentionAlarmButtonEnabled(botPanel.alarmToggleButton, isHumanAttentionAlarmEnabled);
-
-    if (isHumanAttentionAlarmEnabled) {
-      activateHumanAttentionAlarm();
-      addActiveTabLog('Сирена включена.');
-      return;
-    }
-
+  botPanel.humanAttentionAlarmOverlay.stopButton.addEventListener('click', () => {
     humanAttentionAlarm.stop();
+    botPanel.humanAttentionAlarmOverlay.root.hidden = true;
     addActiveTabLog('Сирена отключена.');
   });
 
@@ -562,7 +564,7 @@ function logMiningEvent(
 
     case 'scan-completed':
       addLog(
-        `Скан: мобов ${event.totalMobCount}, агрессивных ${event.aggressiveMobCount}, ресурсов ${event.selectedResourceCount}, безопасных ${event.safeResourceCount}.`
+        `Скан: мобов ${event.totalMobCount}, опасных ${event.dangerousMobCount}, ресурсов ${event.selectedResourceCount}, безопасных ${event.safeResourceCount}.`
       );
       return;
 
@@ -787,13 +789,6 @@ function createHumanAttentionLogPart(): BotLogLinePart {
     color: '#ff4f5f',
     title: 'Проверь страницу игры вручную'
   };
-}
-
-function setHumanAttentionAlarmButtonEnabled(button: HTMLButtonElement, isEnabled: boolean): void {
-  button.classList.toggle('is-muted', !isEnabled);
-  button.setAttribute('aria-pressed', String(isEnabled));
-  button.setAttribute('aria-label', isEnabled ? 'Сирена включена' : 'Сирена отключена');
-  button.setAttribute('title', isEnabled ? 'Сирена включена' : 'Сирена отключена');
 }
 
 function setMiningButtonActive(button: HTMLButtonElement, isActive: boolean): void {
