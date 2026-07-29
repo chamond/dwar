@@ -1,4 +1,4 @@
-export type HuntLocationId = 'baurville' | 'royal-tombs';
+export type HuntLocationId = 'baurville' | 'kingala-village' | 'royal-tombs';
 
 export interface HuntLocationProps {
   id: HuntLocationId;

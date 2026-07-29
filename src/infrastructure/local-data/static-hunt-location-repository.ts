@@ -8,6 +8,11 @@ const LOCAL_HUNT_LOCATION_RECORDS = [
     areaId: 6
   },
   {
+    id: 'kingala-village',
+    name: 'Деревня Кингала',
+    areaId: 18
+  },
+  {
     id: 'royal-tombs',
     name: 'Королевские усыпальницы',
     areaId: 157
