@@ -17,6 +17,7 @@ import {
 } from './profession-recipe-picker';
 import { createResourcePicker, type ResourcePickerElements } from './resource-picker';
 import { createTabs, type TabsElements } from './tabs';
+import { createVolumeControl } from './volume-control';
 
 export type BotPanelTabId = 'mining' | 'crafting';
 
@@ -77,6 +78,7 @@ export interface BotPanelOptions {
   onRecipeSelectionChange?: ((recipes: readonly ProfessionRecipeSnapshot[]) => void) | undefined;
   selectedLocationId?: HuntLocationId | null | undefined;
   onLocationSelectionChange?: ((location: HuntLocationSnapshot) => void) | undefined;
+  onAlarmVolumeChange?: ((volume: number) => void) | undefined;
 }
 
 export function createBotPanel(
@@ -89,6 +91,9 @@ export function createBotPanel(
   panel.className = 'dwar-panel';
   panel.hidden = true;
   const headerElements = createPanelHeader();
+  const volumeControl = createVolumeControl({
+    onVolumeChange: options.onAlarmVolumeChange
+  });
   const miningTab = createMiningTab(resources, locations, options);
   const craftingTab = createCraftingTab(recipes, options);
   const tabs = createTabs<BotPanelTabId>([
@@ -105,7 +110,13 @@ export function createBotPanel(
   ], 'mining');
   const resizeHandle = createResizeHandle();
   const humanAttentionAlarmOverlay = createHumanAttentionAlarmOverlay();
-  panel.append(headerElements.header, tabs.root, resizeHandle, humanAttentionAlarmOverlay.root);
+  panel.append(
+    headerElements.header,
+    tabs.root,
+    resizeHandle,
+    humanAttentionAlarmOverlay.root,
+    volumeControl.root
+  );
 
   return {
     panel,

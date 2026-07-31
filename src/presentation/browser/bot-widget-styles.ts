@@ -52,6 +52,7 @@ export const BOT_WIDGET_STYLES = `
 
   .dwar-launcher:focus-visible,
   .dwar-panel__icon-button:focus-visible,
+  .dwar-volume-control__slider:focus-visible,
   .dwar-panel__resize:focus-visible,
   .dwar-human-attention-alarm__button:focus-visible,
   .dwar-tabs__button:focus-visible,
@@ -138,6 +139,105 @@ export const BOT_WIDGET_STYLES = `
     align-items: center;
     flex: 0 0 auto;
     gap: 4px;
+  }
+
+  .dwar-volume-control {
+    position: absolute;
+    top: 7px;
+    right: 40px;
+    z-index: 6;
+    display: inline-flex;
+  }
+
+  .dwar-volume-control__toggle svg {
+    width: 18px;
+    height: 18px;
+    overflow: visible;
+  }
+
+  .dwar-volume-icon__speaker {
+    fill: currentColor;
+    stroke: none;
+  }
+
+  .dwar-volume-icon__wave,
+  .dwar-volume-icon__mute {
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-width: 1.8;
+  }
+
+  .dwar-volume-control[data-volume-level="muted"] .dwar-volume-icon__wave,
+  .dwar-volume-control:not([data-volume-level="muted"]) .dwar-volume-icon__mute,
+  .dwar-volume-control[data-volume-level="low"] .dwar-volume-icon__wave--high {
+    display: none;
+  }
+
+  .dwar-volume-control__popover {
+    position: absolute;
+    top: 28px;
+    left: 50%;
+    z-index: 7;
+    width: 34px;
+    height: 104px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    background: rgba(20, 27, 38, .97);
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 7px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .42);
+    transform: translateX(-50%) translateY(-3px);
+    transition: opacity .12s ease, transform .12s ease, visibility .12s ease;
+  }
+
+  .dwar-volume-control:hover .dwar-volume-control__popover,
+  .dwar-volume-control:focus-within .dwar-volume-control__popover {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .dwar-volume-control__slider {
+    --dwar-volume-progress: 100%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 78px;
+    height: 4px;
+    padding: 0;
+    appearance: none;
+    accent-color: #f7f8fb;
+    background: linear-gradient(
+      to right,
+      #f7f8fb 0 var(--dwar-volume-progress),
+      #5d6675 var(--dwar-volume-progress) 100%
+    );
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    transform: translate(-50%, -50%) rotate(-90deg);
+  }
+
+  .dwar-volume-control__slider::-webkit-slider-thumb {
+    width: 12px;
+    height: 12px;
+    appearance: none;
+    background: #f7f8fb;
+    border: 0;
+    border-radius: 50%;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, .42);
+  }
+
+  .dwar-volume-control__slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    background: #f7f8fb;
+    border: 0;
+    border-radius: 50%;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, .42);
   }
 
   .dwar-panel__icon-button {

@@ -48,7 +48,8 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   const host = createHost();
   const shadowRoot = host.attachShadow({ mode: 'open' });
   const launcher = createLauncherButton();
-  const botPanel = createPanel(dependencies);
+  const humanAttentionAlarm = createHumanAttentionAlarm();
+  const botPanel = createPanel(dependencies, (volume) => humanAttentionAlarm.setVolume(volume));
   const addMiningLog = createBotLogAppender(botPanel.miningLogList, dependencies.createLogEntry);
   const addCraftingLog = createBotLogAppender(botPanel.craftingLogList, dependencies.createLogEntry);
   const addActiveTabLog: AddBotLog = (message, options): void => {
@@ -57,7 +58,6 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   };
   const miningProcessBar = createProcessBarController(botPanel.miningProcessBar);
   const craftingProcessBars = createCraftingProcessBarsController(botPanel.craftingProcessBars);
-  const humanAttentionAlarm = createHumanAttentionAlarm();
 
   const activateHumanAttentionAlarm = (): void => {
     humanAttentionAlarm.prepare();
@@ -211,7 +211,10 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   addCraftingLog('Скрипт загружен.');
 }
 
-function createPanel(dependencies: BotWidgetDependencies): BotPanelElements {
+function createPanel(
+  dependencies: BotWidgetDependencies,
+  onAlarmVolumeChange: (volume: number) => void
+): BotPanelElements {
   const resources = dependencies.listResources.execute().map((resource) => resource.toSnapshot());
   const recipes = dependencies.listProfessionRecipes.execute().map((recipe) => recipe.toSnapshot());
   const locations = dependencies.listHuntLocations.execute().map((location) => location.toSnapshot());
@@ -228,7 +231,8 @@ function createPanel(dependencies: BotWidgetDependencies): BotPanelElements {
     selectedLocationId: dependencies.locationSelectionStore.load(),
     onLocationSelectionChange: (location) => {
       dependencies.locationSelectionStore.save(location.id);
-    }
+    },
+    onAlarmVolumeChange
   });
 }
 

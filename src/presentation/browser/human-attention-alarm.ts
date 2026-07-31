@@ -4,6 +4,7 @@ import sirenAudioSource from './assets/siren-alarm.ogg';
 export interface HumanAttentionAlarm {
   prepare(): void;
   play(): void;
+  setVolume(volume: number): void;
   stop(): void;
 }
 
@@ -15,6 +16,7 @@ class BrowserHumanAttentionAlarm implements HumanAttentionAlarm {
   private activeAlarm: ActiveAlarm | null = null;
   private audioContext: AudioContext | null = null;
   private readonly source: string;
+  private volume = 1;
 
   constructor(source: string) {
     this.source = source;
@@ -45,6 +47,11 @@ class BrowserHumanAttentionAlarm implements HumanAttentionAlarm {
     }
   }
 
+  setVolume(volume: number): void {
+    this.volume = clampVolume(volume);
+    this.activeAlarm?.setVolume(this.volume);
+  }
+
   stop(): void {
     this.activeAlarm?.stop();
   }
@@ -58,7 +65,7 @@ class BrowserHumanAttentionAlarm implements HumanAttentionAlarm {
 
     audio.loop = true;
     audio.preload = 'auto';
-    audio.volume = 1;
+    audio.volume = this.volume;
     let activeAlarm: ActiveAlarm | null = null;
     let playSubscription: Subscription | null = null;
 
@@ -84,6 +91,9 @@ class BrowserHumanAttentionAlarm implements HumanAttentionAlarm {
     };
 
     activeAlarm = {
+      setVolume: (volume) => {
+        audio.volume = volume;
+      },
       stop: () => {
         audio.pause();
         audio.currentTime = 0;
@@ -129,7 +139,7 @@ class BrowserHumanAttentionAlarm implements HumanAttentionAlarm {
     sweep.type = 'sine';
     sweep.frequency.value = 1.15;
     sweepGain.gain.value = 260;
-    outputGain.gain.value = 0.22;
+    outputGain.gain.value = getGeneratedSirenGain(this.volume);
 
     sweep.connect(sweepGain);
     sweepGain.connect(oscillator.frequency);
@@ -151,6 +161,9 @@ class BrowserHumanAttentionAlarm implements HumanAttentionAlarm {
     };
 
     const activeAlarm: ActiveAlarm = {
+      setVolume: (volume) => {
+        outputGain.gain.value = getGeneratedSirenGain(volume);
+      },
       stop: () => {
         if (isStopped) {
           return;
@@ -203,7 +216,20 @@ class BrowserHumanAttentionAlarm implements HumanAttentionAlarm {
 }
 
 interface ActiveAlarm {
+  setVolume(volume: number): void;
   stop(): void;
+}
+
+function clampVolume(volume: number): number {
+  if (!Number.isFinite(volume)) {
+    return 1;
+  }
+
+  return Math.min(1, Math.max(0, volume));
+}
+
+function getGeneratedSirenGain(volume: number): number {
+  return 0.22 * volume;
 }
 
 function canPlayOggAudio(audio: HTMLAudioElement): boolean {
