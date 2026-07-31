@@ -143,7 +143,7 @@ export const BOT_WIDGET_STYLES = `
 
   .dwar-volume-control {
     position: absolute;
-    top: 7px;
+    top: 6.5px;
     right: 40px;
     z-index: 6;
     display: inline-flex;
