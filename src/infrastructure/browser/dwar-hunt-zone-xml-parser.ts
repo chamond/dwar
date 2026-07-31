@@ -4,6 +4,7 @@ import { HuntMob } from '../../domain/entities/hunt-mob';
 import { HuntResourceNode } from '../../domain/entities/hunt-resource-node';
 import { HuntZoneScan } from '../../domain/entities/hunt-zone-scan';
 import { MapPosition } from '../../domain/entities/map-position';
+import { throwIfHuntMinigameRequired } from './dwar-hunt-minigame-xml';
 
 export class DwarHuntZoneXmlParser {
   constructor(private readonly resourceRepository: ResourceRepository) {}
@@ -15,6 +16,8 @@ export class DwarHuntZoneXmlParser {
     if (parserError) {
       throw new UnexpectedServerResponseError('Hunt zone response is not valid XML.');
     }
+
+    throwIfHuntMinigameRequired(document);
 
     if (document.documentElement.nodeName !== 'hunt') {
       throw new UnexpectedServerResponseError('Hunt zone response has an unexpected root element.');

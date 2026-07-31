@@ -1,4 +1,5 @@
 import type { HuntLocationSelectionStore } from '../../application/ports/hunt-location-selection-store';
+import type { HuntMinigameCaptchaDownloader } from '../../application/ports/hunt-minigame-captcha-downloader';
 import type { LauncherPositionStore } from '../../application/ports/launcher-position-store';
 import type { PanelSizeStore } from '../../application/ports/panel-size-store';
 import type { ProfessionRecipeSelectionStore } from '../../application/ports/profession-recipe-selection-store';
@@ -32,6 +33,7 @@ export interface BotWidgetDependencies {
   listProfessionRecipes: ListProfessionRecipesUseCase;
   listResources: ListResourcesUseCase;
   locationSelectionStore: HuntLocationSelectionStore;
+  huntMinigameCaptchaDownloader: HuntMinigameCaptchaDownloader;
   launcherPositionStore: LauncherPositionStore;
   panelSizeStore: PanelSizeStore;
   professionRecipeSelectionStore: ProfessionRecipeSelectionStore;
@@ -78,6 +80,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     locationSelect: botPanel.locationSelect,
     processBar: miningProcessBar,
     runResourceMining: dependencies.runResourceMining,
+    huntMinigameCaptchaDownloader: dependencies.huntMinigameCaptchaDownloader,
     addLog: addMiningLog,
     prepareHumanAttentionAlarm: () => humanAttentionAlarm.prepare(),
     reportError: createProcessErrorReporter({

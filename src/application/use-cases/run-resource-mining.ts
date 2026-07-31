@@ -32,6 +32,7 @@ import {
   selectSafestResourceForMining,
   type ResourceMiningSafety
 } from '../../domain/services/resource-mining-safety';
+import { isHuntMinigameRequiredError } from '../errors/hunt-minigame-required-error';
 import { isUnexpectedServerResponseError } from '../errors/unexpected-server-response-error';
 import type { Clock } from '../ports/clock';
 import type { CurrentPlayerSplinterDetector } from '../ports/current-player-splinter-detector';
@@ -213,6 +214,10 @@ export class RunResourceMiningUseCase {
         farmStart
       })),
       catchError((error: unknown) => {
+        if (isHuntMinigameRequiredError(error)) {
+          return throwError(() => error);
+        }
+
         if (!isUnexpectedServerResponseError(error)) {
           return throwError(() => error);
         }

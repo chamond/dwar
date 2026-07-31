@@ -1,5 +1,6 @@
 import { UnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
 import { HuntResourceFarmStart } from '../../domain/entities/hunt-resource-farm-start';
+import { throwIfHuntMinigameRequired } from './dwar-hunt-minigame-xml';
 
 export class DwarHuntResourceFarmStartXmlParser {
   parse(xmlText: string): HuntResourceFarmStart {
@@ -9,6 +10,8 @@ export class DwarHuntResourceFarmStartXmlParser {
     if (parserError) {
       throw new UnexpectedServerResponseError('Resource mining start response is not valid XML.');
     }
+
+    throwIfHuntMinigameRequired(document);
 
     if (document.documentElement.nodeName !== 'req') {
       throw new UnexpectedServerResponseError('Resource mining start response has an unexpected root element.');

@@ -1,4 +1,6 @@
-import { EMPTY, catchError, finalize, type Subscription } from 'rxjs';
+import { EMPTY, catchError, finalize, ignoreElements, tap, type Subscription } from 'rxjs';
+import { isHuntMinigameRequiredError } from '../../application/errors/hunt-minigame-required-error';
+import type { HuntMinigameCaptchaDownloader } from '../../application/ports/hunt-minigame-captcha-downloader';
 import type { RunResourceMiningUseCase } from '../../application/use-cases/run-resource-mining';
 import type { AddBotLog } from './bot-log-appender';
 import type { HuntLocationSelectElements } from './hunt-location-select';
@@ -24,6 +26,7 @@ export interface MiningProcessControllerOptions {
   locationSelect: HuntLocationSelectElements;
   processBar: ProcessBarController;
   runResourceMining: RunResourceMiningUseCase;
+  huntMinigameCaptchaDownloader: HuntMinigameCaptchaDownloader;
   addLog: AddBotLog;
   prepareHumanAttentionAlarm(): void;
   reportError: ProcessErrorReporter;
@@ -67,6 +70,24 @@ export function createMiningProcessController(
     }).pipe(
       catchError((error: unknown) => {
         options.reportError(error);
+
+        if (isHuntMinigameRequiredError(error)) {
+          return options.huntMinigameCaptchaDownloader.download().pipe(
+            tap((fileName) => {
+              options.addLog(
+                `Исходный ответ капчи автоматически скачан: ${fileName}.`
+              );
+            }),
+            catchError((downloadError: unknown) => {
+              options.addLog(
+                `Не удалось автоматически скачать ответ капчи: ${getErrorMessage(downloadError)}.`
+              );
+              return EMPTY;
+            }),
+            ignoreElements()
+          );
+        }
+
         return EMPTY;
       }),
       finalize(() => {
@@ -140,6 +161,10 @@ export function createMiningProcessController(
       start();
     }
   };
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'неизвестная ошибка';
 }
 
 function setButtonActive(button: HTMLButtonElement, isActive: boolean): void {

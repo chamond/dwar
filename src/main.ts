@@ -6,6 +6,7 @@ import { RunProfessionCraftingUseCase } from './application/use-cases/run-profes
 import { RunResourceMiningUseCase } from './application/use-cases/run-resource-mining';
 import { BrowserBackpackItemQuantityReader } from './infrastructure/browser/browser-backpack-item-quantity-reader';
 import { BrowserHuntResourceFarmer } from './infrastructure/browser/browser-hunt-resource-farmer';
+import { BrowserHuntMinigameCaptchaDownloader } from './infrastructure/browser/browser-hunt-minigame-captcha-downloader';
 import { BrowserHuntResourceFarmInterrupter } from './infrastructure/browser/browser-hunt-resource-farm-interrupter';
 import { BrowserHuntZoneScanner } from './infrastructure/browser/browser-hunt-zone-scanner';
 import { BrowserDelay } from './infrastructure/browser/browser-delay';
@@ -43,6 +44,7 @@ function bootstrap(): void {
   const huntZoneScanner = new BrowserHuntZoneScanner(huntZoneXmlParser);
   const huntZoneScanStore = new InMemoryHuntZoneScanStore();
   const huntResourceFarmer = new BrowserHuntResourceFarmer();
+  const huntMinigameCaptchaDownloader = new BrowserHuntMinigameCaptchaDownloader();
   const huntResourceFarmInterrupter = new BrowserHuntResourceFarmInterrupter();
   const backpackItemQuantityReader = new BrowserBackpackItemQuantityReader(new DwarBackpackHtmlParser());
   const professionRecipeCrafter = new BrowserProfessionRecipeCrafter();
@@ -66,6 +68,7 @@ function bootstrap(): void {
   );
   mountBotWidget({
     createLogEntry,
+    huntMinigameCaptchaDownloader,
     listHuntLocations,
     listProfessionRecipes,
     listResources,
