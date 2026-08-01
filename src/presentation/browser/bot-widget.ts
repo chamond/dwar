@@ -1,3 +1,4 @@
+import type { AlarmVolumeStore } from '../../application/ports/alarm-volume-store';
 import type { HuntLocationSelectionStore } from '../../application/ports/hunt-location-selection-store';
 import type { HuntMinigameCaptchaDownloader } from '../../application/ports/hunt-minigame-captcha-downloader';
 import type { LauncherPositionStore } from '../../application/ports/launcher-position-store';
@@ -28,6 +29,7 @@ import { createProcessErrorReporter } from './process-error-reporter';
 import { attachResizablePanel, keepPanelSizeInViewport, restorePanelSize } from './resizable-panel';
 
 export interface BotWidgetDependencies {
+  alarmVolumeStore: AlarmVolumeStore;
   createLogEntry: CreateBotLogEntryUseCase;
   listHuntLocations: ListHuntLocationsUseCase;
   listProfessionRecipes: ListProfessionRecipesUseCase;
@@ -51,7 +53,16 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   const shadowRoot = host.attachShadow({ mode: 'open' });
   const launcher = createLauncherButton();
   const humanAttentionAlarm = createHumanAttentionAlarm();
-  const botPanel = createPanel(dependencies, (volume) => humanAttentionAlarm.setVolume(volume));
+  const initialAlarmVolume = dependencies.alarmVolumeStore.load();
+
+  if (initialAlarmVolume !== null) {
+    humanAttentionAlarm.setVolume(initialAlarmVolume);
+  }
+
+  const botPanel = createPanel(dependencies, initialAlarmVolume, (volume) => {
+    humanAttentionAlarm.setVolume(volume);
+    dependencies.alarmVolumeStore.save(volume);
+  });
   const addMiningLog = createBotLogAppender(botPanel.miningLogList, dependencies.createLogEntry);
   const addCraftingLog = createBotLogAppender(botPanel.craftingLogList, dependencies.createLogEntry);
   const addActiveTabLog: AddBotLog = (message, options): void => {
@@ -216,6 +227,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
 
 function createPanel(
   dependencies: BotWidgetDependencies,
+  initialAlarmVolume: number | null,
   onAlarmVolumeChange: (volume: number) => void
 ): BotPanelElements {
   const resources = dependencies.listResources.execute().map((resource) => resource.toSnapshot());
@@ -223,6 +235,7 @@ function createPanel(
   const locations = dependencies.listHuntLocations.execute().map((location) => location.toSnapshot());
 
   return createBotPanel(resources, recipes, locations, {
+    initialAlarmVolume,
     selectedResourceIds: dependencies.resourceSelectionStore.load(),
     onResourceSelectionChange: (selectedResources) => {
       dependencies.resourceSelectionStore.save(selectedResources.map(({ id }) => id));

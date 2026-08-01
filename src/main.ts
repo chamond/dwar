@@ -14,6 +14,7 @@ import { BrowserProfessionRecipeCrafter } from './infrastructure/browser/browser
 import { detectCurrentPlayerSplinter } from './infrastructure/browser/detect-current-player-splinter';
 import { DwarBackpackHtmlParser } from './infrastructure/browser/dwar-backpack-html-parser';
 import { DwarHuntZoneXmlParser } from './infrastructure/browser/dwar-hunt-zone-xml-parser';
+import { LocalStorageAlarmVolumeStore } from './infrastructure/browser/local-storage-alarm-volume-store';
 import { LocalStorageHuntLocationSelectionStore } from './infrastructure/browser/local-storage-hunt-location-selection-store';
 import { LocalStorageLauncherPositionStore } from './infrastructure/browser/local-storage-launcher-position-store';
 import { LocalStoragePanelSizeStore } from './infrastructure/browser/local-storage-panel-size-store';
@@ -35,6 +36,7 @@ function bootstrap(): void {
   const listResources = new ListResourcesUseCase(resourceRepository);
   const listProfessionRecipes = new ListProfessionRecipesUseCase(professionRecipeRepository);
   const listHuntLocations = new ListHuntLocationsUseCase(huntLocationRepository);
+  const alarmVolumeStore = new LocalStorageAlarmVolumeStore();
   const launcherPositionStore = new LocalStorageLauncherPositionStore();
   const panelSizeStore = new LocalStoragePanelSizeStore();
   const resourceSelectionStore = new LocalStorageResourceSelectionStore();
@@ -67,6 +69,7 @@ function bootstrap(): void {
     delay
   );
   mountBotWidget({
+    alarmVolumeStore,
     createLogEntry,
     huntMinigameCaptchaDownloader,
     listHuntLocations,

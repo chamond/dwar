@@ -72,6 +72,7 @@ interface LogSectionElements {
 }
 
 export interface BotPanelOptions {
+  initialAlarmVolume?: number | null | undefined;
   selectedResourceIds?: readonly BotResourceId[] | null | undefined;
   onResourceSelectionChange?: ((resources: readonly BotResourceSnapshot[]) => void) | undefined;
   selectedRecipeIds?: readonly ProfessionRecipeId[] | null | undefined;
@@ -91,6 +92,7 @@ export function createBotPanel(
   panel.className = 'dwar-panel';
   panel.hidden = true;
   const volumeControl = createVolumeControl({
+    initialVolume: options.initialAlarmVolume ?? undefined,
     onVolumeChange: options.onAlarmVolumeChange
   });
   const headerElements = createPanelHeader(volumeControl.root);
