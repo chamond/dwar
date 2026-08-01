@@ -1,4 +1,5 @@
 import { CreateBotLogEntryUseCase } from './application/use-cases/create-bot-log-entry';
+import { ForceStopResourceMiningUseCase } from './application/use-cases/force-stop-resource-mining';
 import { ListHuntLocationsUseCase } from './application/use-cases/list-hunt-locations';
 import { ListProfessionRecipesUseCase } from './application/use-cases/list-profession-recipes';
 import { ListResourcesUseCase } from './application/use-cases/list-resources';
@@ -48,6 +49,7 @@ function bootstrap(): void {
   const huntResourceFarmer = new BrowserHuntResourceFarmer();
   const huntMinigameCaptchaDownloader = new BrowserHuntMinigameCaptchaDownloader();
   const huntResourceFarmInterrupter = new BrowserHuntResourceFarmInterrupter();
+  const forceStopResourceMining = new ForceStopResourceMiningUseCase(huntResourceFarmInterrupter);
   const backpackItemQuantityReader = new BrowserBackpackItemQuantityReader(new DwarBackpackHtmlParser());
   const professionRecipeCrafter = new BrowserProfessionRecipeCrafter();
   const delay = new BrowserDelay();
@@ -71,6 +73,7 @@ function bootstrap(): void {
   mountBotWidget({
     alarmVolumeStore,
     createLogEntry,
+    forceStopResourceMining,
     huntMinigameCaptchaDownloader,
     listHuntLocations,
     listProfessionRecipes,

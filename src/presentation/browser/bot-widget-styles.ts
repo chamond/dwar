@@ -57,6 +57,8 @@ export const BOT_WIDGET_STYLES = `
   .dwar-human-attention-alarm__button:focus-visible,
   .dwar-tabs__button:focus-visible,
   .dwar-action-button:focus-visible,
+  .dwar-mining-action__menu-toggle:focus-visible,
+  .dwar-mining-action__force-stop:focus-visible,
   .dwar-craft-amount:focus-within,
   .dwar-location-select__control:focus-visible,
   .dwar-resource-picker__toggle:focus-visible {
@@ -508,6 +510,81 @@ export const BOT_WIDGET_STYLES = `
     gap: 7px;
     width: 100%;
     padding: 0 10px;
+  }
+
+  .dwar-mining-action {
+    position: relative;
+    display: flex;
+    width: 100%;
+  }
+
+  .dwar-mining-action .dwar-mining-button {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .dwar-mining-action.is-active .dwar-mining-button {
+    border-radius: 7px 0 0 7px;
+  }
+
+  .dwar-mining-action__menu-toggle {
+    display: grid;
+    width: 30px;
+    height: 38px;
+    flex: 0 0 30px;
+    place-items: center;
+    padding: 0;
+    color: #ffe9e9;
+    background: linear-gradient(180deg, #d65a63 0%, #8f2e38 100%);
+    border: 1px solid rgba(255, 173, 182, .44);
+    border-left: 1px solid rgba(75, 20, 27, .42);
+    border-radius: 0 7px 7px 0;
+    cursor: pointer;
+    font: 800 12px/1 ui-sans-serif, system-ui, sans-serif;
+  }
+
+  .dwar-mining-action__menu-toggle:hover,
+  .dwar-mining-action__menu-toggle[aria-expanded="true"] {
+    background: linear-gradient(180deg, #e66a74 0%, #9f3741 100%);
+  }
+
+  .dwar-mining-action__menu-toggle[hidden] {
+    display: none;
+  }
+
+  .dwar-mining-action__menu {
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    z-index: 4;
+    min-width: 194px;
+    padding: 4px;
+    background: #171d28;
+    border: 1px solid rgba(255, 255, 255, .13);
+    border-radius: 7px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, .48);
+  }
+
+  .dwar-mining-action__menu[hidden] {
+    display: none;
+  }
+
+  .dwar-mining-action__force-stop {
+    width: 100%;
+    padding: 9px 10px;
+    color: #ffc8cc;
+    background: transparent;
+    border: 0;
+    border-radius: 5px;
+    cursor: pointer;
+    font: 700 12px/1.2 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .dwar-mining-action__force-stop:hover {
+    color: #fff0f1;
+    background: rgba(214, 90, 99, .2);
   }
 
   .dwar-mining-button {

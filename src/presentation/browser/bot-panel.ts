@@ -8,8 +8,8 @@ import {
   createHumanAttentionAlarmOverlay,
   type HumanAttentionAlarmOverlayElements
 } from './human-attention-alarm-overlay';
-import { getPickaxeIcon } from './pickaxe-icon';
 import { createHuntLocationSelect, type HuntLocationSelectElements } from './hunt-location-select';
+import { createMiningActionControl, type MiningActionControl } from './mining-action-control';
 import { createProcessBar, type ProcessBarElements } from './process-bar';
 import {
   createProfessionRecipePicker,
@@ -27,7 +27,7 @@ export interface BotPanelElements {
   closeButton: HTMLButtonElement;
   humanAttentionAlarmOverlay: HumanAttentionAlarmOverlayElements;
   tabs: TabsElements<BotPanelTabId>;
-  startMiningButton: HTMLButtonElement;
+  miningAction: MiningActionControl;
   startCraftingButton: HTMLButtonElement;
   craftAmountInput: CraftAmountInputElements;
   resourcePicker: ResourcePickerElements;
@@ -49,7 +49,7 @@ interface PanelHeaderElements {
 
 interface MiningTabElements {
   root: HTMLElement;
-  startMiningButton: HTMLButtonElement;
+  miningAction: MiningActionControl;
   resourcePicker: ResourcePickerElements;
   locationSelect: HuntLocationSelectElements;
   logSection: LogSectionElements;
@@ -125,7 +125,7 @@ export function createBotPanel(
     closeButton: headerElements.closeButton,
     humanAttentionAlarmOverlay,
     tabs,
-    startMiningButton: miningTab.startMiningButton,
+    miningAction: miningTab.miningAction,
     startCraftingButton: craftingTab.startCraftingButton,
     craftAmountInput: craftingTab.craftAmountInput,
     resourcePicker: miningTab.resourcePicker,
@@ -185,11 +185,7 @@ function createMiningTab(
   const controls = document.createElement('div');
   controls.className = 'dwar-panel__controls';
 
-  const startMiningButton = document.createElement('button');
-  startMiningButton.type = 'button';
-  startMiningButton.className = 'dwar-action-button dwar-mining-button';
-  startMiningButton.setAttribute('aria-label', 'Начать добычу');
-  startMiningButton.innerHTML = `${getPickaxeIcon()}<span>Добыча</span>`;
+  const miningAction = createMiningActionControl();
 
   const resourcePicker = createResourcePicker(resources, {
     selectedResourceIds: options.selectedResourceIds,
@@ -203,7 +199,7 @@ function createMiningTab(
 
   const actionGroup = document.createElement('div');
   actionGroup.className = 'dwar-panel__action-buttons';
-  actionGroup.append(startMiningButton);
+  actionGroup.append(miningAction.root);
 
   const selectorGroup = document.createElement('div');
   selectorGroup.className = 'dwar-panel__selectors';
@@ -218,7 +214,7 @@ function createMiningTab(
 
   return {
     root,
-    startMiningButton,
+    miningAction,
     resourcePicker,
     locationSelect,
     logSection,

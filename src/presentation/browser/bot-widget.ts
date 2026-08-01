@@ -6,6 +6,7 @@ import type { PanelSizeStore } from '../../application/ports/panel-size-store';
 import type { ProfessionRecipeSelectionStore } from '../../application/ports/profession-recipe-selection-store';
 import type { ResourceSelectionStore } from '../../application/ports/resource-selection-store';
 import type { CreateBotLogEntryUseCase } from '../../application/use-cases/create-bot-log-entry';
+import type { ForceStopResourceMiningUseCase } from '../../application/use-cases/force-stop-resource-mining';
 import type { ListHuntLocationsUseCase } from '../../application/use-cases/list-hunt-locations';
 import type { ListProfessionRecipesUseCase } from '../../application/use-cases/list-profession-recipes';
 import type { ListResourcesUseCase } from '../../application/use-cases/list-resources';
@@ -31,6 +32,7 @@ import { attachResizablePanel, keepPanelSizeInViewport, restorePanelSize } from 
 export interface BotWidgetDependencies {
   alarmVolumeStore: AlarmVolumeStore;
   createLogEntry: CreateBotLogEntryUseCase;
+  forceStopResourceMining: ForceStopResourceMiningUseCase;
   listHuntLocations: ListHuntLocationsUseCase;
   listProfessionRecipes: ListProfessionRecipesUseCase;
   listResources: ListResourcesUseCase;
@@ -86,10 +88,11 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   };
 
   const miningController = createMiningProcessController({
-    button: botPanel.startMiningButton,
+    action: botPanel.miningAction,
     resourcePicker: botPanel.resourcePicker,
     locationSelect: botPanel.locationSelect,
     processBar: miningProcessBar,
+    forceStopResourceMining: dependencies.forceStopResourceMining,
     runResourceMining: dependencies.runResourceMining,
     huntMinigameCaptchaDownloader: dependencies.huntMinigameCaptchaDownloader,
     addLog: addMiningLog,
@@ -175,8 +178,12 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     addActiveTabLog('Сирена отключена.');
   });
 
-  botPanel.startMiningButton.addEventListener('click', () => {
+  botPanel.miningAction.mainButton.addEventListener('click', () => {
     miningController.toggle();
+  });
+
+  botPanel.miningAction.forceStopButton.addEventListener('click', () => {
+    miningController.forceStop();
   });
 
   botPanel.startCraftingButton.addEventListener('click', () => {
@@ -204,6 +211,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
       && (
         botPanel.resourcePicker.root.contains(event.target)
         || botPanel.recipePicker.root.contains(event.target)
+        || botPanel.miningAction.root.contains(event.target)
       )
     ) {
       return;
@@ -256,19 +264,27 @@ function attachMutuallyExclusivePickers(botPanel: BotPanelElements): void {
   botPanel.resourcePicker.toggleButton.addEventListener('click', () => {
     if (!botPanel.resourcePicker.menu.hidden) {
       botPanel.recipePicker.close();
+      botPanel.miningAction.closeMenu();
     }
   });
 
   botPanel.recipePicker.toggleButton.addEventListener('click', () => {
     if (!botPanel.recipePicker.menu.hidden) {
       botPanel.resourcePicker.close();
+      botPanel.miningAction.closeMenu();
     }
+  });
+
+  botPanel.miningAction.menuToggleButton.addEventListener('click', () => {
+    botPanel.resourcePicker.close();
+    botPanel.recipePicker.close();
   });
 }
 
 function closePickers(botPanel: BotPanelElements): void {
   botPanel.resourcePicker.close();
   botPanel.recipePicker.close();
+  botPanel.miningAction.closeMenu();
 }
 
 function showPanel(panel: HTMLElement, launcher: HTMLElement): void {

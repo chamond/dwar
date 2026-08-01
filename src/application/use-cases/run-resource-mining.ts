@@ -186,7 +186,7 @@ export class RunResourceMiningUseCase {
           };
 
           return concat(
-            this.farmInterrupter.interrupt(resource).pipe(ignoreElements()),
+            this.farmInterrupter.interrupt().pipe(ignoreElements()),
             of(cancelledEvent)
           );
         }
@@ -320,7 +320,7 @@ export class RunResourceMiningUseCase {
 
                     return concat(
                       of(scanCompletedEvent),
-                      this.farmInterrupter.interrupt(resource).pipe(ignoreElements()),
+                      this.farmInterrupter.interrupt().pipe(ignoreElements()),
                       of(interruptedEvent)
                     );
                   }
