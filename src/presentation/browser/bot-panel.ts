@@ -90,10 +90,10 @@ export function createBotPanel(
   const panel = document.createElement('section');
   panel.className = 'dwar-panel';
   panel.hidden = true;
-  const headerElements = createPanelHeader();
   const volumeControl = createVolumeControl({
     onVolumeChange: options.onAlarmVolumeChange
   });
+  const headerElements = createPanelHeader(volumeControl.root);
   const miningTab = createMiningTab(resources, locations, options);
   const craftingTab = createCraftingTab(recipes, options);
   const tabs = createTabs<BotPanelTabId>([
@@ -114,8 +114,7 @@ export function createBotPanel(
     headerElements.header,
     tabs.root,
     resizeHandle,
-    humanAttentionAlarmOverlay.root,
-    volumeControl.root
+    humanAttentionAlarmOverlay.root
   );
 
   return {
@@ -140,7 +139,7 @@ export function createBotPanel(
   };
 }
 
-function createPanelHeader(): PanelHeaderElements {
+function createPanelHeader(volumeControl: HTMLElement): PanelHeaderElements {
   const header = document.createElement('header');
   header.className = 'dwar-panel__header';
   header.dataset.dwarDragHandle = '';
@@ -166,7 +165,7 @@ function createPanelHeader(): PanelHeaderElements {
   closeButton.innerHTML = '&times;';
 
   title.append(status, titleText);
-  actions.append(closeButton);
+  actions.append(volumeControl, closeButton);
   header.append(title, actions);
 
   return {
