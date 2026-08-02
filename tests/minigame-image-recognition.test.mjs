@@ -41,7 +41,7 @@ const compiledSequenceService = transformSync(
 const sequenceServiceModuleUrl = `data:text/javascript;base64,${Buffer.from(compiledSequenceService).toString('base64')}`;
 const { invertMinigameSequence } = await import(sequenceServiceModuleUrl);
 
-const references = [1, 2, 3].map((referenceNumber) => ({
+const references = [1, 2, 3, 4, 5].map((referenceNumber) => ({
   name: `minigame_${referenceNumber}`,
   fragments: Array.from({ length: 6 }, (_, fragmentIndex) => {
     const descriptor = JSON.parse(readFileSync(
@@ -55,7 +55,9 @@ const references = [1, 2, 3].map((referenceNumber) => ({
 const cases = [
   ['minigame-1.png', 'minigame_1', [0, 3, 1, 2, 5, 4]],
   ['minigame-2.png', 'minigame_2', [1, 4, 2, 0, 5, 3]],
-  ['minigame-3.png', 'minigame_3', [1, 3, 0, 4, 5, 2]]
+  ['minigame-3.png', 'minigame_3', [1, 3, 0, 4, 5, 2]],
+  ['minigame-4.png', 'minigame_4', [5, 0, 4, 1, 3, 2]],
+  ['minigame-5.png', 'minigame_5', [5, 1, 3, 4, 0, 2]]
 ];
 
 for (const [imagePath, referenceName, sourceToTargetSequence] of cases) {

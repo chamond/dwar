@@ -20,6 +20,16 @@ const cases = [
     image: 'minigame-3.png',
     reference: 'minigame_3',
     sequence: [1, 3, 0, 4, 5, 2]
+  },
+  {
+    image: 'minigame-4.png',
+    reference: 'minigame_4',
+    sequence: [5, 0, 4, 1, 3, 2]
+  },
+  {
+    image: 'minigame-5.png',
+    reference: 'minigame_5',
+    sequence: [5, 1, 3, 4, 0, 2]
   }
 ];
 

@@ -70,7 +70,7 @@ const score = compareMinigameFragmentMatrixFiles(
 console.log(score.similarity); // 1 means identical matrices
 ```
 
-To split a new image, identify which of the three reference minigames it belongs
+To split a new image, identify which of the five reference minigames it belongs
 to, and recognize the target position of every source fragment, run:
 
 ```sh
@@ -87,7 +87,7 @@ recognized source-to-reference order, for example:
 Порядок: 1,3,0,4,5,2
 ```
 
-The browser widget embeds the same three reference sets in `dist/index.js`.
+The browser widget embeds the same five reference sets in `dist/index.js`.
 When hunting requests a minigame, the widget recognizes the fetched image in
 memory, automatically downloads the original server PNG, shows the image and
 source-to-target order in the mining log, and adds a solve button. The button

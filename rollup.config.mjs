@@ -26,7 +26,7 @@ function minigameReferencesPlugin() {
         return null;
       }
 
-      const references = [1, 2, 3].map((referenceNumber) => {
+      const references = [1, 2, 3, 4, 5].map((referenceNumber) => {
         const name = `minigame_${referenceNumber}`;
         const directory = path.join(rootDir, name);
         const fragments = Array.from({ length: 6 }, (_, fragmentIndex) => {
