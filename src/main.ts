@@ -8,6 +8,7 @@ import { RunResourceMiningUseCase } from './application/use-cases/run-resource-m
 import { SolveHuntMinigameUseCase } from './application/use-cases/solve-hunt-minigame';
 import { BrowserBackpackItemQuantityReader } from './infrastructure/browser/browser-backpack-item-quantity-reader';
 import { BrowserHuntResourceFarmer } from './infrastructure/browser/browser-hunt-resource-farmer';
+import { BrowserHuntMinigameImageDownloader } from './infrastructure/browser/browser-hunt-minigame-image-downloader';
 import { BrowserHuntMinigameRecognizer } from './infrastructure/browser/browser-hunt-minigame-recognizer';
 import { BrowserHuntMinigameSolutionSubmitter } from './infrastructure/browser/browser-hunt-minigame-solution-submitter';
 import { BrowserHuntResourceFarmInterrupter } from './infrastructure/browser/browser-hunt-resource-farm-interrupter';
@@ -49,7 +50,10 @@ function bootstrap(): void {
   const huntZoneScanner = new BrowserHuntZoneScanner(huntZoneXmlParser);
   const huntZoneScanStore = new InMemoryHuntZoneScanStore();
   const huntResourceFarmer = new BrowserHuntResourceFarmer();
-  const huntMinigameRecognizer = new BrowserHuntMinigameRecognizer();
+  const huntMinigameImageDownloader = new BrowserHuntMinigameImageDownloader();
+  const huntMinigameRecognizer = new BrowserHuntMinigameRecognizer(
+    huntMinigameImageDownloader
+  );
   const huntMinigameSolutionSubmitter = new BrowserHuntMinigameSolutionSubmitter();
   const huntResourceFarmInterrupter = new BrowserHuntResourceFarmInterrupter();
   const forceStopResourceMining = new ForceStopResourceMiningUseCase(huntResourceFarmInterrupter);

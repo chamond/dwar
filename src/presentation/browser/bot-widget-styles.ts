@@ -1039,8 +1039,10 @@ export const BOT_WIDGET_STYLES = `
 
   .dwar-minigame-recognition__image {
     display: block;
-    width: 100%;
+    width: auto;
+    max-width: min(200px, 100%);
     height: auto;
+    justify-self: center;
     background: #05070a;
     border: 1px solid rgba(255, 255, 255, .12);
     border-radius: 5px;

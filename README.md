@@ -89,9 +89,10 @@ recognized source-to-reference order, for example:
 
 The browser widget embeds the same three reference sets in `dist/index.js`.
 When hunting requests a minigame, the widget recognizes the fetched image in
-memory, shows the original image and source-to-target order in the mining log,
-and adds a solve button. The button submits the target-to-source server order
-and then cancels the interrupted farming attempt.
+memory, automatically downloads the original server PNG, shows the image and
+source-to-target order in the mining log, and adds a solve button. The button
+submits the target-to-source server order and then cancels the interrupted
+farming attempt.
 
 The current local resource catalog contains stable bot ids, mining duration,
 and distinct backpack artifact ids for agate, aquamarine, and turquoise. The
