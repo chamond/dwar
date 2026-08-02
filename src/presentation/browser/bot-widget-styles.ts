@@ -66,6 +66,11 @@ export const BOT_WIDGET_STYLES = `
     outline-offset: 3px;
   }
 
+  .dwar-minigame-recognition__solve:focus-visible {
+    outline: 2px solid #78d9c2;
+    outline-offset: 3px;
+  }
+
   .dwar-launcher svg {
     width: 31px;
     height: 31px;
@@ -1019,6 +1024,54 @@ export const BOT_WIDGET_STYLES = `
   .dwar-log-tag {
     color: var(--dwar-log-tag-color);
     font-weight: 700;
+  }
+
+  .dwar-minigame-recognition {
+    display: grid;
+    margin-top: 6px;
+    gap: 6px;
+  }
+
+  .dwar-minigame-recognition__title {
+    color: #dbe3f1;
+    font-weight: 700;
+  }
+
+  .dwar-minigame-recognition__image {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: #05070a;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 5px;
+  }
+
+  .dwar-minigame-recognition__sequence {
+    color: #f3c96b;
+    font: 700 12px/1.3 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    text-align: center;
+  }
+
+  .dwar-minigame-recognition__solve {
+    min-height: 34px;
+    padding: 7px 10px;
+    color: #07110f;
+    background: linear-gradient(180deg, #78d9c2 0%, #39a88f 100%);
+    border: 1px solid rgba(166, 255, 233, .36);
+    border-radius: 6px;
+    cursor: pointer;
+    font: 700 12px/1.2 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .dwar-minigame-recognition__solve:hover {
+    background: linear-gradient(180deg, #8cebd6 0%, #42b79c 100%);
+  }
+
+  .dwar-minigame-recognition__solve:disabled {
+    color: #9aa4b3;
+    background: #29313d;
+    border-color: rgba(255, 255, 255, .08);
+    cursor: wait;
   }
 
   .dwar-log-line:last-child {

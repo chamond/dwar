@@ -24,6 +24,17 @@ export function appendLogLine(
   logList.scrollTop = logList.scrollHeight;
 }
 
+export function appendLogContent(
+  logList: HTMLElement,
+  entry: BotLogEntrySnapshot,
+  content: Node
+): void {
+  const line = createLogLine(entry, []);
+  line.append(content);
+  logList.append(line);
+  logList.scrollTop = logList.scrollHeight;
+}
+
 export function clearLogList(logList: HTMLElement): void {
   logList.replaceChildren();
 }

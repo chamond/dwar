@@ -10,7 +10,11 @@
     "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
     "typecheck": "tsc --noEmit",
     "bundle": "rollup --config",
-    "build": "npm run clean && npm run typecheck && npm run bundle"
+    "build": "npm run clean && npm run typecheck && npm run bundle",
+    "test:minigame-matrices": "node --test tests/minigame-fragment-matrices.test.mjs",
+    "test:minigame-recognizer": "node --test tests/minigame-fragment-recognizer.test.mjs tests/minigame-image-recognition.test.mjs",
+    "minigame:matrices": "node scripts/minigame-fragment-matrices.mjs",
+    "minigame:recognize": "node scripts/minigame-fragment-recognizer.mjs"
   },
   "engines": {
     "node": ">=20.11"
@@ -19,6 +23,7 @@
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@swc/core": "^1.7.0",
     "@types/node": "^22.0.0",
+    "pngjs": "^7.0.0",
     "rollup": "^4.0.0",
     "typescript": "^5.0.0"
   },

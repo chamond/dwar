@@ -1,6 +1,6 @@
 import type { AlarmVolumeStore } from '../../application/ports/alarm-volume-store';
 import type { HuntLocationSelectionStore } from '../../application/ports/hunt-location-selection-store';
-import type { HuntMinigameCaptchaDownloader } from '../../application/ports/hunt-minigame-captcha-downloader';
+import type { HuntMinigameRecognizer } from '../../application/ports/hunt-minigame-recognizer';
 import type { LauncherPositionStore } from '../../application/ports/launcher-position-store';
 import type { PanelSizeStore } from '../../application/ports/panel-size-store';
 import type { ProfessionRecipeSelectionStore } from '../../application/ports/profession-recipe-selection-store';
@@ -12,6 +12,7 @@ import type { ListProfessionRecipesUseCase } from '../../application/use-cases/l
 import type { ListResourcesUseCase } from '../../application/use-cases/list-resources';
 import type { RunProfessionCraftingUseCase } from '../../application/use-cases/run-profession-crafting';
 import type { RunResourceMiningUseCase } from '../../application/use-cases/run-resource-mining';
+import type { SolveHuntMinigameUseCase } from '../../application/use-cases/solve-hunt-minigame';
 import { createBotLogAppender, type AddBotLog } from './bot-log-appender';
 import { createBotPanel, type BotPanelElements } from './bot-panel';
 import { BOT_WIDGET_STYLES } from './bot-widget-styles';
@@ -23,6 +24,7 @@ import { attachDraggablePanel } from './draggable-panel';
 import { createHumanAttentionAlarm } from './human-attention-alarm';
 import { createLauncherButton } from './launcher-button';
 import { clearLogList } from './log-list';
+import { appendMinigameRecognitionLog } from './minigame-recognition-log';
 import { createMiningProcessController } from './mining-process-controller';
 import { keepPanelInViewport, positionPanelNearLauncher } from './panel-position';
 import { createProcessBarController } from './process-bar';
@@ -37,13 +39,14 @@ export interface BotWidgetDependencies {
   listProfessionRecipes: ListProfessionRecipesUseCase;
   listResources: ListResourcesUseCase;
   locationSelectionStore: HuntLocationSelectionStore;
-  huntMinigameCaptchaDownloader: HuntMinigameCaptchaDownloader;
+  huntMinigameRecognizer: HuntMinigameRecognizer;
   launcherPositionStore: LauncherPositionStore;
   panelSizeStore: PanelSizeStore;
   professionRecipeSelectionStore: ProfessionRecipeSelectionStore;
   resourceSelectionStore: ResourceSelectionStore;
   runProfessionCrafting: RunProfessionCraftingUseCase;
   runResourceMining: RunResourceMiningUseCase;
+  solveHuntMinigame: SolveHuntMinigameUseCase;
 }
 
 export function mountBotWidget(dependencies: BotWidgetDependencies): void {
@@ -94,8 +97,20 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     processBar: miningProcessBar,
     forceStopResourceMining: dependencies.forceStopResourceMining,
     runResourceMining: dependencies.runResourceMining,
-    huntMinigameCaptchaDownloader: dependencies.huntMinigameCaptchaDownloader,
+    huntMinigameRecognizer: dependencies.huntMinigameRecognizer,
+    solveHuntMinigame: dependencies.solveHuntMinigame,
     addLog: addMiningLog,
+    presentMinigameRecognition: (recognition, solve) => {
+      const entry = dependencies.createLogEntry.execute({
+        message: `Распознана мини-игра: ${recognition.sourceToTargetSequence.join(',')}`
+      }).toSnapshot();
+      appendMinigameRecognitionLog(
+        botPanel.miningLogList,
+        entry,
+        recognition,
+        solve
+      );
+    },
     prepareHumanAttentionAlarm: () => humanAttentionAlarm.prepare(),
     reportError: createProcessErrorReporter({
       stoppedLabel: 'Добыча остановлена',

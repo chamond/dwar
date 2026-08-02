@@ -5,9 +5,11 @@ import { ListProfessionRecipesUseCase } from './application/use-cases/list-profe
 import { ListResourcesUseCase } from './application/use-cases/list-resources';
 import { RunProfessionCraftingUseCase } from './application/use-cases/run-profession-crafting';
 import { RunResourceMiningUseCase } from './application/use-cases/run-resource-mining';
+import { SolveHuntMinigameUseCase } from './application/use-cases/solve-hunt-minigame';
 import { BrowserBackpackItemQuantityReader } from './infrastructure/browser/browser-backpack-item-quantity-reader';
 import { BrowserHuntResourceFarmer } from './infrastructure/browser/browser-hunt-resource-farmer';
-import { BrowserHuntMinigameCaptchaDownloader } from './infrastructure/browser/browser-hunt-minigame-captcha-downloader';
+import { BrowserHuntMinigameRecognizer } from './infrastructure/browser/browser-hunt-minigame-recognizer';
+import { BrowserHuntMinigameSolutionSubmitter } from './infrastructure/browser/browser-hunt-minigame-solution-submitter';
 import { BrowserHuntResourceFarmInterrupter } from './infrastructure/browser/browser-hunt-resource-farm-interrupter';
 import { BrowserHuntZoneScanner } from './infrastructure/browser/browser-hunt-zone-scanner';
 import { BrowserDelay } from './infrastructure/browser/browser-delay';
@@ -47,9 +49,14 @@ function bootstrap(): void {
   const huntZoneScanner = new BrowserHuntZoneScanner(huntZoneXmlParser);
   const huntZoneScanStore = new InMemoryHuntZoneScanStore();
   const huntResourceFarmer = new BrowserHuntResourceFarmer();
-  const huntMinigameCaptchaDownloader = new BrowserHuntMinigameCaptchaDownloader();
+  const huntMinigameRecognizer = new BrowserHuntMinigameRecognizer();
+  const huntMinigameSolutionSubmitter = new BrowserHuntMinigameSolutionSubmitter();
   const huntResourceFarmInterrupter = new BrowserHuntResourceFarmInterrupter();
   const forceStopResourceMining = new ForceStopResourceMiningUseCase(huntResourceFarmInterrupter);
+  const solveHuntMinigame = new SolveHuntMinigameUseCase(
+    huntMinigameSolutionSubmitter,
+    huntResourceFarmInterrupter
+  );
   const backpackItemQuantityReader = new BrowserBackpackItemQuantityReader(new DwarBackpackHtmlParser());
   const professionRecipeCrafter = new BrowserProfessionRecipeCrafter();
   const delay = new BrowserDelay();
@@ -74,7 +81,7 @@ function bootstrap(): void {
     alarmVolumeStore,
     createLogEntry,
     forceStopResourceMining,
-    huntMinigameCaptchaDownloader,
+    huntMinigameRecognizer,
     listHuntLocations,
     listProfessionRecipes,
     listResources,
@@ -84,7 +91,8 @@ function bootstrap(): void {
     professionRecipeSelectionStore,
     resourceSelectionStore,
     runProfessionCrafting,
-    runResourceMining
+    runResourceMining,
+    solveHuntMinigame
   });
 }
 

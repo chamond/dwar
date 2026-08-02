@@ -1,8 +1,12 @@
 import { EMPTY, catchError, finalize, ignoreElements, tap, type Subscription } from 'rxjs';
 import { isHuntMinigameRequiredError } from '../../application/errors/hunt-minigame-required-error';
-import type { HuntMinigameCaptchaDownloader } from '../../application/ports/hunt-minigame-captcha-downloader';
+import type {
+  HuntMinigameRecognition,
+  HuntMinigameRecognizer
+} from '../../application/ports/hunt-minigame-recognizer';
 import type { ForceStopResourceMiningUseCase } from '../../application/use-cases/force-stop-resource-mining';
 import type { RunResourceMiningUseCase } from '../../application/use-cases/run-resource-mining';
+import type { SolveHuntMinigameUseCase } from '../../application/use-cases/solve-hunt-minigame';
 import type { AddBotLog } from './bot-log-appender';
 import type { HuntLocationSelectElements } from './hunt-location-select';
 import {
@@ -29,8 +33,13 @@ export interface MiningProcessControllerOptions {
   processBar: ProcessBarController;
   forceStopResourceMining: ForceStopResourceMiningUseCase;
   runResourceMining: RunResourceMiningUseCase;
-  huntMinigameCaptchaDownloader: HuntMinigameCaptchaDownloader;
+  huntMinigameRecognizer: HuntMinigameRecognizer;
+  solveHuntMinigame: SolveHuntMinigameUseCase;
   addLog: AddBotLog;
+  presentMinigameRecognition(
+    recognition: HuntMinigameRecognition,
+    solve: () => void
+  ): void;
   prepareHumanAttentionAlarm(): void;
   reportError: ProcessErrorReporter;
 }
@@ -40,9 +49,38 @@ export function createMiningProcessController(
 ): MiningProcessController {
   let executionSubscription: Subscription | null = null;
   let forceStopSubscription: Subscription | null = null;
+  let minigameSolutionSubscription: Subscription | null = null;
   let phase: MiningPhase = 'idle';
   let stopRequested = false;
   let stoppedByUser = false;
+
+  const solveMinigame = (sourceToTargetSequence: readonly number[]): void => {
+    if (minigameSolutionSubscription && !minigameSolutionSubscription.closed) {
+      return;
+    }
+
+    options.addLog(`Отправляю решение мини-игры: ${sourceToTargetSequence.join(',')}.`);
+
+    const subscription = options.solveHuntMinigame
+      .execute(sourceToTargetSequence)
+      .pipe(
+        tap(() => {
+          options.addLog('Головоломка решена, текущая добыча отменена.', {
+            tone: 'success'
+          });
+        }),
+        catchError((error: unknown) => {
+          options.reportError(error);
+          return EMPTY;
+        }),
+        finalize(() => {
+          minigameSolutionSubscription = null;
+        })
+      )
+      .subscribe();
+
+    minigameSolutionSubscription = subscription.closed ? null : subscription;
+  };
 
   const start = (): void => {
     const selectedResources = options.resourcePicker.getSelectedResources();
@@ -76,15 +114,19 @@ export function createMiningProcessController(
         options.reportError(error);
 
         if (isHuntMinigameRequiredError(error)) {
-          return options.huntMinigameCaptchaDownloader.download().pipe(
-            tap((fileName) => {
-              options.addLog(
-                `Исходный ответ капчи автоматически скачан: ${fileName}.`
+          return options.huntMinigameRecognizer.recognize().pipe(
+            tap((recognition) => {
+              const sourceToTargetSequence = [
+                ...recognition.sourceToTargetSequence
+              ];
+              options.presentMinigameRecognition(
+                recognition,
+                () => solveMinigame(sourceToTargetSequence)
               );
             }),
-            catchError((downloadError: unknown) => {
+            catchError((recognitionError: unknown) => {
               options.addLog(
-                `Не удалось автоматически скачать ответ капчи: ${getErrorMessage(downloadError)}.`
+                `Не удалось распознать мини-игру: ${getErrorMessage(recognitionError)}.`
               );
               return EMPTY;
             }),

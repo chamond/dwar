@@ -40,6 +40,59 @@ The compiled output is `dist/index.js`.
 Load that file on the game page to mount the floating pickaxe button and bot panel.
 The launcher position is saved in browser localStorage.
 
+## Minigame fragment matrices
+
+The standalone PNG utility detects the black separators in a 3-by-2 minigame
+image and writes six normalized grayscale matrices. It is not included in the
+browser bundle.
+
+```sh
+npm run minigame:matrices -- /path/to/captcha.png [output-directory]
+```
+
+Without the second argument, files are written next to the source image into
+`<image-name>-fragment-matrices`. Each `fragment-N.json` contains a versioned
+64-by-64 row-major matrix. The module also exports functions for reading and
+comparing two generated matrix files.
+
+```js
+import {
+  createMinigameFragmentMatrices,
+  compareMinigameFragmentMatrixFiles
+} from './scripts/minigame-fragment-matrices.mjs';
+
+const result = createMinigameFragmentMatrices('/path/to/another-captcha.png');
+const score = compareMinigameFragmentMatrixFiles(
+  '/path/to/reference/fragment-0.json',
+  result.files[0]
+);
+
+console.log(score.similarity); // 1 means identical matrices
+```
+
+To split a new image, identify which of the three reference minigames it belongs
+to, and recognize the target position of every source fragment, run:
+
+```sh
+npm run minigame:recognize -- /path/to/captcha.png
+```
+
+The recognizer compares every source fragment with all six fragments of every
+reference entirely in memory, without writing intermediate JSON files. It
+selects the reference with the highest average similarity and prints the
+recognized source-to-reference order, for example:
+
+```text
+Эталон: minigame_3 (схожесть 1.000000)
+Порядок: 1,3,0,4,5,2
+```
+
+The browser widget embeds the same three reference sets in `dist/index.js`.
+When hunting requests a minigame, the widget recognizes the fetched image in
+memory, shows the original image and source-to-target order in the mining log,
+and adds a solve button. The button submits the target-to-source server order
+and then cancels the interrupted farming attempt.
+
 The current local resource catalog contains stable bot ids, mining duration,
 and distinct backpack artifact ids for agate, aquamarine, and turquoise. The
 panel separates mining and crafting into tabs with independent logs, clear

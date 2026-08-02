@@ -7,9 +7,52 @@ import { nodeResolve } from '@rollup/plugin-node-resolve';
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const swcOptions = JSON.parse(readFileSync(new URL('./.swcrc', import.meta.url), 'utf8'));
 delete swcOptions.$schema;
+const minigameReferencesModuleId = 'virtual:minigame-references';
+const resolvedMinigameReferencesModuleId = `\0${minigameReferencesModuleId}`;
 const dataUrlAssetMimeTypes = new Map([
   ['.ogg', 'audio/ogg']
 ]);
+
+function minigameReferencesPlugin() {
+  return {
+    name: 'minigame-references',
+    resolveId(source) {
+      return source === minigameReferencesModuleId
+        ? resolvedMinigameReferencesModuleId
+        : null;
+    },
+    load(id) {
+      if (id !== resolvedMinigameReferencesModuleId) {
+        return null;
+      }
+
+      const references = [1, 2, 3].map((referenceNumber) => {
+        const name = `minigame_${referenceNumber}`;
+        const directory = path.join(rootDir, name);
+        const fragments = Array.from({ length: 6 }, (_, fragmentIndex) => {
+          const filePath = path.join(directory, `fragment-${fragmentIndex}.json`);
+          const descriptor = JSON.parse(readFileSync(filePath, 'utf8'));
+
+          if (
+            descriptor.fragment?.index !== fragmentIndex
+            || descriptor.matrix?.width !== 64
+            || descriptor.matrix?.height !== 64
+            || !Array.isArray(descriptor.matrix?.values)
+            || descriptor.matrix.values.length !== 64 * 64
+          ) {
+            throw new TypeError(`Некорректный эталон мини-игры: ${filePath}`);
+          }
+
+          return descriptor.matrix.values;
+        });
+
+        return { name, fragments };
+      });
+
+      return `export default ${JSON.stringify(references)};`;
+    }
+  };
+}
 
 function resolveTypeScriptModule(source, importer) {
   if (!importer || !source.startsWith('.')) {
@@ -134,6 +177,7 @@ export default {
   },
   plugins: [
     dataUrlAssetPlugin(),
+    minigameReferencesPlugin(),
     nodeResolve({
       browser: true
     }),
