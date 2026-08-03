@@ -32,7 +32,6 @@ const DEFAULT_CRAFT_COOLDOWN_PER_ITEM_MS = 30_000;
 const DEFAULT_POST_CRAFT_DELAY_MS = 5_000;
 const DEFAULT_NO_SELECTED_RECIPE_DELAY_MS = 5_000;
 const DEFAULT_SELECTION_REFRESH_DELAY_MS = 1_000;
-const MIN_REMAINING_RESOURCE_AMOUNT = 1;
 
 export interface ProfessionCraftingConfig {
   resourceBackpackGroup: number;
@@ -151,7 +150,7 @@ export class RunProfessionCraftingUseCase {
   ): Observable<ProfessionCraftingEvent> {
     const taskErrors: unknown[] = [];
     const tasks = lookups.map(({ recipe, availableAmount }) => {
-      const task = availableAmount <= MIN_REMAINING_RESOURCE_AMOUNT
+      const task = availableAmount <= 0
         ? defer(() => {
             stoppedRecipeIds.add(recipe.getId());
 
@@ -252,16 +251,12 @@ export class RunProfessionCraftingUseCase {
       requestedAmount ?? this.config.amountPerRequest,
       this.config.amountPerRequest
     );
-    const craftableResourceAmount = Math.max(
-      0,
-      availableResourceAmount - MIN_REMAINING_RESOURCE_AMOUNT
-    );
 
     return Math.min(
       amount,
       this.config.amountPerRequest,
       recipe.getMaxAmountPerRequest(),
-      craftableResourceAmount
+      availableResourceAmount
     );
   }
 

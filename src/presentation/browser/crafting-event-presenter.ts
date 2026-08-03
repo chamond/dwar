@@ -38,14 +38,14 @@ function logCraftingEvent(
 
     case 'recipe-stopped':
       addLog(
-        `Крафт ${formatProfessionRecipeLabel(event.recipe)} остановлен: недостаточно ${formatCraftingResourceLabel(event.recipe)} для сохранения резерва в 1 шт.`,
+        `Крафт ${formatProfessionRecipeLabel(event.recipe)} остановлен: нет ${formatCraftingResourceLabel(event.recipe)}.`,
         {
           parts: [
             'Крафт ',
             createRecipeLogPart(event.recipe),
-            ' остановлен: недостаточно ',
+            ' остановлен: нет ',
             createCraftingResourceLogPart(event.recipe),
-            ' для сохранения резерва в 1 шт.'
+            '.'
           ]
         }
       );
