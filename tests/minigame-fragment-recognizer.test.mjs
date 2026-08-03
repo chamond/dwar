@@ -3,7 +3,10 @@ import { copyFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { recognizeMinigameFragments } from '../scripts/minigame-fragment-recognizer.mjs';
+import {
+  findStrongestUniqueMatches,
+  recognizeMinigameFragments
+} from '../scripts/minigame-fragment-recognizer.mjs';
 
 const cases = [
   {
@@ -30,8 +33,29 @@ const cases = [
     image: 'minigame-5.png',
     reference: 'minigame_5',
     sequence: [5, 1, 3, 4, 0, 2]
+  },
+  {
+    image: 'minigame-6.png',
+    reference: 'minigame_6',
+    sequence: [0, 1, 4, 5, 3, 2]
   }
 ];
+
+test('сопоставляет каждую целевую позицию ровно один раз', () => {
+  const comparisons = Array.from({ length: 6 }, (_, sourceIndex) =>
+    Array.from({ length: 6 }, (_, referenceIndex) => ({
+      sourceIndex,
+      referenceIndex,
+      similarity: 1 - referenceIndex * 0.01
+    }))
+  );
+  const matches = findStrongestUniqueMatches(comparisons);
+
+  assert.deepEqual(
+    matches.map(({ referenceIndex }) => referenceIndex).sort(),
+    [0, 1, 2, 3, 4, 5]
+  );
+});
 
 for (const fixture of cases) {
   test(`распознаёт эталон и порядок для ${fixture.image}`, () => {
@@ -52,6 +76,7 @@ for (const fixture of cases) {
       assert.equal(existsSync(generatedMatrices), false);
       assert.equal(result.reference.name, fixture.reference);
       assert.deepEqual(result.sequence, fixture.sequence);
+      assert.deepEqual([...result.sequence].sort(), [0, 1, 2, 3, 4, 5]);
       assert.equal(result.comparisons.length, 6);
 
       result.comparisons.forEach((comparisons, sourceIndex) => {

@@ -41,7 +41,7 @@ const compiledSequenceService = transformSync(
 const sequenceServiceModuleUrl = `data:text/javascript;base64,${Buffer.from(compiledSequenceService).toString('base64')}`;
 const { invertMinigameSequence } = await import(sequenceServiceModuleUrl);
 
-const references = [1, 2, 3, 4, 5].map((referenceNumber) => ({
+const references = [1, 2, 3, 4, 5, 6].map((referenceNumber) => ({
   name: `minigame_${referenceNumber}`,
   fragments: Array.from({ length: 6 }, (_, fragmentIndex) => {
     const descriptor = JSON.parse(readFileSync(
@@ -57,7 +57,8 @@ const cases = [
   ['minigame-2.png', 'minigame_2', [1, 4, 2, 0, 5, 3]],
   ['minigame-3.png', 'minigame_3', [1, 3, 0, 4, 5, 2]],
   ['minigame-4.png', 'minigame_4', [5, 0, 4, 1, 3, 2]],
-  ['minigame-5.png', 'minigame_5', [5, 1, 3, 4, 0, 2]]
+  ['minigame-5.png', 'minigame_5', [5, 1, 3, 4, 0, 2]],
+  ['minigame-6.png', 'minigame_6', [0, 1, 4, 5, 3, 2]]
 ];
 
 for (const [imagePath, referenceName, sourceToTargetSequence] of cases) {
@@ -67,9 +68,53 @@ for (const [imagePath, referenceName, sourceToTargetSequence] of cases) {
 
     assert.equal(recognition.referenceName, referenceName);
     assert.deepEqual(recognition.sourceToTargetSequence, sourceToTargetSequence);
+    assert.deepEqual(
+      [...recognition.sourceToTargetSequence].sort(),
+      [0, 1, 2, 3, 4, 5]
+    );
     assert.equal(recognition.similarity, 1);
   });
 }
+
+test('не назначает два фрагмента на одну целевую позицию', () => {
+  const image = new PNG({ width: 40, height: 27 });
+  const columns = [
+    { x: 1, width: 11 },
+    { x: 14, width: 11 },
+    { x: 27, width: 12 }
+  ];
+  const rows = [
+    { y: 1, height: 11 },
+    { y: 15, height: 11 }
+  ];
+
+  rows.forEach((row, rowIndex) => {
+    columns.forEach((column, columnIndex) => {
+      const fragmentIndex = rowIndex * columns.length + columnIndex;
+
+      for (let y = row.y; y < row.y + row.height; y += 1) {
+        for (let x = column.x; x < column.x + column.width; x += 1) {
+          const offset = (y * image.width + x) * 4;
+          const luminance = 64 + fragmentIndex * 24;
+          image.data[offset] = luminance;
+          image.data[offset + 1] = luminance;
+          image.data[offset + 2] = luminance;
+          image.data[offset + 3] = 255;
+        }
+      }
+    });
+  });
+
+  const recognition = recognizeMinigameImage(image, [{
+    name: 'ambiguous',
+    fragments: Array.from({ length: 6 }, () => new Array(64 * 64).fill(128))
+  }]);
+
+  assert.deepEqual(
+    [...recognition.sourceToTargetSequence].sort(),
+    [0, 1, 2, 3, 4, 5]
+  );
+});
 
 test('инвертирует распознанный порядок в серверную последовательность', () => {
   assert.deepEqual(

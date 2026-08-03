@@ -11,7 +11,7 @@ const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_DIRECTORY = path.dirname(SCRIPT_DIRECTORY);
 
 function defaultReferenceDirectories() {
-  return [1, 2, 3, 4, 5].map((number) =>
+  return [1, 2, 3, 4, 5, 6].map((number) =>
     path.join(PROJECT_DIRECTORY, `minigame_${number}`)
   );
 }
@@ -40,10 +40,43 @@ function readReference(referenceDirectory) {
   };
 }
 
-function findStrongestComparison(comparisons) {
-  return comparisons.reduce((strongest, comparison) =>
-    comparison.similarity > strongest.similarity ? comparison : strongest
-  );
+export function findStrongestUniqueMatches(comparisons) {
+  const currentMatches = new Array(comparisons.length);
+  let strongestMatches = null;
+  let strongestSimilarity = Number.NEGATIVE_INFINITY;
+
+  function visit(sourceIndex, usedReferences, totalSimilarity) {
+    if (sourceIndex === comparisons.length) {
+      if (totalSimilarity > strongestSimilarity) {
+        strongestSimilarity = totalSimilarity;
+        strongestMatches = [...currentMatches];
+      }
+      return;
+    }
+
+    for (const comparison of comparisons[sourceIndex]) {
+      const referenceMask = 1 << comparison.referenceIndex;
+
+      if ((usedReferences & referenceMask) !== 0) {
+        continue;
+      }
+
+      currentMatches[sourceIndex] = comparison;
+      visit(
+        sourceIndex + 1,
+        usedReferences | referenceMask,
+        totalSimilarity + comparison.similarity
+      );
+    }
+  }
+
+  visit(0, 0, 0);
+
+  if (strongestMatches === null) {
+    throw new Error('Не удалось сопоставить фрагменты мини-игры.');
+  }
+
+  return strongestMatches;
 }
 
 function compareWithReference(sourceFragments, reference) {
@@ -54,7 +87,7 @@ function compareWithReference(sourceFragments, reference) {
       ...compareMinigameFragmentMatrices(sourceFragment, referenceFragment)
     }))
   );
-  const matches = comparisons.map(findStrongestComparison);
+  const matches = findStrongestUniqueMatches(comparisons);
   const similarity =
     matches.reduce((sum, match) => sum + match.similarity, 0) / matches.length;
 

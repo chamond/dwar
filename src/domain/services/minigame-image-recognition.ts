@@ -63,29 +63,64 @@ function recognizeReference(
 ): ReferenceRecognition {
   assertReference(reference);
 
-  const strongestMatches = sourceFragments.map((sourceFragment) => {
-    const similarities = reference.fragments.map((referenceFragment) =>
+  const similarities = sourceFragments.map((sourceFragment) =>
+    reference.fragments.map((referenceFragment) =>
       compareMatrices(sourceFragment, referenceFragment)
-    );
-
-    return similarities.reduce(
-      (strongest, similarity, referenceIndex) =>
-        similarity > strongest.similarity
-          ? { referenceIndex, similarity }
-          : strongest,
-      { referenceIndex: 0, similarity: similarities[0] ?? 0 }
-    );
-  });
-  const similarity = strongestMatches.reduce(
-    (sum, match) => sum + match.similarity,
+    )
+  );
+  const sourceToTargetSequence = findStrongestUniqueSequence(similarities);
+  const similarity = sourceToTargetSequence.reduce(
+    (sum, targetIndex, sourceIndex) =>
+      sum + (similarities[sourceIndex]?.[targetIndex] ?? 0),
     0
-  ) / strongestMatches.length;
+  ) / sourceToTargetSequence.length;
 
   return {
     referenceName: reference.name,
     similarity,
-    sourceToTargetSequence: strongestMatches.map(({ referenceIndex }) => referenceIndex)
+    sourceToTargetSequence
   };
+}
+
+function findStrongestUniqueSequence(
+  similarities: readonly (readonly number[])[]
+): number[] {
+  const currentSequence = new Array<number>(FRAGMENT_COUNT);
+  let strongestSequence: number[] | null = null;
+  let strongestSimilarity = Number.NEGATIVE_INFINITY;
+
+  function visit(sourceIndex: number, usedTargets: number, totalSimilarity: number): void {
+    if (sourceIndex === FRAGMENT_COUNT) {
+      if (totalSimilarity > strongestSimilarity) {
+        strongestSimilarity = totalSimilarity;
+        strongestSequence = [...currentSequence];
+      }
+      return;
+    }
+
+    for (let targetIndex = 0; targetIndex < FRAGMENT_COUNT; targetIndex += 1) {
+      const targetMask = 1 << targetIndex;
+
+      if ((usedTargets & targetMask) !== 0) {
+        continue;
+      }
+
+      currentSequence[sourceIndex] = targetIndex;
+      visit(
+        sourceIndex + 1,
+        usedTargets | targetMask,
+        totalSimilarity + (similarities[sourceIndex]?.[targetIndex] ?? 0)
+      );
+    }
+  }
+
+  visit(0, 0, 0);
+
+  if (strongestSequence === null) {
+    throw new Error('Не удалось сопоставить фрагменты мини-игры.');
+  }
+
+  return strongestSequence;
 }
 
 function assertReference(reference: MinigameReference): void {
