@@ -126,7 +126,7 @@ export class RunProfessionCraftingUseCase {
     recipes: readonly ProfessionRecipe[]
   ): Observable<readonly RecipeBackpackLookup[]> {
     return this.backpackItemQuantityReader.readQuantities(
-      recipes.map((recipe) => recipe.getResource().getArtifactId()),
+      recipes.map((recipe) => recipe.getResource().getArticleId()),
       {
         group: this.config.resourceBackpackGroup
       }
@@ -136,7 +136,7 @@ export class RunProfessionCraftingUseCase {
           recipe,
           availableAmount: getRequiredQuantity(
             quantities,
-            recipe.getResource().getArtifactId()
+            recipe.getResource().getArticleId()
           ).quantity
         }));
       }),
@@ -306,12 +306,12 @@ function createRecipeInfo(recipe: ProfessionRecipe): ProfessionCraftingRecipeInf
 
 function getRequiredQuantity(
   quantities: readonly BackpackItemQuantity[],
-  artifactId: number
+  articleId: number
 ): BackpackItemQuantity {
-  const quantity = quantities.find((candidate) => candidate.artifactId === artifactId);
+  const quantity = quantities.find((candidate) => candidate.articleId === articleId);
 
   if (!quantity) {
-    throw new Error(`Backpack quantity result is missing artifact ${artifactId}.`);
+    throw new Error(`Backpack quantity result is missing resource article ${articleId}.`);
   }
 
   return quantity;

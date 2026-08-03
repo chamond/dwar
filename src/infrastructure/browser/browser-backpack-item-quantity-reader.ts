@@ -13,11 +13,11 @@ export class BrowserBackpackItemQuantityReader implements BackpackItemQuantityRe
   constructor(private readonly parser: DwarBackpackHtmlParser) {}
 
   readQuantities(
-    artifactIds: readonly number[],
+    articleIds: readonly number[],
     options: BackpackItemQuantityReadOptions
   ): Observable<readonly BackpackItemQuantity[]> {
-    if (artifactIds.length === 0) {
-      throw new Error('At least one backpack artifact id is required.');
+    if (articleIds.length === 0) {
+      throw new Error('At least one resource article id is required.');
     }
 
     const requestInit: RequestInit = {
@@ -33,7 +33,7 @@ export class BrowserBackpackItemQuantityReader implements BackpackItemQuantityRe
 
         return response.text();
       }),
-      map((responseText) => this.parser.parseItemQuantities(responseText, artifactIds)),
+      map((responseText) => this.parser.parseItemQuantities(responseText, articleIds)),
       take(1)
     );
   }

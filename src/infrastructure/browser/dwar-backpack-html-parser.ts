@@ -4,62 +4,84 @@ import type { BackpackItemQuantity } from '../../application/ports/backpack-item
 export class DwarBackpackHtmlParser {
   parseItemQuantities(
     htmlText: string,
-    artifactIds: readonly number[]
+    articleIds: readonly number[]
   ): readonly BackpackItemQuantity[] {
     const document = new DOMParser().parseFromString(htmlText, 'text/html');
-    const uniqueArtifactIds = [...new Set(artifactIds)];
+    const uniqueArticleIds = [...new Set(articleIds)];
 
-    return uniqueArtifactIds.map((artifactId) => this.parseItemQuantity(document, artifactId));
+    return uniqueArticleIds.map((articleId) => this.parseItemQuantity(document, articleId));
   }
 
-  private parseItemQuantity(document: Document, artifactId: number): BackpackItemQuantity {
-    assertArtifactId(artifactId);
-    const slotSelector = `span.artifact-slot[artifact_id="${String(artifactId)}"]`;
+  private parseItemQuantity(document: Document, articleId: number): BackpackItemQuantity {
+    assertArticleId(articleId);
+    const slotSelector = `li[div_id="AA_${String(articleId)}"]`;
     const quantitySelector = '.artifact-slot-qnt';
-    const slots = Array.from(document.querySelectorAll(slotSelector));
+    const slot = document.querySelector(slotSelector);
 
-    const quantity = slots.reduce((total, slot) => {
-      const quantityElement = slot.querySelector(quantitySelector);
+    if (!slot) {
+      return {
+        articleId,
+        artifactId: null,
+        quantity: 0
+      };
+    }
 
-      if (!quantityElement) {
-        throw new UnexpectedServerResponseError(
-          `Backpack item ${artifactId} has no quantity element.`
-        );
-      }
+    const artifactId = parseArtifactId(slot, articleId);
+    const quantityElement = slot.querySelector(quantitySelector);
 
-      const quantityText = quantityElement.textContent?.trim() ?? '';
-      const normalizedQuantityText = quantityText.replace(/\s/g, '');
+    if (!quantityElement) {
+      throw new UnexpectedServerResponseError(
+        `Backpack item ${articleId} has no quantity element.`
+      );
+    }
 
-      if (!/^\d+$/.test(normalizedQuantityText)) {
-        throw new UnexpectedServerResponseError(
-          `Backpack item ${artifactId} has an invalid quantity.`
-        );
-      }
+    const quantityText = quantityElement.textContent?.trim() ?? '';
+    const normalizedQuantityText = quantityText.replace(/\s/g, '');
 
-      const slotQuantity = Number(normalizedQuantityText);
+    if (!/^\d+$/.test(normalizedQuantityText)) {
+      throw new UnexpectedServerResponseError(
+        `Backpack item ${articleId} has an invalid quantity.`
+      );
+    }
 
-      if (
-        !Number.isSafeInteger(slotQuantity)
-        || slotQuantity <= 0
-        || !Number.isSafeInteger(total + slotQuantity)
-      ) {
-        throw new UnexpectedServerResponseError(
-          `Backpack item ${artifactId} has an invalid positive quantity.`
-        );
-      }
+    const quantity = Number(normalizedQuantityText);
 
-      return total + slotQuantity;
-    }, 0);
+    if (!Number.isSafeInteger(quantity) || quantity <= 0) {
+      throw new UnexpectedServerResponseError(
+        `Backpack item ${articleId} has an invalid positive quantity.`
+      );
+    }
 
     return {
+      articleId,
       artifactId,
       quantity
     };
   }
 }
 
-function assertArtifactId(artifactId: number): void {
+function parseArtifactId(slot: Element, articleId: number): number {
+  const artifactIdText = slot.getAttribute('data-id')?.trim() ?? '';
+
+  if (!/^\d+$/.test(artifactIdText)) {
+    throw new UnexpectedServerResponseError(
+      `Backpack item ${articleId} has an invalid data-id.`
+    );
+  }
+
+  const artifactId = Number(artifactIdText);
+
   if (!Number.isSafeInteger(artifactId) || artifactId <= 0) {
-    throw new Error('Backpack artifact id must be a positive safe integer.');
+    throw new UnexpectedServerResponseError(
+      `Backpack item ${articleId} has an invalid positive data-id.`
+    );
+  }
+
+  return artifactId;
+}
+
+function assertArticleId(articleId: number): void {
+  if (!Number.isSafeInteger(articleId) || articleId <= 0) {
+    throw new Error('Resource article id must be a positive safe integer.');
   }
 }

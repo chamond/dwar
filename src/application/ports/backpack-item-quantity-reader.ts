@@ -1,16 +1,18 @@
+import type { Observable } from 'rxjs';
+
 export interface BackpackItemQuantityReadOptions {
   group: number;
 }
 
 export interface BackpackItemQuantity {
-  artifactId: number;
+  articleId: number;
+  artifactId: number | null;
   quantity: number;
 }
 
 export interface BackpackItemQuantityReader {
   readQuantities(
-    artifactIds: readonly number[],
+    articleIds: readonly number[],
     options: BackpackItemQuantityReadOptions
   ): Observable<readonly BackpackItemQuantity[]>;
 }
-import type { Observable } from 'rxjs';

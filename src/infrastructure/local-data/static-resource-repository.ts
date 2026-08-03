@@ -7,7 +7,6 @@ const LOCAL_RESOURCE_RECORDS = [
     name: 'Агат',
     markerColor: '#2f6dff',
     articleId: 362,
-    artifactId: 7673110639,
     level: 0,
     miningDurationMs: 20_000
   },
@@ -16,7 +15,6 @@ const LOCAL_RESOURCE_RECORDS = [
     name: 'Аквамарин',
     markerColor: '#63d7ff',
     articleId: 363,
-    artifactId: 7673111144,
     level: 0,
     miningDurationMs: 20_000
   },
@@ -25,7 +23,6 @@ const LOCAL_RESOURCE_RECORDS = [
     name: 'Бирюза',
     markerColor: '#28d8be',
     articleId: 364,
-    artifactId: 7673110790,
     level: 0,
     miningDurationMs: 20_000
   }

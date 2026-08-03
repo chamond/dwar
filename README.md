@@ -94,8 +94,9 @@ source-to-target order in the mining log, and adds a solve button. The button
 submits the target-to-source server order and then cancels the interrupted
 farming attempt.
 
-The current local resource catalog contains stable bot ids, mining duration,
-and distinct backpack artifact ids for agate, aquamarine, and turquoise. The
+The current local resource catalog contains stable bot ids, mining article ids,
+and mining duration for agate, aquamarine, and turquoise. The current backpack
+artifact id is discovered from the matching item's `data-id` attribute. The
 panel separates mining and crafting into tabs with independent logs, clear
 buttons, controls, and progress bars.
 During mining, one zone scan every four seconds checks both nearby danger and
@@ -107,10 +108,10 @@ fills, scans continue while the filled bar waits for the result. The crafting
 tab contains the recipe multiselect and one shared amount input defaulting to
 10. At the start of each crafting cycle, the bot loads backpack group 3 and
 reads the resource quantities for all selected recipes with one shared
-request. It then crafts no more than the selected amount or the available
-resource count, waits for all recipe cooldowns before the next shared cycle,
-logs the calculated remainder, and stops only the affected recipe when that
-resource is absent.
+request by matching each stable mining article id. It then crafts no more than
+the selected amount or the available resource count, waits for all recipe
+cooldowns before the next shared cycle, logs the calculated remainder, and
+stops only the affected recipe when that resource is absent.
 Unexpected server responses stop the affected process, open the panel, show a
 pulsing alarm overlay, start a looping siren, and add a red human-attention log
 tag. Clicking the alarm button stops the siren and hides the overlay. The alarm
