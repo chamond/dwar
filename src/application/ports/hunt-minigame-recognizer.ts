@@ -4,7 +4,7 @@ export interface HuntMinigameRecognition {
   image: Blob;
   referenceName: string;
   similarity: number;
-  sourceToTargetSequence: readonly number[];
+  targetToSourceSequence: readonly number[];
 }
 
 export interface HuntMinigameRecognizer {

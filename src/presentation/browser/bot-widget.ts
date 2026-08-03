@@ -102,7 +102,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     addLog: addMiningLog,
     presentMinigameRecognition: (recognition, solve) => {
       const entry = dependencies.createLogEntry.execute({
-        message: `Распознана мини-игра: ${recognition.sourceToTargetSequence.join(',')}`
+        message: `Распознана мини-игра: ${recognition.targetToSourceSequence.join(',')}`
       }).toSnapshot();
       appendMinigameRecognitionLog(
         botPanel.miningLogList,

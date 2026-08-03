@@ -88,6 +88,11 @@ function compareWithReference(sourceFragments, reference) {
     }))
   );
   const matches = findStrongestUniqueMatches(comparisons);
+  const targetToSourceSequence = new Array(FRAGMENT_COUNT);
+
+  matches.forEach(({ sourceIndex, referenceIndex }) => {
+    targetToSourceSequence[referenceIndex] = sourceIndex;
+  });
   const similarity =
     matches.reduce((sum, match) => sum + match.similarity, 0) / matches.length;
 
@@ -95,6 +100,7 @@ function compareWithReference(sourceFragments, reference) {
     name: reference.name,
     directory: reference.directory,
     similarity,
+    targetToSourceSequence,
     matches,
     comparisons
   };
@@ -131,7 +137,7 @@ export function recognizeMinigameFragments(
       directory: reference.directory,
       similarity: reference.similarity
     },
-    sequence: reference.matches.map((match) => match.referenceIndex),
+    targetToSourceSequence: reference.targetToSourceSequence,
     matches: reference.matches,
     comparisons: reference.comparisons,
     referenceScores: references.map(({ name, directory, similarity }) => ({
@@ -164,7 +170,10 @@ if (invokedFilePath === currentFilePath) {
         `Эталон: ${result.reference.name} ` +
           `(схожесть ${result.reference.similarity.toFixed(6)})`
       );
-      console.log(`Порядок: ${result.sequence.join(',')}`);
+      console.log(
+        `Серверная последовательность: ` +
+          result.targetToSourceSequence.join(',')
+      );
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       console.error(reason);

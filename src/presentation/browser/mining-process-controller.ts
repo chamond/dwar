@@ -54,15 +54,15 @@ export function createMiningProcessController(
   let stopRequested = false;
   let stoppedByUser = false;
 
-  const solveMinigame = (sourceToTargetSequence: readonly number[]): void => {
+  const solveMinigame = (targetToSourceSequence: readonly number[]): void => {
     if (minigameSolutionSubscription && !minigameSolutionSubscription.closed) {
       return;
     }
 
-    options.addLog(`Отправляю решение мини-игры: ${sourceToTargetSequence.join(',')}.`);
+    options.addLog(`Отправляю решение мини-игры: ${targetToSourceSequence.join(',')}.`);
 
     const subscription = options.solveHuntMinigame
-      .execute(sourceToTargetSequence)
+      .execute(targetToSourceSequence)
       .pipe(
         tap(() => {
           options.addLog('Головоломка решена, текущая добыча отменена.', {
@@ -116,12 +116,12 @@ export function createMiningProcessController(
         if (isHuntMinigameRequiredError(error)) {
           return options.huntMinigameRecognizer.recognize().pipe(
             tap((recognition) => {
-              const sourceToTargetSequence = [
-                ...recognition.sourceToTargetSequence
+              const targetToSourceSequence = [
+                ...recognition.targetToSourceSequence
               ];
               options.presentMinigameRecognition(
                 recognition,
-                () => solveMinigame(sourceToTargetSequence)
+                () => solveMinigame(targetToSourceSequence)
               );
             }),
             catchError((recognitionError: unknown) => {

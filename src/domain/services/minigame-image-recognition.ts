@@ -20,7 +20,7 @@ export interface MinigameReference {
 export interface MinigameImageRecognition {
   referenceName: string;
   similarity: number;
-  sourceToTargetSequence: readonly number[];
+  targetToSourceSequence: readonly number[];
 }
 
 interface IndexRange {
@@ -68,29 +68,29 @@ function recognizeReference(
       compareMatrices(sourceFragment, referenceFragment)
     )
   );
-  const sourceToTargetSequence = findStrongestUniqueSequence(similarities);
-  const similarity = sourceToTargetSequence.reduce(
-    (sum, targetIndex, sourceIndex) =>
+  const targetToSourceSequence = findStrongestTargetToSourceSequence(similarities);
+  const similarity = targetToSourceSequence.reduce(
+    (sum, sourceIndex, targetIndex) =>
       sum + (similarities[sourceIndex]?.[targetIndex] ?? 0),
     0
-  ) / sourceToTargetSequence.length;
+  ) / targetToSourceSequence.length;
 
   return {
     referenceName: reference.name,
     similarity,
-    sourceToTargetSequence
+    targetToSourceSequence
   };
 }
 
-function findStrongestUniqueSequence(
+function findStrongestTargetToSourceSequence(
   similarities: readonly (readonly number[])[]
 ): number[] {
   const currentSequence = new Array<number>(FRAGMENT_COUNT);
   let strongestSequence: number[] | null = null;
   let strongestSimilarity = Number.NEGATIVE_INFINITY;
 
-  function visit(sourceIndex: number, usedTargets: number, totalSimilarity: number): void {
-    if (sourceIndex === FRAGMENT_COUNT) {
+  function visit(targetIndex: number, usedSources: number, totalSimilarity: number): void {
+    if (targetIndex === FRAGMENT_COUNT) {
       if (totalSimilarity > strongestSimilarity) {
         strongestSimilarity = totalSimilarity;
         strongestSequence = [...currentSequence];
@@ -98,17 +98,17 @@ function findStrongestUniqueSequence(
       return;
     }
 
-    for (let targetIndex = 0; targetIndex < FRAGMENT_COUNT; targetIndex += 1) {
-      const targetMask = 1 << targetIndex;
+    for (let sourceIndex = 0; sourceIndex < FRAGMENT_COUNT; sourceIndex += 1) {
+      const sourceMask = 1 << sourceIndex;
 
-      if ((usedTargets & targetMask) !== 0) {
+      if ((usedSources & sourceMask) !== 0) {
         continue;
       }
 
-      currentSequence[sourceIndex] = targetIndex;
+      currentSequence[targetIndex] = sourceIndex;
       visit(
-        sourceIndex + 1,
-        usedTargets | targetMask,
+        targetIndex + 1,
+        usedSources | sourceMask,
         totalSimilarity + (similarities[sourceIndex]?.[targetIndex] ?? 0)
       );
     }

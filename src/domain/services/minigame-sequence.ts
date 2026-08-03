@@ -1,23 +1,13 @@
 const FRAGMENT_COUNT = 6;
 
-export function invertMinigameSequence(
-  sourceToTargetSequence: readonly number[]
-): number[] {
+export function assertMinigameSequence(sequence: readonly number[]): void {
   if (
-    sourceToTargetSequence.length !== FRAGMENT_COUNT
-    || new Set(sourceToTargetSequence).size !== FRAGMENT_COUNT
-    || sourceToTargetSequence.some(
-      (targetIndex) => !Number.isInteger(targetIndex) || targetIndex < 0 || targetIndex >= FRAGMENT_COUNT
+    sequence.length !== FRAGMENT_COUNT
+    || new Set(sequence).size !== FRAGMENT_COUNT
+    || sequence.some(
+      (sourceIndex) => !Number.isInteger(sourceIndex) || sourceIndex < 0 || sourceIndex >= FRAGMENT_COUNT
     )
   ) {
-    throw new TypeError('Распознанная последовательность мини-игры должна быть перестановкой 0–5.');
+    throw new TypeError('Последовательность мини-игры должна быть перестановкой 0–5.');
   }
-
-  const targetToSourceSequence = new Array<number>(FRAGMENT_COUNT);
-
-  sourceToTargetSequence.forEach((targetIndex, sourceIndex) => {
-    targetToSourceSequence[targetIndex] = sourceIndex;
-  });
-
-  return targetToSourceSequence;
 }

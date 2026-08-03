@@ -18,7 +18,7 @@ export function appendMinigameRecognitionLog(
   const image = createRecognitionImage(recognition.image);
   const sequence = document.createElement('div');
   sequence.className = 'dwar-minigame-recognition__sequence';
-  sequence.textContent = recognition.sourceToTargetSequence.join(',');
+  sequence.textContent = recognition.targetToSourceSequence.join(',');
 
   const solveButton = document.createElement('button');
   solveButton.type = 'button';

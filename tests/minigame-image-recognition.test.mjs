@@ -21,25 +21,6 @@ const compiledService = transformSync(readFileSync(servicePath, 'utf8'), {
 }).code;
 const serviceModuleUrl = `data:text/javascript;base64,${Buffer.from(compiledService).toString('base64')}`;
 const { recognizeMinigameImage } = await import(serviceModuleUrl);
-const sequenceServicePath = path.resolve(
-  'src/domain/services/minigame-sequence.ts'
-);
-const compiledSequenceService = transformSync(
-  readFileSync(sequenceServicePath, 'utf8'),
-  {
-    jsc: {
-      parser: {
-        syntax: 'typescript'
-      },
-      target: 'es2022'
-    },
-    module: {
-      type: 'es6'
-    }
-  }
-).code;
-const sequenceServiceModuleUrl = `data:text/javascript;base64,${Buffer.from(compiledSequenceService).toString('base64')}`;
-const { invertMinigameSequence } = await import(sequenceServiceModuleUrl);
 
 const references = [1, 2, 3, 4, 5, 6].map((referenceNumber) => ({
   name: `minigame_${referenceNumber}`,
@@ -53,23 +34,23 @@ const references = [1, 2, 3, 4, 5, 6].map((referenceNumber) => ({
 }));
 
 const cases = [
-  ['minigame-1.png', 'minigame_1', [0, 3, 1, 2, 5, 4]],
-  ['minigame-2.png', 'minigame_2', [1, 4, 2, 0, 5, 3]],
-  ['minigame-3.png', 'minigame_3', [1, 3, 0, 4, 5, 2]],
-  ['minigame-4.png', 'minigame_4', [5, 0, 4, 1, 3, 2]],
-  ['minigame-5.png', 'minigame_5', [5, 1, 3, 4, 0, 2]],
-  ['minigame-6.png', 'minigame_6', [0, 1, 4, 5, 3, 2]]
+  ['minigame-1.png', 'minigame_1', [0, 2, 3, 1, 5, 4]],
+  ['minigame-2.png', 'minigame_2', [3, 0, 2, 5, 1, 4]],
+  ['minigame-3.png', 'minigame_3', [2, 0, 5, 1, 3, 4]],
+  ['minigame-4.png', 'minigame_4', [1, 3, 5, 4, 2, 0]],
+  ['minigame-5.png', 'minigame_5', [4, 1, 5, 2, 3, 0]],
+  ['minigame-6.png', 'minigame_6', [0, 1, 5, 4, 2, 3]]
 ];
 
-for (const [imagePath, referenceName, sourceToTargetSequence] of cases) {
+for (const [imagePath, referenceName, targetToSourceSequence] of cases) {
   test(`browser-ядро распознаёт ${imagePath}`, () => {
     const image = PNG.sync.read(readFileSync(imagePath));
     const recognition = recognizeMinigameImage(image, references);
 
     assert.equal(recognition.referenceName, referenceName);
-    assert.deepEqual(recognition.sourceToTargetSequence, sourceToTargetSequence);
+    assert.deepEqual(recognition.targetToSourceSequence, targetToSourceSequence);
     assert.deepEqual(
-      [...recognition.sourceToTargetSequence].sort(),
+      [...recognition.targetToSourceSequence].sort(),
       [0, 1, 2, 3, 4, 5]
     );
     assert.equal(recognition.similarity, 1);
@@ -111,14 +92,7 @@ test('не назначает два фрагмента на одну целев
   }]);
 
   assert.deepEqual(
-    [...recognition.sourceToTargetSequence].sort(),
+    [...recognition.targetToSourceSequence].sort(),
     [0, 1, 2, 3, 4, 5]
-  );
-});
-
-test('инвертирует распознанный порядок в серверную последовательность', () => {
-  assert.deepEqual(
-    invertMinigameSequence([1, 3, 0, 4, 5, 2]),
-    [2, 0, 5, 1, 3, 4]
   );
 });
