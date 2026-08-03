@@ -8,7 +8,6 @@ import type {
 } from '../../application/ports/hunt-minigame-recognizer';
 import type { HuntMinigameImageDownloader } from '../../application/ports/hunt-minigame-image-downloader';
 import { recognizeMinigameImage } from '../../domain/services/minigame-image-recognition';
-import { resetDwarHuntMinigameTelemetry } from './dwar-hunt-minigame-telemetry';
 import { HUNT_MINIGAME_CAPTCHA_REQUEST } from './hunt-minigame-captcha-request';
 
 export class BrowserHuntMinigameRecognizer implements HuntMinigameRecognizer {
@@ -38,10 +37,6 @@ export class BrowserHuntMinigameRecognizer implements HuntMinigameRecognizer {
             ...recognizeMinigameImage(pixelImage, minigameReferences)
           }))
         );
-      }),
-      map((recognition) => {
-        resetDwarHuntMinigameTelemetry();
-        return recognition;
       }),
       take(1)
     );
