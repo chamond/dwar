@@ -13,6 +13,11 @@ const LOCAL_HUNT_LOCATION_RECORDS = [
     areaId: 18
   },
   {
+    id: 'mass-grave',
+    name: 'Братское захоронение',
+    areaId: 156
+  },
+  {
     id: 'royal-tombs',
     name: 'Королевские усыпальницы',
     areaId: 157
