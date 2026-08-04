@@ -21,6 +21,11 @@ const LOCAL_HUNT_LOCATION_RECORDS = [
     id: 'royal-tombs',
     name: 'Королевские усыпальницы',
     areaId: 157
+  },
+  {
+    id: 'hills-of-peace',
+    name: 'Холмы умиротворения',
+    areaId: 278
   }
 ] as const satisfies readonly HuntLocationProps[];
 
