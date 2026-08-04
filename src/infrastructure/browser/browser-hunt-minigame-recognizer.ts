@@ -6,15 +6,10 @@ import type {
   HuntMinigameRecognition,
   HuntMinigameRecognizer
 } from '../../application/ports/hunt-minigame-recognizer';
-import type { HuntMinigameImageDownloader } from '../../application/ports/hunt-minigame-image-downloader';
 import { recognizeMinigameImage } from '../../domain/services/minigame-image-recognition';
 import { HUNT_MINIGAME_CAPTCHA_REQUEST } from './hunt-minigame-captcha-request';
 
 export class BrowserHuntMinigameRecognizer implements HuntMinigameRecognizer {
-  public constructor(
-    private readonly imageDownloader: HuntMinigameImageDownloader
-  ) {}
-
   recognize(): Observable<HuntMinigameRecognition> {
     return fromFetch(HUNT_MINIGAME_CAPTCHA_REQUEST.url, {
       method: HUNT_MINIGAME_CAPTCHA_REQUEST.method
@@ -28,16 +23,14 @@ export class BrowserHuntMinigameRecognizer implements HuntMinigameRecognizer {
 
         return from(response.blob());
       }),
-      switchMap((image) => {
-        this.imageDownloader.download(image);
-
-        return decodeImage(image).pipe(
+      switchMap((image) =>
+        decodeImage(image).pipe(
           map((pixelImage) => ({
             image,
             ...recognizeMinigameImage(pixelImage, minigameReferences)
           }))
-        );
-      }),
+        )
+      ),
       take(1)
     );
   }

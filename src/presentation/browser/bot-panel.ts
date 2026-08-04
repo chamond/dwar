@@ -4,11 +4,11 @@ import type { ProfessionRecipeId, ProfessionRecipeSnapshot } from '../../domain/
 import { getClearLogIcon } from './clear-log-icon';
 import { getCraftIcon } from './craft-icon';
 import { createCraftAmountInput, type CraftAmountInputElements } from './craft-amount-input';
-import {
-  createHumanAttentionAlarmOverlay,
-  type HumanAttentionAlarmOverlayElements
-} from './human-attention-alarm-overlay';
 import { createHuntLocationSelect, type HuntLocationSelectElements } from './hunt-location-select';
+import {
+  createMinigameDownloadOption,
+  type MinigameDownloadOptionElements
+} from './minigame-download-option';
 import { createMiningActionControl, type MiningActionControl } from './mining-action-control';
 import { createProcessBar, type ProcessBarElements } from './process-bar';
 import {
@@ -25,9 +25,9 @@ export interface BotPanelElements {
   panel: HTMLElement;
   header: HTMLElement;
   closeButton: HTMLButtonElement;
-  humanAttentionAlarmOverlay: HumanAttentionAlarmOverlayElements;
   tabs: TabsElements<BotPanelTabId>;
   miningAction: MiningActionControl;
+  minigameDownloadOption: MinigameDownloadOptionElements;
   startCraftingButton: HTMLButtonElement;
   craftAmountInput: CraftAmountInputElements;
   resourcePicker: ResourcePickerElements;
@@ -50,6 +50,7 @@ interface PanelHeaderElements {
 interface MiningTabElements {
   root: HTMLElement;
   miningAction: MiningActionControl;
+  minigameDownloadOption: MinigameDownloadOptionElements;
   resourcePicker: ResourcePickerElements;
   locationSelect: HuntLocationSelectElements;
   logSection: LogSectionElements;
@@ -72,14 +73,14 @@ interface LogSectionElements {
 }
 
 export interface BotPanelOptions {
-  initialAlarmVolume?: number | null | undefined;
+  initialSoundVolume?: number | null | undefined;
   selectedResourceIds?: readonly BotResourceId[] | null | undefined;
   onResourceSelectionChange?: ((resources: readonly BotResourceSnapshot[]) => void) | undefined;
   selectedRecipeIds?: readonly ProfessionRecipeId[] | null | undefined;
   onRecipeSelectionChange?: ((recipes: readonly ProfessionRecipeSnapshot[]) => void) | undefined;
   selectedLocationId?: HuntLocationId | null | undefined;
   onLocationSelectionChange?: ((location: HuntLocationSnapshot) => void) | undefined;
-  onAlarmVolumeChange?: ((volume: number) => void) | undefined;
+  onSoundVolumeChange?: ((volume: number) => void) | undefined;
 }
 
 export function createBotPanel(
@@ -92,8 +93,8 @@ export function createBotPanel(
   panel.className = 'dwar-panel';
   panel.hidden = true;
   const volumeControl = createVolumeControl({
-    initialVolume: options.initialAlarmVolume ?? undefined,
-    onVolumeChange: options.onAlarmVolumeChange
+    initialVolume: options.initialSoundVolume ?? undefined,
+    onVolumeChange: options.onSoundVolumeChange
   });
   const headerElements = createPanelHeader(volumeControl.root);
   const miningTab = createMiningTab(resources, locations, options);
@@ -111,21 +112,19 @@ export function createBotPanel(
     }
   ], 'mining');
   const resizeHandle = createResizeHandle();
-  const humanAttentionAlarmOverlay = createHumanAttentionAlarmOverlay();
   panel.append(
     headerElements.header,
     tabs.root,
-    resizeHandle,
-    humanAttentionAlarmOverlay.root
+    resizeHandle
   );
 
   return {
     panel,
     header: headerElements.header,
     closeButton: headerElements.closeButton,
-    humanAttentionAlarmOverlay,
     tabs,
     miningAction: miningTab.miningAction,
+    minigameDownloadOption: miningTab.minigameDownloadOption,
     startCraftingButton: craftingTab.startCraftingButton,
     craftAmountInput: craftingTab.craftAmountInput,
     resourcePicker: miningTab.resourcePicker,
@@ -186,6 +185,7 @@ function createMiningTab(
   controls.className = 'dwar-panel__controls';
 
   const miningAction = createMiningActionControl();
+  const minigameDownloadOption = createMinigameDownloadOption();
 
   const resourcePicker = createResourcePicker(resources, {
     selectedResourceIds: options.selectedResourceIds,
@@ -199,7 +199,7 @@ function createMiningTab(
 
   const actionGroup = document.createElement('div');
   actionGroup.className = 'dwar-panel__action-buttons';
-  actionGroup.append(miningAction.root);
+  actionGroup.append(miningAction.root, minigameDownloadOption.root);
 
   const selectorGroup = document.createElement('div');
   selectorGroup.className = 'dwar-panel__selectors';
@@ -215,6 +215,7 @@ function createMiningTab(
   return {
     root,
     miningAction,
+    minigameDownloadOption,
     resourcePicker,
     locationSelect,
     logSection,

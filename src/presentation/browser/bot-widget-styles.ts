@@ -54,19 +54,14 @@ export const BOT_WIDGET_STYLES = `
   .dwar-panel__icon-button:focus-visible,
   .dwar-volume-control__slider:focus-visible,
   .dwar-panel__resize:focus-visible,
-  .dwar-human-attention-alarm__button:focus-visible,
   .dwar-tabs__button:focus-visible,
   .dwar-action-button:focus-visible,
   .dwar-mining-action__menu-toggle:focus-visible,
   .dwar-mining-action__force-stop:focus-visible,
+  .dwar-minigame-download-option__checkbox:focus-visible,
   .dwar-craft-amount:focus-within,
   .dwar-location-select__control:focus-visible,
   .dwar-resource-picker__toggle:focus-visible {
-    outline: 2px solid #78d9c2;
-    outline-offset: 3px;
-  }
-
-  .dwar-minigame-recognition__solve:focus-visible {
     outline: 2px solid #78d9c2;
     outline-offset: 3px;
   }
@@ -281,131 +276,6 @@ export const BOT_WIDGET_STYLES = `
     color: #aeb8c7;
   }
 
-  .dwar-human-attention-alarm {
-    position: absolute;
-    inset: 0;
-    z-index: 5;
-    display: grid;
-    place-items: center;
-    padding: 20px;
-    overflow: hidden;
-    background:
-      radial-gradient(circle at center, rgba(118, 14, 24, .34) 0%, rgba(8, 10, 15, .9) 58%),
-      rgba(5, 7, 11, .86);
-    backdrop-filter: blur(5px) saturate(.7);
-  }
-
-  .dwar-human-attention-alarm[hidden] {
-    display: none;
-  }
-
-  .dwar-human-attention-alarm__button {
-    position: relative;
-    isolation: isolate;
-    display: flex;
-    width: 200px;
-    height: 200px;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 7px;
-    padding: 22px;
-    color: #fff5f5;
-    background:
-      radial-gradient(circle at 34% 24%, rgba(255, 255, 255, .25), transparent 30%),
-      linear-gradient(145deg, #ff5462 0%, #d32031 48%, #760d19 100%);
-    border: 2px solid rgba(255, 213, 216, .72);
-    border-radius: 50%;
-    box-shadow:
-      0 20px 48px rgba(0, 0, 0, .58),
-      0 0 0 9px rgba(255, 61, 76, .13),
-      0 0 50px rgba(255, 42, 58, .5),
-      inset 0 1px 0 rgba(255, 255, 255, .3),
-      inset 0 -12px 22px rgba(71, 0, 9, .28);
-    cursor: pointer;
-    text-align: center;
-    text-shadow: 0 2px 8px rgba(54, 0, 7, .58);
-    animation: dwar-human-attention-alarm-beat 1.15s ease-in-out infinite;
-  }
-
-  .dwar-human-attention-alarm__button::before {
-    position: absolute;
-    inset: -16px;
-    z-index: -1;
-    content: "";
-    border: 2px solid rgba(255, 73, 87, .65);
-    border-radius: 50%;
-    animation: dwar-human-attention-alarm-ring 1.15s ease-out infinite;
-  }
-
-  .dwar-human-attention-alarm__button:hover {
-    background:
-      radial-gradient(circle at 34% 24%, rgba(255, 255, 255, .3), transparent 32%),
-      linear-gradient(145deg, #ff6672 0%, #e12638 48%, #86101e 100%);
-  }
-
-  .dwar-human-attention-alarm__button:active {
-    transform: scale(.97);
-  }
-
-  .dwar-human-attention-alarm__icon {
-    display: grid;
-    width: 58px;
-    height: 58px;
-    place-items: center;
-    filter: drop-shadow(0 5px 10px rgba(67, 0, 8, .45));
-  }
-
-  .dwar-human-attention-alarm__icon svg {
-    width: 100%;
-    height: 100%;
-    stroke-width: 2;
-  }
-
-  .dwar-human-attention-alarm__title {
-    font: 900 20px/1 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    letter-spacing: .1em;
-  }
-
-  .dwar-human-attention-alarm__hint {
-    max-width: 132px;
-    color: rgba(255, 241, 242, .88);
-    font: 700 11px/1.25 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  }
-
-  @keyframes dwar-human-attention-alarm-beat {
-    0%,
-    100% {
-      transform: scale(1);
-      filter: brightness(1);
-    }
-
-    48% {
-      transform: scale(1.045);
-      filter: brightness(1.12);
-    }
-  }
-
-  @keyframes dwar-human-attention-alarm-ring {
-    0% {
-      opacity: .82;
-      transform: scale(.92);
-    }
-
-    78%,
-    100% {
-      opacity: 0;
-      transform: scale(1.18);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .dwar-human-attention-alarm__button,
-    .dwar-human-attention-alarm__button::before {
-      animation: none;
-    }
-  }
-
   .dwar-tabs {
     display: flex;
     flex: 1 1 auto;
@@ -521,6 +391,29 @@ export const BOT_WIDGET_STYLES = `
     position: relative;
     display: flex;
     width: 100%;
+  }
+
+  .dwar-minigame-download-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    color: #aeb8c7;
+    cursor: pointer;
+    font: 600 10px/1.25 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    user-select: none;
+  }
+
+  .dwar-minigame-download-option:hover {
+    color: #dbe3f1;
+  }
+
+  .dwar-minigame-download-option__checkbox {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    margin: 0;
+    accent-color: #78d9c2;
+    cursor: pointer;
   }
 
   .dwar-mining-action .dwar-mining-button {
@@ -1052,28 +945,6 @@ export const BOT_WIDGET_STYLES = `
     color: #f3c96b;
     font: 700 12px/1.3 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
     text-align: center;
-  }
-
-  .dwar-minigame-recognition__solve {
-    min-height: 34px;
-    padding: 7px 10px;
-    color: #07110f;
-    background: linear-gradient(180deg, #78d9c2 0%, #39a88f 100%);
-    border: 1px solid rgba(166, 255, 233, .36);
-    border-radius: 6px;
-    cursor: pointer;
-    font: 700 12px/1.2 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  }
-
-  .dwar-minigame-recognition__solve:hover {
-    background: linear-gradient(180deg, #8cebd6 0%, #42b79c 100%);
-  }
-
-  .dwar-minigame-recognition__solve:disabled {
-    color: #9aa4b3;
-    background: #29313d;
-    border-color: rgba(255, 255, 255, .08);
-    cursor: wait;
   }
 
   .dwar-log-line:last-child {

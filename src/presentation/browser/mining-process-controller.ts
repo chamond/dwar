@@ -1,5 +1,18 @@
-import { EMPTY, catchError, finalize, ignoreElements, tap, type Subscription } from 'rxjs';
+import {
+  EMPTY,
+  catchError,
+  filter,
+  finalize,
+  of,
+  retry,
+  switchMap,
+  tap,
+  type Observable,
+  type Subscription
+} from 'rxjs';
 import { isHuntMinigameRequiredError } from '../../application/errors/hunt-minigame-required-error';
+import type { ResourceMiningEvent } from '../../application/events/resource-mining-event';
+import type { HuntMinigameImageDownloader } from '../../application/ports/hunt-minigame-image-downloader';
 import type {
   HuntMinigameRecognition,
   HuntMinigameRecognizer
@@ -9,6 +22,8 @@ import type { RunResourceMiningUseCase } from '../../application/use-cases/run-r
 import type { SolveHuntMinigameUseCase } from '../../application/use-cases/solve-hunt-minigame';
 import type { AddBotLog } from './bot-log-appender';
 import type { HuntLocationSelectElements } from './hunt-location-select';
+import type { MinigameCueSound } from './minigame-cue-sound';
+import type { MinigameDownloadOptionElements } from './minigame-download-option';
 import {
   getMiningPhase,
   isMiningAttemptTerminal,
@@ -34,13 +49,12 @@ export interface MiningProcessControllerOptions {
   forceStopResourceMining: ForceStopResourceMiningUseCase;
   runResourceMining: RunResourceMiningUseCase;
   huntMinigameRecognizer: HuntMinigameRecognizer;
+  huntMinigameImageDownloader: HuntMinigameImageDownloader;
   solveHuntMinigame: SolveHuntMinigameUseCase;
+  minigameCueSound: MinigameCueSound;
+  minigameDownloadOption: MinigameDownloadOptionElements;
   addLog: AddBotLog;
-  presentMinigameRecognition(
-    recognition: HuntMinigameRecognition,
-    solve: () => void
-  ): void;
-  prepareHumanAttentionAlarm(): void;
+  presentMinigameRecognition(recognition: HuntMinigameRecognition): void;
   reportError: ProcessErrorReporter;
 }
 
@@ -49,37 +63,82 @@ export function createMiningProcessController(
 ): MiningProcessController {
   let executionSubscription: Subscription | null = null;
   let forceStopSubscription: Subscription | null = null;
-  let minigameSolutionSubscription: Subscription | null = null;
   let phase: MiningPhase = 'idle';
   let stopRequested = false;
   let stoppedByUser = false;
 
-  const solveMinigame = (targetToSourceSequence: readonly number[]): void => {
-    if (minigameSolutionSubscription && !minigameSolutionSubscription.closed) {
-      return;
+  const recoverFromMiningError = (error: unknown): Observable<unknown> => {
+    if (!isHuntMinigameRequiredError(error)) {
+      options.reportError(error);
+      return EMPTY;
     }
 
-    options.addLog(`Отправляю решение мини-игры: ${targetToSourceSequence.join(',')}.`);
+    phase = 'busy';
+    options.processBar.reset();
+    options.minigameCueSound.play();
+    options.addLog(
+      `Обнаружена мини-игра, осталось ${error.timeLeftSeconds} сек. Распознаю изображение.`
+    );
 
-    const subscription = options.solveHuntMinigame
-      .execute(targetToSourceSequence)
-      .pipe(
-        tap(() => {
-          options.addLog('Головоломка решена, текущая добыча отменена.', {
-            tone: 'success'
-          });
-        }),
-        catchError((error: unknown) => {
-          options.reportError(error);
-          return EMPTY;
-        }),
-        finalize(() => {
-          minigameSolutionSubscription = null;
-        })
-      )
-      .subscribe();
+    return options.huntMinigameRecognizer.recognize().pipe(
+      tap((recognition) => {
+        if (options.minigameDownloadOption.isEnabled()) {
+          try {
+            options.huntMinigameImageDownloader.download(recognition.image);
+          } catch {
+            options.addLog('Не удалось скачать исходный PNG мини-игры. Решение продолжается.');
+          }
+        }
 
-    minigameSolutionSubscription = subscription.closed ? null : subscription;
+        options.presentMinigameRecognition(recognition);
+      }),
+      switchMap((recognition) =>
+        options.solveHuntMinigame.execute(recognition.targetToSourceSequence)
+      ),
+      tap((event) => {
+        if (event.type !== 'solution-delay-started') {
+          return;
+        }
+
+        options.processBar.start({
+          label: 'Ожидание решения мини-игры',
+          durationMs: event.delayMs
+        });
+        options.addLog(
+          `Решение мини-игры будет отправлено через ${formatDelaySeconds(event.delayMs)} сек.`
+        );
+      }),
+      filter((event) => event.type === 'solution-submitted'),
+      switchMap(({ result }) => {
+        options.processBar.reset();
+
+        if (result.isSuccessful) {
+          if (stopRequested) {
+            stoppedByUser = true;
+            options.addLog('Мини-игра решена успешно (status="1"). Выполняю отложенную остановку.', {
+              tone: 'success'
+            });
+            return EMPTY;
+          }
+
+          options.addLog(
+            'Мини-игра решена успешно (status="1"). Добыча продолжается.',
+            { tone: 'success' }
+          );
+          return of(undefined);
+        }
+
+        options.addLog(createRejectedSolutionMessage(result.status, result.message), {
+          tone: 'failure'
+        });
+        return EMPTY;
+      }),
+      catchError((minigameError: unknown) => {
+        options.processBar.reset();
+        options.reportError(minigameError);
+        return EMPTY;
+      })
+    );
   };
 
   const start = (): void => {
@@ -96,7 +155,7 @@ export function createMiningProcessController(
       return;
     }
 
-    options.prepareHumanAttentionAlarm();
+    options.minigameCueSound.prepare();
 
     stopRequested = false;
     stoppedByUser = false;
@@ -106,36 +165,16 @@ export function createMiningProcessController(
       `Добыча запущена: ${selectedResources.map(formatResourceLabel).join(', ')}. Локация: ${selectedLocation.name}.`
     );
 
-    const subscription = options.runResourceMining.execute({
+    const miningEvents: Observable<ResourceMiningEvent> = options.runResourceMining.execute({
       getSelectedResourceIds: () => options.resourcePicker.getSelectedResources().map(({ id }) => id),
       selectedLocationId: selectedLocation.id
     }).pipe(
-      catchError((error: unknown) => {
-        options.reportError(error);
+      retry({
+        delay: recoverFromMiningError
+      })
+    );
 
-        if (isHuntMinigameRequiredError(error)) {
-          return options.huntMinigameRecognizer.recognize().pipe(
-            tap((recognition) => {
-              const targetToSourceSequence = [
-                ...recognition.targetToSourceSequence
-              ];
-              options.presentMinigameRecognition(
-                recognition,
-                () => solveMinigame(targetToSourceSequence)
-              );
-            }),
-            catchError((recognitionError: unknown) => {
-              options.addLog(
-                `Не удалось распознать мини-игру: ${getErrorMessage(recognitionError)}.`
-              );
-              return EMPTY;
-            }),
-            ignoreElements()
-          );
-        }
-
-        return EMPTY;
-      }),
+    const subscription = miningEvents.pipe(
       finalize(() => {
         executionSubscription = null;
         options.action.setState('idle');
@@ -247,6 +286,13 @@ export function createMiningProcessController(
   };
 }
 
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'неизвестная ошибка';
+function createRejectedSolutionMessage(status: string | null, message: string | null): string {
+  const statusLabel = status ?? 'отсутствует';
+  const serverMessage = message ? ` Сообщение сервера: ${message}.` : '';
+
+  return `Мини-игра не решена (status="${statusLabel}"). Добыча прекращена.${serverMessage}`;
+}
+
+function formatDelaySeconds(delayMs: number): string {
+  return (delayMs / 1_000).toFixed(1).replace(/\.0$/, '');
 }

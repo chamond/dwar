@@ -35,7 +35,7 @@ export function createVolumeControl(options: VolumeControlOptions = {}): VolumeC
   slider.max = '1';
   slider.step = '0.01';
   slider.setAttribute('orient', 'vertical');
-  slider.setAttribute('aria-label', 'Громкость сирены');
+  slider.setAttribute('aria-label', 'Громкость звуков');
 
   let volume = clampVolume(options.initialVolume ?? DEFAULT_VOLUME);
   let lastAudibleVolume = volume >= MIN_AUDIBLE_VOLUME ? volume : DEFAULT_VOLUME;
@@ -81,7 +81,7 @@ function updateVolumeControl(
   const level = isMuted ? 'muted' : volume < 0.5 ? 'low' : 'high';
 
   root.dataset.volumeLevel = level;
-  toggleButton.setAttribute('aria-label', isMuted ? 'Включить звук сирены' : 'Выключить звук сирены');
+  toggleButton.setAttribute('aria-label', isMuted ? 'Включить звуки' : 'Выключить звуки');
   toggleButton.setAttribute('aria-pressed', String(isMuted));
   toggleButton.setAttribute(
     'title',

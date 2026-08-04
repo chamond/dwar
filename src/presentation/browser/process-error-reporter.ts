@@ -5,7 +5,6 @@ import type { AddBotLog } from './bot-log-appender';
 export interface ProcessErrorReporterOptions {
   stoppedLabel: string;
   addLog: AddBotLog;
-  activateHumanAttentionAlarm(): void;
 }
 
 export type ProcessErrorReporter = (error: unknown) => void;
@@ -25,7 +24,6 @@ export function createProcessErrorReporter(
       return;
     }
 
-    options.activateHumanAttentionAlarm();
     const message = `${options.stoppedLabel}: неожиданный ответ сервера: ${errorMessage}.`;
     options.addLog(
       `${message} Требуется участие человека.`,
@@ -33,14 +31,15 @@ export function createProcessErrorReporter(
         parts: [
           message,
           ' ',
-          createHumanAttentionLogPart()
-        ]
+          createAttentionRequiredLogPart()
+        ],
+        tone: 'failure'
       }
     );
   };
 }
 
-function createHumanAttentionLogPart(): BotLogLinePart {
+function createAttentionRequiredLogPart(): BotLogLinePart {
   return {
     text: 'ТРЕБУЕТСЯ УЧАСТИЕ ЧЕЛОВЕКА',
     color: '#ff4f5f',

@@ -1,10 +1,11 @@
-import type { AlarmVolumeStore } from '../../application/ports/alarm-volume-store';
+import type { HuntMinigameImageDownloader } from '../../application/ports/hunt-minigame-image-downloader';
 import type { HuntLocationSelectionStore } from '../../application/ports/hunt-location-selection-store';
 import type { HuntMinigameRecognizer } from '../../application/ports/hunt-minigame-recognizer';
 import type { LauncherPositionStore } from '../../application/ports/launcher-position-store';
 import type { PanelSizeStore } from '../../application/ports/panel-size-store';
 import type { ProfessionRecipeSelectionStore } from '../../application/ports/profession-recipe-selection-store';
 import type { ResourceSelectionStore } from '../../application/ports/resource-selection-store';
+import type { SoundVolumeStore } from '../../application/ports/sound-volume-store';
 import type { CreateBotLogEntryUseCase } from '../../application/use-cases/create-bot-log-entry';
 import type { ForceStopResourceMiningUseCase } from '../../application/use-cases/force-stop-resource-mining';
 import type { ListHuntLocationsUseCase } from '../../application/use-cases/list-hunt-locations';
@@ -21,10 +22,10 @@ import { createCraftingProcessController } from './crafting-process-controller';
 import { createCraftingProcessBarsController } from './crafting-process-bars';
 import { attachDraggableLauncher, restoreLauncherPosition } from './draggable-launcher';
 import { attachDraggablePanel } from './draggable-panel';
-import { createHumanAttentionAlarm } from './human-attention-alarm';
 import { createLauncherButton } from './launcher-button';
 import { clearLogList } from './log-list';
 import { appendMinigameRecognitionLog } from './minigame-recognition-log';
+import { createMinigameCueSound } from './minigame-cue-sound';
 import { createMiningProcessController } from './mining-process-controller';
 import { keepPanelInViewport, positionPanelNearLauncher } from './panel-position';
 import { createProcessBarController } from './process-bar';
@@ -32,13 +33,13 @@ import { createProcessErrorReporter } from './process-error-reporter';
 import { attachResizablePanel, keepPanelSizeInViewport, restorePanelSize } from './resizable-panel';
 
 export interface BotWidgetDependencies {
-  alarmVolumeStore: AlarmVolumeStore;
   createLogEntry: CreateBotLogEntryUseCase;
   forceStopResourceMining: ForceStopResourceMiningUseCase;
   listHuntLocations: ListHuntLocationsUseCase;
   listProfessionRecipes: ListProfessionRecipesUseCase;
   listResources: ListResourcesUseCase;
   locationSelectionStore: HuntLocationSelectionStore;
+  huntMinigameImageDownloader: HuntMinigameImageDownloader;
   huntMinigameRecognizer: HuntMinigameRecognizer;
   launcherPositionStore: LauncherPositionStore;
   panelSizeStore: PanelSizeStore;
@@ -47,6 +48,7 @@ export interface BotWidgetDependencies {
   runProfessionCrafting: RunProfessionCraftingUseCase;
   runResourceMining: RunResourceMiningUseCase;
   solveHuntMinigame: SolveHuntMinigameUseCase;
+  soundVolumeStore: SoundVolumeStore;
 }
 
 export function mountBotWidget(dependencies: BotWidgetDependencies): void {
@@ -57,16 +59,16 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   const host = createHost();
   const shadowRoot = host.attachShadow({ mode: 'open' });
   const launcher = createLauncherButton();
-  const humanAttentionAlarm = createHumanAttentionAlarm();
-  const initialAlarmVolume = dependencies.alarmVolumeStore.load();
+  const minigameCueSound = createMinigameCueSound();
+  const initialSoundVolume = dependencies.soundVolumeStore.load();
 
-  if (initialAlarmVolume !== null) {
-    humanAttentionAlarm.setVolume(initialAlarmVolume);
+  if (initialSoundVolume !== null) {
+    minigameCueSound.setVolume(initialSoundVolume);
   }
 
-  const botPanel = createPanel(dependencies, initialAlarmVolume, (volume) => {
-    humanAttentionAlarm.setVolume(volume);
-    dependencies.alarmVolumeStore.save(volume);
+  const botPanel = createPanel(dependencies, initialSoundVolume, (volume) => {
+    minigameCueSound.setVolume(volume);
+    dependencies.soundVolumeStore.save(volume);
   });
   const addMiningLog = createBotLogAppender(botPanel.miningLogList, dependencies.createLogEntry);
   const addCraftingLog = createBotLogAppender(botPanel.craftingLogList, dependencies.createLogEntry);
@@ -77,19 +79,6 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   const miningProcessBar = createProcessBarController(botPanel.miningProcessBar);
   const craftingProcessBars = createCraftingProcessBarsController(botPanel.craftingProcessBars);
 
-  const activateHumanAttentionAlarm = (): void => {
-    humanAttentionAlarm.prepare();
-    humanAttentionAlarm.play();
-    closePickers(botPanel);
-    botPanel.humanAttentionAlarmOverlay.root.hidden = false;
-
-    if (botPanel.panel.hidden) {
-      showPanel(botPanel.panel, launcher);
-    }
-
-    botPanel.humanAttentionAlarmOverlay.stopButton.focus({ preventScroll: true });
-  };
-
   const miningController = createMiningProcessController({
     action: botPanel.miningAction,
     resourcePicker: botPanel.resourcePicker,
@@ -97,25 +86,25 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     processBar: miningProcessBar,
     forceStopResourceMining: dependencies.forceStopResourceMining,
     runResourceMining: dependencies.runResourceMining,
+    huntMinigameImageDownloader: dependencies.huntMinigameImageDownloader,
     huntMinigameRecognizer: dependencies.huntMinigameRecognizer,
     solveHuntMinigame: dependencies.solveHuntMinigame,
+    minigameCueSound,
+    minigameDownloadOption: botPanel.minigameDownloadOption,
     addLog: addMiningLog,
-    presentMinigameRecognition: (recognition, solve) => {
+    presentMinigameRecognition: (recognition) => {
       const entry = dependencies.createLogEntry.execute({
         message: `Распознана мини-игра: ${recognition.targetToSourceSequence.join(',')}`
       }).toSnapshot();
       appendMinigameRecognitionLog(
         botPanel.miningLogList,
         entry,
-        recognition,
-        solve
+        recognition
       );
     },
-    prepareHumanAttentionAlarm: () => humanAttentionAlarm.prepare(),
     reportError: createProcessErrorReporter({
       stoppedLabel: 'Добыча остановлена',
-      addLog: addMiningLog,
-      activateHumanAttentionAlarm
+      addLog: addMiningLog
     })
   });
   const craftingController = createCraftingProcessController({
@@ -125,11 +114,9 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     processBars: craftingProcessBars,
     runProfessionCrafting: dependencies.runProfessionCrafting,
     addLog: addCraftingLog,
-    prepareHumanAttentionAlarm: () => humanAttentionAlarm.prepare(),
     reportError: createProcessErrorReporter({
       stoppedLabel: 'Крафт остановлен',
-      addLog: addCraftingLog,
-      activateHumanAttentionAlarm
+      addLog: addCraftingLog
     })
   });
 
@@ -155,15 +142,6 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
       return;
     }
 
-    if (!botPanel.humanAttentionAlarmOverlay.root.hidden) {
-      if (botPanel.panel.hidden) {
-        showPanel(botPanel.panel, launcher);
-      }
-
-      botPanel.humanAttentionAlarmOverlay.stopButton.focus({ preventScroll: true });
-      return;
-    }
-
     if (botPanel.panel.hidden) {
       showPanel(botPanel.panel, launcher);
       addActiveTabLog('Интерфейс открыт.');
@@ -185,12 +163,6 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
 
   botPanel.craftingClearLogButton.addEventListener('click', () => {
     clearLogList(botPanel.craftingLogList);
-  });
-
-  botPanel.humanAttentionAlarmOverlay.stopButton.addEventListener('click', () => {
-    humanAttentionAlarm.stop();
-    botPanel.humanAttentionAlarmOverlay.root.hidden = true;
-    addActiveTabLog('Сирена отключена.');
   });
 
   botPanel.miningAction.mainButton.addEventListener('click', () => {
@@ -250,15 +222,15 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
 
 function createPanel(
   dependencies: BotWidgetDependencies,
-  initialAlarmVolume: number | null,
-  onAlarmVolumeChange: (volume: number) => void
+  initialSoundVolume: number | null,
+  onSoundVolumeChange: (volume: number) => void
 ): BotPanelElements {
   const resources = dependencies.listResources.execute().map((resource) => resource.toSnapshot());
   const recipes = dependencies.listProfessionRecipes.execute().map((recipe) => recipe.toSnapshot());
   const locations = dependencies.listHuntLocations.execute().map((location) => location.toSnapshot());
 
   return createBotPanel(resources, recipes, locations, {
-    initialAlarmVolume,
+    initialSoundVolume,
     selectedResourceIds: dependencies.resourceSelectionStore.load(),
     onResourceSelectionChange: (selectedResources) => {
       dependencies.resourceSelectionStore.save(selectedResources.map(({ id }) => id));
@@ -271,7 +243,7 @@ function createPanel(
     onLocationSelectionChange: (location) => {
       dependencies.locationSelectionStore.save(location.id);
     },
-    onAlarmVolumeChange
+    onSoundVolumeChange
   });
 }
 

@@ -89,10 +89,13 @@ recognized source-to-reference order, for example:
 
 The browser widget embeds the same six reference sets in `dist/index.js`.
 When hunting requests a minigame, the widget recognizes the fetched image in
-memory, automatically downloads the original server PNG, shows the image and
-source-to-target order in the mining log, and adds a solve button. The button
-submits the target-to-source server order and then cancels the interrupted
-farming attempt.
+memory, shows the image and target-to-source server order in the mining log,
+and optionally downloads the original PNG when the checkbox below the mining
+button is enabled. It plays one short synthesized bowstring cue, waits a random
+5 to 10 seconds, and submits the recognized order automatically. A response
+with `status="1"` resumes the mining loop; every other status stops it. The
+widget sends `action=cancel` without awaiting or inspecting its response, then
+immediately handles the status saved from `minigame_check`.
 
 The current local resource catalog contains stable bot ids, mining article ids,
 and mining duration for agate, aquamarine, and turquoise. The current backpack
@@ -112,10 +115,10 @@ request by matching each stable mining article id. It then crafts no more than
 the selected amount or the available resource count, waits for all recipe
 cooldowns before the next shared cycle, logs the calculated remainder, and
 stops only the affected recipe when that resource is absent.
-Unexpected server responses stop the affected process, open the panel, show a
-pulsing alarm overlay, start a looping siren, and add a red human-attention log
-tag. Clicking the alarm button stops the siren and hides the overlay. The alarm
-asset is embedded into the single output bundle.
+Unexpected server responses stop the affected process and add a red
+human-attention log tag. There is no siren or alarm overlay. The header volume
+control adjusts the one-shot minigame cue and persists mute and volume in
+browser localStorage.
 
 ## GitHub Pages Deploy
 

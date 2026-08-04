@@ -5,8 +5,7 @@ import { appendLogContent } from './log-list';
 export function appendMinigameRecognitionLog(
   logList: HTMLElement,
   entry: BotLogEntrySnapshot,
-  recognition: HuntMinigameRecognition,
-  solve: () => void
+  recognition: HuntMinigameRecognition
 ): void {
   const content = document.createElement('div');
   content.className = 'dwar-minigame-recognition';
@@ -20,17 +19,7 @@ export function appendMinigameRecognitionLog(
   sequence.className = 'dwar-minigame-recognition__sequence';
   sequence.textContent = recognition.targetToSourceSequence.join(',');
 
-  const solveButton = document.createElement('button');
-  solveButton.type = 'button';
-  solveButton.className = 'dwar-minigame-recognition__solve';
-  solveButton.textContent = 'Решить головоломку';
-  solveButton.addEventListener('click', () => {
-    solveButton.disabled = true;
-    solveButton.textContent = 'Решение отправляется…';
-    solve();
-  }, { once: true });
-
-  content.append(title, image, sequence, solveButton);
+  content.append(title, image, sequence);
   appendLogContent(logList, entry, content);
 }
 

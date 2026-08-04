@@ -22,7 +22,6 @@ export interface CraftingProcessControllerOptions {
   processBars: CraftingProcessBarsController;
   runProfessionCrafting: RunProfessionCraftingUseCase;
   addLog: AddBotLog;
-  prepareHumanAttentionAlarm(): void;
   reportError: ProcessErrorReporter;
 }
 
@@ -42,8 +41,6 @@ export function createCraftingProcessController(
       }, options.addLog, options.processBars);
       return;
     }
-
-    options.prepareHumanAttentionAlarm();
 
     stopRequested = false;
     restartRequested = false;

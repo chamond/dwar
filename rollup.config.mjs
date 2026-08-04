@@ -9,9 +9,6 @@ const swcOptions = JSON.parse(readFileSync(new URL('./.swcrc', import.meta.url),
 delete swcOptions.$schema;
 const minigameReferencesModuleId = 'virtual:minigame-references';
 const resolvedMinigameReferencesModuleId = `\0${minigameReferencesModuleId}`;
-const dataUrlAssetMimeTypes = new Map([
-  ['.ogg', 'audio/ogg']
-]);
 
 function minigameReferencesPlugin() {
   return {
@@ -106,30 +103,6 @@ function swcTypeScriptPlugin() {
   };
 }
 
-function dataUrlAssetPlugin() {
-  return {
-    name: 'data-url-assets',
-    resolveId(source, importer) {
-      if (!importer || !dataUrlAssetMimeTypes.has(path.extname(source))) {
-        return null;
-      }
-
-      return path.resolve(path.dirname(importer), source);
-    },
-    load(id) {
-      const mimeType = dataUrlAssetMimeTypes.get(path.extname(id));
-
-      if (!mimeType) {
-        return null;
-      }
-
-      const encodedAsset = readFileSync(id).toString('base64');
-
-      return `export default "data:${mimeType};base64,${encodedAsset}";`;
-    }
-  };
-}
-
 function swcMinifyBundlePlugin() {
   return {
     name: 'swc-minify-bundle',
@@ -176,7 +149,6 @@ export default {
     sourcemap: false
   },
   plugins: [
-    dataUrlAssetPlugin(),
     minigameReferencesPlugin(),
     nodeResolve({
       browser: true

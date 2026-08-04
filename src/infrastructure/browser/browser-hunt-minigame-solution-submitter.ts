@@ -1,7 +1,10 @@
 import { defer, map, switchMap, take, type Observable } from 'rxjs';
 import { fromFetch } from 'rxjs/fetch';
 import { UnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
-import type { HuntMinigameSolutionSubmitter } from '../../application/ports/hunt-minigame-solution-submitter';
+import type {
+  HuntMinigameSolutionResult,
+  HuntMinigameSolutionSubmitter
+} from '../../application/ports/hunt-minigame-solution-submitter';
 import { createDwarHuntMinigameTelemetry } from './dwar-hunt-minigame-telemetry';
 import {
   buildHuntMinigameCheckUrl,
@@ -9,7 +12,7 @@ import {
 } from './hunt-minigame-check-request';
 
 export class BrowserHuntMinigameSolutionSubmitter implements HuntMinigameSolutionSubmitter {
-  submit(targetToSourceSequence: readonly number[]): Observable<void> {
+  submit(targetToSourceSequence: readonly number[]): Observable<HuntMinigameSolutionResult> {
     return defer(() => fromFetch(
       buildHuntMinigameCheckUrl(targetToSourceSequence),
       {
@@ -28,13 +31,13 @@ export class BrowserHuntMinigameSolutionSubmitter implements HuntMinigameSolutio
 
         return response.text();
       }),
-      map(assertSuccessfulResponse),
+      map(parseSolutionResponse),
       take(1)
     );
   }
 }
 
-function assertSuccessfulResponse(responseText: string): void {
+function parseSolutionResponse(responseText: string): HuntMinigameSolutionResult {
   const document = new DOMParser().parseFromString(responseText, 'application/xml');
   const parserError = document.querySelector('parsererror');
 
@@ -43,13 +46,11 @@ function assertSuccessfulResponse(responseText: string): void {
   }
 
   const status = document.documentElement.getAttribute('status');
+  const message = document.documentElement.getAttribute('msg');
 
-  if (status !== '1') {
-    const message = document.documentElement.getAttribute('msg');
-    throw new UnexpectedServerResponseError(
-      message
-        ? `Hunt minigame solution was rejected: ${message}`
-        : `Hunt minigame solution returned status ${status ?? 'missing'}.`
-    );
-  }
+  return {
+    status,
+    message,
+    isSuccessful: status === '1'
+  };
 }
