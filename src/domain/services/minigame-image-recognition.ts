@@ -14,7 +14,7 @@ export interface MinigamePixelImage {
 
 export interface MinigameReference {
   name: string;
-  fragments: readonly (readonly number[])[];
+  fragments: ReadonlyArray<ArrayLike<number>>;
 }
 
 export interface MinigameImageRecognition {
@@ -137,7 +137,7 @@ function assertReference(reference: MinigameReference): void {
   }
 }
 
-function compareMatrices(first: readonly number[], second: readonly number[]): number {
+function compareMatrices(first: ArrayLike<number>, second: ArrayLike<number>): number {
   let absoluteDifference = 0;
 
   for (let index = 0; index < first.length; index += 1) {

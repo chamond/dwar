@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,6 +10,9 @@ const swcOptions = JSON.parse(readFileSync(new URL('./.swcrc', import.meta.url),
 delete swcOptions.$schema;
 const minigameReferencesModuleId = 'virtual:minigame-references';
 const resolvedMinigameReferencesModuleId = `\0${minigameReferencesModuleId}`;
+const minigameReferenceNumbers = [1, 2, 3, 4, 5, 6, 7];
+const minigameFragmentCount = 6;
+const minigameMatrixSize = 64;
 
 function minigameReferencesPlugin() {
   return {
@@ -23,30 +27,69 @@ function minigameReferencesPlugin() {
         return null;
       }
 
-      const references = [1, 2, 3, 4, 5, 6, 7].map((referenceNumber) => {
+      const references = minigameReferenceNumbers.map((referenceNumber) => {
         const name = `minigame_${referenceNumber}`;
         const directory = path.join(rootDir, name);
-        const fragments = Array.from({ length: 6 }, (_, fragmentIndex) => {
+        const fragments = Array.from({ length: minigameFragmentCount }, (_, fragmentIndex) => {
           const filePath = path.join(directory, `fragment-${fragmentIndex}.json`);
           const descriptor = JSON.parse(readFileSync(filePath, 'utf8'));
+          const values = descriptor.matrix?.values;
 
           if (
             descriptor.fragment?.index !== fragmentIndex
-            || descriptor.matrix?.width !== 64
-            || descriptor.matrix?.height !== 64
-            || !Array.isArray(descriptor.matrix?.values)
-            || descriptor.matrix.values.length !== 64 * 64
+            || descriptor.matrix?.width !== minigameMatrixSize
+            || descriptor.matrix?.height !== minigameMatrixSize
+            || !Array.isArray(values)
+            || values.length !== minigameMatrixSize * minigameMatrixSize
+            || values.some((value) =>
+              !Number.isInteger(value) || value < 0 || value > 255
+            )
           ) {
             throw new TypeError(`Некорректный эталон мини-игры: ${filePath}`);
           }
 
-          return descriptor.matrix.values;
+          return values;
         });
 
         return { name, fragments };
       });
+      const packedMatrices = Buffer.from(
+        references.flatMap(({ fragments }) => fragments.flat())
+      ).toString('base64');
+      const referenceNames = references.map(({ name }) => name);
 
-      return `export default ${JSON.stringify(references)};`;
+      return `
+        function decodeReferences(encodedMatrices, referenceNames) {
+          const binary = atob(encodedMatrices);
+          const values = new Uint8Array(binary.length);
+
+          for (let index = 0; index < binary.length; index += 1) {
+            values[index] = binary.charCodeAt(index);
+          }
+
+          return referenceNames.map((name, referenceIndex) => ({
+            name,
+            fragments: Array.from(
+              { length: ${minigameFragmentCount} },
+              (_, fragmentIndex) => {
+                const start = (
+                  referenceIndex * ${minigameFragmentCount} + fragmentIndex
+                ) * ${minigameMatrixSize * minigameMatrixSize};
+
+                return values.subarray(
+                  start,
+                  start + ${minigameMatrixSize * minigameMatrixSize}
+                );
+              }
+            )
+          }));
+        }
+
+        export default decodeReferences(
+          ${JSON.stringify(packedMatrices)},
+          ${JSON.stringify(referenceNames)}
+        );
+      `;
     }
   };
 }

@@ -1,7 +1,7 @@
 declare module 'virtual:minigame-references' {
   const references: readonly {
     name: string;
-    fragments: readonly (readonly number[])[];
+    fragments: ReadonlyArray<Uint8Array>;
   }[];
 
   export default references;
