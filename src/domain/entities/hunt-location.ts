@@ -1,6 +1,7 @@
 export type HuntLocationId =
   | 'baurville'
   | 'kingala-village'
+  | 'thistle-thickets'
   | 'mass-grave'
   | 'royal-tombs'
   | 'hills-of-peace';

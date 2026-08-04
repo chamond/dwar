@@ -13,6 +13,11 @@ const LOCAL_HUNT_LOCATION_RECORDS = [
     areaId: 18
   },
   {
+    id: 'thistle-thickets',
+    name: 'Заросли чертополоха',
+    areaId: 119
+  },
+  {
     id: 'mass-grave',
     name: 'Братское захоронение',
     areaId: 156
