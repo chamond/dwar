@@ -87,7 +87,7 @@ recognized source-to-reference order, for example:
 Порядок: 1,3,0,4,5,2
 ```
 
-The browser widget embeds the same six reference sets in `dist/index.js`.
+The browser widget embeds the same seven reference sets in `dist/index.js`.
 When hunting requests a minigame, the widget recognizes the fetched image in
 memory, shows the image and target-to-source server order in the mining log,
 and optionally downloads the original PNG when the checkbox below the mining

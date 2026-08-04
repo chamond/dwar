@@ -22,7 +22,7 @@ const compiledService = transformSync(readFileSync(servicePath, 'utf8'), {
 const serviceModuleUrl = `data:text/javascript;base64,${Buffer.from(compiledService).toString('base64')}`;
 const { recognizeMinigameImage } = await import(serviceModuleUrl);
 
-const references = [1, 2, 3, 4, 5, 6].map((referenceNumber) => ({
+const references = [1, 2, 3, 4, 5, 6, 7].map((referenceNumber) => ({
   name: `minigame_${referenceNumber}`,
   fragments: Array.from({ length: 6 }, (_, fragmentIndex) => {
     const descriptor = JSON.parse(readFileSync(

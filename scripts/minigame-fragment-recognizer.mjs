@@ -11,7 +11,7 @@ const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_DIRECTORY = path.dirname(SCRIPT_DIRECTORY);
 
 function defaultReferenceDirectories() {
-  return [1, 2, 3, 4, 5, 6].map((number) =>
+  return [1, 2, 3, 4, 5, 6, 7].map((number) =>
     path.join(PROJECT_DIRECTORY, `minigame_${number}`)
   );
 }
