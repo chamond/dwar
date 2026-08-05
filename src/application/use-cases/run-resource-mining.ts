@@ -20,7 +20,6 @@ import type {
   ResourceMiningResourceInfo
 } from '../events/resource-mining-event';
 import type { BotResourceId } from '../../domain/entities/bot-resource';
-import type { HuntLocation, HuntLocationId } from '../../domain/entities/hunt-location';
 import type { HuntMob } from '../../domain/entities/hunt-mob';
 import type { HuntResourceFarmStart } from '../../domain/entities/hunt-resource-farm-start';
 import type { HuntResourceNode } from '../../domain/entities/hunt-resource-node';
@@ -37,7 +36,7 @@ import { isUnexpectedServerResponseError } from '../errors/unexpected-server-res
 import type { Clock } from '../ports/clock';
 import type { CurrentPlayerSplinterDetector } from '../ports/current-player-splinter-detector';
 import type { Delay } from '../ports/delay';
-import type { HuntLocationRepository } from '../ports/hunt-location-repository';
+import type { GetAreaId } from '../ports/get-area-id';
 import type { HuntResourceFarmer } from '../ports/hunt-resource-farmer';
 import type { HuntResourceFarmInterrupter } from '../ports/hunt-resource-farm-interrupter';
 import type { HuntZoneScanner } from '../ports/hunt-zone-scanner';
@@ -56,7 +55,6 @@ export interface ResourceMiningConfig {
 
 export interface RunResourceMiningInput {
   getSelectedResourceIds(): readonly BotResourceId[];
-  selectedLocationId: HuntLocationId;
 }
 
 type FarmStartResult =
@@ -74,13 +72,13 @@ export class RunResourceMiningUseCase {
   constructor(
     private readonly scanner: HuntZoneScanner,
     private readonly resourceRepository: ResourceRepository,
-    private readonly locationRepository: HuntLocationRepository,
     private readonly scanStore: HuntZoneScanStore,
     private readonly farmer: HuntResourceFarmer,
     private readonly farmInterrupter: HuntResourceFarmInterrupter,
     private readonly delay: Delay,
     private readonly clock: Clock,
     private readonly detectCurrentPlayerSplinter: CurrentPlayerSplinterDetector,
+    private readonly getAreaId: GetAreaId,
     config: Partial<ResourceMiningConfig> = {}
   ) {
     this.config = {
@@ -95,18 +93,17 @@ export class RunResourceMiningUseCase {
   }
 
   execute(input: RunResourceMiningInput): Observable<ResourceMiningEvent> {
-    return defer(() => {
-      const location = this.getSelectedLocation(input.selectedLocationId);
-
-      return defer(() => this.runIteration(location, input)).pipe(
+    return defer(() => this.getAreaId()).pipe(
+      take(1),
+      switchMap((areaId) => defer(() => this.runIteration(areaId, input)).pipe(
         repeat(),
         takeWhile((event) => event.type !== 'splinter-detected', true)
-      );
-    });
+      ))
+    );
   }
 
   private runIteration(
-    location: HuntLocation,
+    areaId: number,
     input: RunResourceMiningInput
   ): Observable<ResourceMiningEvent> {
     const selectedArticleIds = this.getSelectedArticleIds(input.getSelectedResourceIds());
@@ -121,7 +118,7 @@ export class RunResourceMiningUseCase {
 
     return concat(
       of(scanStartedEvent),
-      this.scanAndStore(location).pipe(
+      this.scanAndStore(areaId).pipe(
         switchMap((scan) => {
           const selectedResources = scan.getResourcesByArticleIds(selectedArticleIds);
           const selection = selectSafestResourceForMining(selectedResources, scan.getMobs(), {
@@ -144,7 +141,7 @@ export class RunResourceMiningUseCase {
 
           return concat(
             of(scanCompletedEvent),
-            this.startMiningResource(selection.selectedSafety, location)
+            this.startMiningResource(selection.selectedSafety, areaId)
           );
         })
       )
@@ -166,7 +163,7 @@ export class RunResourceMiningUseCase {
 
   private startMiningResource(
     safety: ResourceMiningSafety,
-    location: HuntLocation
+    areaId: number
   ): Observable<ResourceMiningEvent> {
     const resource = safety.resource;
 
@@ -201,7 +198,7 @@ export class RunResourceMiningUseCase {
 
         return concat(
           of(farmStartedEvent),
-          this.monitorResource(resource, location, startedAtMs, miningDurationMs)
+          this.monitorResource(resource, areaId, startedAtMs, miningDurationMs)
         );
       })
     );
@@ -241,7 +238,7 @@ export class RunResourceMiningUseCase {
 
   private monitorResource(
     resource: HuntResourceNode,
-    location: HuntLocation,
+    areaId: number,
     startedAtMs: number,
     miningDurationMs: number
   ): Observable<ResourceMiningEvent> {
@@ -263,7 +260,7 @@ export class RunResourceMiningUseCase {
 
             return concat(
               of(scanStartedEvent),
-              this.scanAndStore(location).pipe(
+              this.scanAndStore(areaId).pipe(
                 switchMap((scan) => {
                   const currentResource = scan.findResourceByServerNumber(resource.getServerNumber());
                   const nominalDurationElapsed = this.nowMs() >= nominalDeadlineAtMs;
@@ -358,9 +355,9 @@ export class RunResourceMiningUseCase {
     return normalizedNextScanAtMs;
   }
 
-  private scanAndStore(location: HuntLocation): Observable<HuntZoneScan> {
+  private scanAndStore(areaId: number): Observable<HuntZoneScan> {
     return this.scanner.scan({
-      areaId: location.getAreaId()
+      areaId
     }).pipe(
       tap((scan) => {
         this.scanStore.save(scan);
@@ -391,15 +388,6 @@ export class RunResourceMiningUseCase {
     return new Set(selectedArticleIds);
   }
 
-  private getSelectedLocation(selectedLocationId: HuntLocationId): HuntLocation {
-    const location = this.locationRepository.findById(selectedLocationId);
-
-    if (!location) {
-      throw new Error('Selected hunt location is not known by the bot.');
-    }
-
-    return location;
-  }
 }
 
 function isMonitoringTerminalEvent(event: ResourceMiningEvent): boolean {

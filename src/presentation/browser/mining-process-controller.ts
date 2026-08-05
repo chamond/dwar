@@ -3,6 +3,7 @@ import {
   catchError,
   filter,
   finalize,
+  map,
   of,
   retry,
   switchMap,
@@ -21,9 +22,6 @@ import type { ForceStopResourceMiningUseCase } from '../../application/use-cases
 import type { RunResourceMiningUseCase } from '../../application/use-cases/run-resource-mining';
 import type { SolveHuntMinigameUseCase } from '../../application/use-cases/solve-hunt-minigame';
 import type { AddBotLog } from './bot-log-appender';
-import type { HuntLocationSelectElements } from './hunt-location-select';
-import type { MinigameCueSound } from './minigame-cue-sound';
-import type { MinigameDownloadOptionElements } from './minigame-download-option';
 import {
   getMiningPhase,
   isMiningAttemptTerminal,
@@ -35,6 +33,7 @@ import type { ProcessBarController } from './process-bar';
 import type { ProcessErrorReporter } from './process-error-reporter';
 import type { ResourcePickerElements } from './resource-picker';
 import { formatResourceLabel } from './resource-label';
+import type { SplinterAlertSound } from './splinter-alert-sound';
 
 export interface MiningProcessController {
   toggle(): void;
@@ -44,15 +43,13 @@ export interface MiningProcessController {
 export interface MiningProcessControllerOptions {
   action: MiningActionControl;
   resourcePicker: ResourcePickerElements;
-  locationSelect: HuntLocationSelectElements;
   processBar: ProcessBarController;
   forceStopResourceMining: ForceStopResourceMiningUseCase;
   runResourceMining: RunResourceMiningUseCase;
   huntMinigameRecognizer: HuntMinigameRecognizer;
   huntMinigameImageDownloader: HuntMinigameImageDownloader;
   solveHuntMinigame: SolveHuntMinigameUseCase;
-  minigameCueSound: MinigameCueSound;
-  minigameDownloadOption: MinigameDownloadOptionElements;
+  splinterAlertSound: SplinterAlertSound;
   addLog: AddBotLog;
   presentMinigameRecognition(recognition: HuntMinigameRecognition): void;
   reportError: ProcessErrorReporter;
@@ -75,41 +72,37 @@ export function createMiningProcessController(
 
     phase = 'busy';
     options.processBar.reset();
-    options.minigameCueSound.play();
     options.addLog(
       `Обнаружена мини-игра, осталось ${error.timeLeftSeconds} сек. Распознаю изображение.`
     );
 
     return options.huntMinigameRecognizer.recognize().pipe(
       tap((recognition) => {
-        if (options.minigameDownloadOption.isEnabled()) {
-          try {
-            options.huntMinigameImageDownloader.download(recognition.image);
-          } catch {
-            options.addLog('Не удалось скачать исходный PNG мини-игры. Решение продолжается.');
-          }
-        }
-
         options.presentMinigameRecognition(recognition);
       }),
       switchMap((recognition) =>
-        options.solveHuntMinigame.execute(recognition.targetToSourceSequence)
-      ),
-      tap((event) => {
-        if (event.type !== 'solution-delay-started') {
-          return;
-        }
+        options.solveHuntMinigame.execute(recognition.targetToSourceSequence).pipe(
+          tap((event) => {
+            if (event.type !== 'solution-delay-started') {
+              return;
+            }
 
-        options.processBar.start({
-          label: 'Ожидание решения мини-игры',
-          durationMs: event.delayMs
-        });
-        options.addLog(
-          `Решение мини-игры будет отправлено через ${formatDelaySeconds(event.delayMs)} сек.`
-        );
-      }),
-      filter((event) => event.type === 'solution-submitted'),
-      switchMap(({ result }) => {
+            options.processBar.start({
+              label: 'Ожидание решения мини-игры',
+              durationMs: event.delayMs
+            });
+            options.addLog(
+              `Решение мини-игры будет отправлено через ${formatDelaySeconds(event.delayMs)} сек.`
+            );
+          }),
+          filter((event) => event.type === 'solution-submitted'),
+          map(({ result }) => ({
+            image: recognition.image,
+            result
+          }))
+        )
+      ),
+      switchMap(({ image, result }) => {
         options.processBar.reset();
 
         if (result.isSuccessful) {
@@ -131,6 +124,13 @@ export function createMiningProcessController(
         options.addLog(createRejectedSolutionMessage(result.status, result.message), {
           tone: 'failure'
         });
+
+        try {
+          options.huntMinigameImageDownloader.download(image);
+        } catch {
+          options.addLog('Не удалось скачать исходный PNG мини-игры.');
+        }
+
         return EMPTY;
       }),
       catchError((minigameError: unknown) => {
@@ -143,31 +143,22 @@ export function createMiningProcessController(
 
   const start = (): void => {
     const selectedResources = options.resourcePicker.getSelectedResources();
-    const selectedLocation = options.locationSelect.getSelectedLocation();
 
     if (selectedResources.length === 0) {
       options.addLog('Выберите хотя бы один ресурс для добычи.');
       return;
     }
 
-    if (!selectedLocation) {
-      options.addLog('Выберите локацию для добычи.');
-      return;
-    }
-
-    options.minigameCueSound.prepare();
+    options.splinterAlertSound.prepare();
 
     stopRequested = false;
     stoppedByUser = false;
     options.resourcePicker.close();
     options.action.setState('active');
-    options.addLog(
-      `Добыча запущена: ${selectedResources.map(formatResourceLabel).join(', ')}. Локация: ${selectedLocation.name}.`
-    );
+    options.addLog(`Добыча запущена: ${selectedResources.map(formatResourceLabel).join(', ')}.`);
 
     const miningEvents: Observable<ResourceMiningEvent> = options.runResourceMining.execute({
-      getSelectedResourceIds: () => options.resourcePicker.getSelectedResources().map(({ id }) => id),
-      selectedLocationId: selectedLocation.id
+      getSelectedResourceIds: () => options.resourcePicker.getSelectedResources().map(({ id }) => id)
     }).pipe(
       retry({
         delay: recoverFromMiningError
@@ -191,6 +182,11 @@ export function createMiningProcessController(
     ).subscribe({
       next: (event) => {
         phase = getMiningPhase(event);
+
+        if (event.type === 'splinter-detected') {
+          options.splinterAlertSound.play();
+        }
+
         presentMiningEvent(event, options.addLog, options.processBar);
 
         if (stopRequested && isMiningAttemptTerminal(event)) {

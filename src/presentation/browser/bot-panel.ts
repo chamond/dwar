@@ -1,14 +1,8 @@
 import type { BotResourceId, BotResourceSnapshot } from '../../domain/entities/bot-resource';
-import type { HuntLocationId, HuntLocationSnapshot } from '../../domain/entities/hunt-location';
 import type { ProfessionRecipeId, ProfessionRecipeSnapshot } from '../../domain/entities/profession-recipe';
 import { getClearLogIcon } from './clear-log-icon';
 import { getCraftIcon } from './craft-icon';
 import { createCraftAmountInput, type CraftAmountInputElements } from './craft-amount-input';
-import { createHuntLocationSelect, type HuntLocationSelectElements } from './hunt-location-select';
-import {
-  createMinigameDownloadOption,
-  type MinigameDownloadOptionElements
-} from './minigame-download-option';
 import { createMiningActionControl, type MiningActionControl } from './mining-action-control';
 import { createProcessBar, type ProcessBarElements } from './process-bar';
 import {
@@ -27,12 +21,10 @@ export interface BotPanelElements {
   closeButton: HTMLButtonElement;
   tabs: TabsElements<BotPanelTabId>;
   miningAction: MiningActionControl;
-  minigameDownloadOption: MinigameDownloadOptionElements;
   startCraftingButton: HTMLButtonElement;
   craftAmountInput: CraftAmountInputElements;
   resourcePicker: ResourcePickerElements;
   recipePicker: ProfessionRecipePickerElements;
-  locationSelect: HuntLocationSelectElements;
   miningClearLogButton: HTMLButtonElement;
   miningLogList: HTMLElement;
   miningProcessBar: ProcessBarElements;
@@ -50,9 +42,7 @@ interface PanelHeaderElements {
 interface MiningTabElements {
   root: HTMLElement;
   miningAction: MiningActionControl;
-  minigameDownloadOption: MinigameDownloadOptionElements;
   resourcePicker: ResourcePickerElements;
-  locationSelect: HuntLocationSelectElements;
   logSection: LogSectionElements;
   processBar: ProcessBarElements;
 }
@@ -78,15 +68,12 @@ export interface BotPanelOptions {
   onResourceSelectionChange?: ((resources: readonly BotResourceSnapshot[]) => void) | undefined;
   selectedRecipeIds?: readonly ProfessionRecipeId[] | null | undefined;
   onRecipeSelectionChange?: ((recipes: readonly ProfessionRecipeSnapshot[]) => void) | undefined;
-  selectedLocationId?: HuntLocationId | null | undefined;
-  onLocationSelectionChange?: ((location: HuntLocationSnapshot) => void) | undefined;
   onSoundVolumeChange?: ((volume: number) => void) | undefined;
 }
 
 export function createBotPanel(
   resources: readonly BotResourceSnapshot[],
   recipes: readonly ProfessionRecipeSnapshot[],
-  locations: readonly HuntLocationSnapshot[],
   options: BotPanelOptions = {}
 ): BotPanelElements {
   const panel = document.createElement('section');
@@ -97,7 +84,7 @@ export function createBotPanel(
     onVolumeChange: options.onSoundVolumeChange
   });
   const headerElements = createPanelHeader(volumeControl.root);
-  const miningTab = createMiningTab(resources, locations, options);
+  const miningTab = createMiningTab(resources, options);
   const craftingTab = createCraftingTab(recipes, options);
   const tabs = createTabs<BotPanelTabId>([
     {
@@ -124,12 +111,10 @@ export function createBotPanel(
     closeButton: headerElements.closeButton,
     tabs,
     miningAction: miningTab.miningAction,
-    minigameDownloadOption: miningTab.minigameDownloadOption,
     startCraftingButton: craftingTab.startCraftingButton,
     craftAmountInput: craftingTab.craftAmountInput,
     resourcePicker: miningTab.resourcePicker,
     recipePicker: craftingTab.recipePicker,
-    locationSelect: miningTab.locationSelect,
     miningClearLogButton: miningTab.logSection.clearLogButton,
     miningLogList: miningTab.logSection.logList,
     miningProcessBar: miningTab.processBar,
@@ -177,7 +162,6 @@ function createPanelHeader(volumeControl: HTMLElement): PanelHeaderElements {
 
 function createMiningTab(
   resources: readonly BotResourceSnapshot[],
-  locations: readonly HuntLocationSnapshot[],
   options: BotPanelOptions
 ): MiningTabElements {
   const root = document.createElement('div');
@@ -185,25 +169,19 @@ function createMiningTab(
   controls.className = 'dwar-panel__controls';
 
   const miningAction = createMiningActionControl();
-  const minigameDownloadOption = createMinigameDownloadOption();
 
   const resourcePicker = createResourcePicker(resources, {
     selectedResourceIds: options.selectedResourceIds,
     onSelectionChange: options.onResourceSelectionChange
   });
 
-  const locationSelect = createHuntLocationSelect(locations, {
-    selectedLocationId: options.selectedLocationId,
-    onLocationChange: options.onLocationSelectionChange
-  });
-
   const actionGroup = document.createElement('div');
   actionGroup.className = 'dwar-panel__action-buttons';
-  actionGroup.append(miningAction.root, minigameDownloadOption.root);
+  actionGroup.append(miningAction.root);
 
   const selectorGroup = document.createElement('div');
   selectorGroup.className = 'dwar-panel__selectors';
-  selectorGroup.append(resourcePicker.root, locationSelect.root);
+  selectorGroup.append(resourcePicker.root);
   controls.append(actionGroup, selectorGroup);
 
   const logSection = createLogSection('Лог добычи');
@@ -215,9 +193,7 @@ function createMiningTab(
   return {
     root,
     miningAction,
-    minigameDownloadOption,
     resourcePicker,
-    locationSelect,
     logSection,
     processBar
   };

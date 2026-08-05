@@ -58,9 +58,7 @@ export const BOT_WIDGET_STYLES = `
   .dwar-action-button:focus-visible,
   .dwar-mining-action__menu-toggle:focus-visible,
   .dwar-mining-action__force-stop:focus-visible,
-  .dwar-minigame-download-option__checkbox:focus-visible,
   .dwar-craft-amount:focus-within,
-  .dwar-location-select__control:focus-visible,
   .dwar-resource-picker__toggle:focus-visible {
     outline: 2px solid #78d9c2;
     outline-offset: 3px;
@@ -360,7 +358,6 @@ export const BOT_WIDGET_STYLES = `
 
   .dwar-action-button,
   .dwar-craft-amount,
-  .dwar-location-select__control,
   .dwar-resource-picker__toggle {
     height: 38px;
     border: 1px solid rgba(255, 255, 255, .11);
@@ -391,29 +388,6 @@ export const BOT_WIDGET_STYLES = `
     position: relative;
     display: flex;
     width: 100%;
-  }
-
-  .dwar-minigame-download-option {
-    display: flex;
-    align-items: flex-start;
-    gap: 6px;
-    color: #aeb8c7;
-    cursor: pointer;
-    font: 600 10px/1.25 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    user-select: none;
-  }
-
-  .dwar-minigame-download-option:hover {
-    color: #dbe3f1;
-  }
-
-  .dwar-minigame-download-option__checkbox {
-    width: 14px;
-    height: 14px;
-    flex: 0 0 auto;
-    margin: 0;
-    accent-color: #78d9c2;
-    cursor: pointer;
   }
 
   .dwar-mining-action .dwar-mining-button {
@@ -548,28 +522,6 @@ export const BOT_WIDGET_STYLES = `
     min-width: 0;
   }
 
-  .dwar-location-select {
-    display: block;
-    min-width: 0;
-  }
-
-  .dwar-location-select__control {
-    width: 100%;
-    padding: 0 32px 0 10px;
-    color: #dbe3f1;
-    background: #0b1118;
-    border-radius: 7px;
-    appearance: none;
-    background-image:
-      linear-gradient(45deg, transparent 50%, #aeb8c7 50%),
-      linear-gradient(135deg, #aeb8c7 50%, transparent 50%);
-    background-position:
-      calc(100% - 17px) 16px,
-      calc(100% - 12px) 16px;
-    background-size: 5px 5px, 5px 5px;
-    background-repeat: no-repeat;
-  }
-
   .dwar-craft-amount {
     display: flex;
     align-items: center;
@@ -624,8 +576,6 @@ export const BOT_WIDGET_STYLES = `
     background: #0b1118;
   }
 
-  .dwar-location-select__control:hover,
-  .dwar-location-select__control:focus-visible,
   .dwar-resource-picker__toggle:hover,
   .dwar-resource-picker__toggle:focus-visible {
     border-color: rgba(120, 217, 194, .42);

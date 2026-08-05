@@ -75,8 +75,24 @@ export class RunProfessionCraftingUseCase {
     return defer(() => {
       const stoppedRecipeIds = new Set<ProfessionRecipeId>();
 
-      return defer(() => this.runIteration(input, stoppedRecipeIds)).pipe(repeat());
+      return defer(() => this.runIteration(input, stoppedRecipeIds)).pipe(
+        repeat({
+          delay: () => this.hasRunnableSelectedRecipe(input, stoppedRecipeIds)
+            ? of(undefined)
+            : EMPTY
+        })
+      );
     });
+  }
+
+  private hasRunnableSelectedRecipe(
+    input: RunProfessionCraftingInput,
+    stoppedRecipeIds: ReadonlySet<ProfessionRecipeId>
+  ): boolean {
+    const selectedRecipes = this.getSelectedRecipes(input.getSelectedRecipeIds());
+
+    return selectedRecipes.length === 0
+      || selectedRecipes.some((recipe) => !stoppedRecipeIds.has(recipe.getId()));
   }
 
   private runIteration(

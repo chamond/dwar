@@ -1,5 +1,4 @@
 import type { HuntMinigameImageDownloader } from '../../application/ports/hunt-minigame-image-downloader';
-import type { HuntLocationSelectionStore } from '../../application/ports/hunt-location-selection-store';
 import type { HuntMinigameRecognizer } from '../../application/ports/hunt-minigame-recognizer';
 import type { LauncherPositionStore } from '../../application/ports/launcher-position-store';
 import type { PanelSizeStore } from '../../application/ports/panel-size-store';
@@ -8,7 +7,6 @@ import type { ResourceSelectionStore } from '../../application/ports/resource-se
 import type { SoundVolumeStore } from '../../application/ports/sound-volume-store';
 import type { CreateBotLogEntryUseCase } from '../../application/use-cases/create-bot-log-entry';
 import type { ForceStopResourceMiningUseCase } from '../../application/use-cases/force-stop-resource-mining';
-import type { ListHuntLocationsUseCase } from '../../application/use-cases/list-hunt-locations';
 import type { ListProfessionRecipesUseCase } from '../../application/use-cases/list-profession-recipes';
 import type { ListResourcesUseCase } from '../../application/use-cases/list-resources';
 import type { RunProfessionCraftingUseCase } from '../../application/use-cases/run-profession-crafting';
@@ -25,20 +23,18 @@ import { attachDraggablePanel } from './draggable-panel';
 import { createLauncherButton } from './launcher-button';
 import { clearLogList } from './log-list';
 import { appendMinigameRecognitionLog } from './minigame-recognition-log';
-import { createMinigameCueSound } from './minigame-cue-sound';
 import { createMiningProcessController } from './mining-process-controller';
 import { keepPanelInViewport, positionPanelNearLauncher } from './panel-position';
 import { createProcessBarController } from './process-bar';
 import { createProcessErrorReporter } from './process-error-reporter';
 import { attachResizablePanel, keepPanelSizeInViewport, restorePanelSize } from './resizable-panel';
+import { createSplinterAlertSound } from './splinter-alert-sound';
 
 export interface BotWidgetDependencies {
   createLogEntry: CreateBotLogEntryUseCase;
   forceStopResourceMining: ForceStopResourceMiningUseCase;
-  listHuntLocations: ListHuntLocationsUseCase;
   listProfessionRecipes: ListProfessionRecipesUseCase;
   listResources: ListResourcesUseCase;
-  locationSelectionStore: HuntLocationSelectionStore;
   huntMinigameImageDownloader: HuntMinigameImageDownloader;
   huntMinigameRecognizer: HuntMinigameRecognizer;
   launcherPositionStore: LauncherPositionStore;
@@ -59,15 +55,15 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   const host = createHost();
   const shadowRoot = host.attachShadow({ mode: 'open' });
   const launcher = createLauncherButton();
-  const minigameCueSound = createMinigameCueSound();
+  const splinterAlertSound = createSplinterAlertSound();
   const initialSoundVolume = dependencies.soundVolumeStore.load();
 
   if (initialSoundVolume !== null) {
-    minigameCueSound.setVolume(initialSoundVolume);
+    splinterAlertSound.setVolume(initialSoundVolume);
   }
 
   const botPanel = createPanel(dependencies, initialSoundVolume, (volume) => {
-    minigameCueSound.setVolume(volume);
+    splinterAlertSound.setVolume(volume);
     dependencies.soundVolumeStore.save(volume);
   });
   const addMiningLog = createBotLogAppender(botPanel.miningLogList, dependencies.createLogEntry);
@@ -82,15 +78,13 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   const miningController = createMiningProcessController({
     action: botPanel.miningAction,
     resourcePicker: botPanel.resourcePicker,
-    locationSelect: botPanel.locationSelect,
     processBar: miningProcessBar,
     forceStopResourceMining: dependencies.forceStopResourceMining,
     runResourceMining: dependencies.runResourceMining,
     huntMinigameImageDownloader: dependencies.huntMinigameImageDownloader,
     huntMinigameRecognizer: dependencies.huntMinigameRecognizer,
     solveHuntMinigame: dependencies.solveHuntMinigame,
-    minigameCueSound,
-    minigameDownloadOption: botPanel.minigameDownloadOption,
+    splinterAlertSound,
     addLog: addMiningLog,
     presentMinigameRecognition: (recognition) => {
       const entry = dependencies.createLogEntry.execute({
@@ -227,9 +221,8 @@ function createPanel(
 ): BotPanelElements {
   const resources = dependencies.listResources.execute().map((resource) => resource.toSnapshot());
   const recipes = dependencies.listProfessionRecipes.execute().map((recipe) => recipe.toSnapshot());
-  const locations = dependencies.listHuntLocations.execute().map((location) => location.toSnapshot());
 
-  return createBotPanel(resources, recipes, locations, {
+  return createBotPanel(resources, recipes, {
     initialSoundVolume,
     selectedResourceIds: dependencies.resourceSelectionStore.load(),
     onResourceSelectionChange: (selectedResources) => {
@@ -238,10 +231,6 @@ function createPanel(
     selectedRecipeIds: dependencies.professionRecipeSelectionStore.load(),
     onRecipeSelectionChange: (selectedRecipes) => {
       dependencies.professionRecipeSelectionStore.save(selectedRecipes.map(({ id }) => id));
-    },
-    selectedLocationId: dependencies.locationSelectionStore.load(),
-    onLocationSelectionChange: (location) => {
-      dependencies.locationSelectionStore.save(location.id);
     },
     onSoundVolumeChange
   });

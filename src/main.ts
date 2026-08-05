@@ -1,6 +1,5 @@
 import { CreateBotLogEntryUseCase } from './application/use-cases/create-bot-log-entry';
 import { ForceStopResourceMiningUseCase } from './application/use-cases/force-stop-resource-mining';
-import { ListHuntLocationsUseCase } from './application/use-cases/list-hunt-locations';
 import { ListProfessionRecipesUseCase } from './application/use-cases/list-profession-recipes';
 import { ListResourcesUseCase } from './application/use-cases/list-resources';
 import { RunProfessionCraftingUseCase } from './application/use-cases/run-profession-crafting';
@@ -19,13 +18,12 @@ import { BrowserProfessionRecipeCrafter } from './infrastructure/browser/browser
 import { detectCurrentPlayerSplinter } from './infrastructure/browser/detect-current-player-splinter';
 import { DwarBackpackHtmlParser } from './infrastructure/browser/dwar-backpack-html-parser';
 import { DwarHuntZoneXmlParser } from './infrastructure/browser/dwar-hunt-zone-xml-parser';
-import { LocalStorageHuntLocationSelectionStore } from './infrastructure/browser/local-storage-hunt-location-selection-store';
+import { getAreaId } from './infrastructure/browser/get-area-id';
 import { LocalStorageLauncherPositionStore } from './infrastructure/browser/local-storage-launcher-position-store';
 import { LocalStoragePanelSizeStore } from './infrastructure/browser/local-storage-panel-size-store';
 import { LocalStorageProfessionRecipeSelectionStore } from './infrastructure/browser/local-storage-profession-recipe-selection-store';
 import { LocalStorageResourceSelectionStore } from './infrastructure/browser/local-storage-resource-selection-store';
 import { LocalStorageSoundVolumeStore } from './infrastructure/browser/local-storage-sound-volume-store';
-import { StaticHuntLocationRepository } from './infrastructure/local-data/static-hunt-location-repository';
 import { StaticProfessionRecipeRepository } from './infrastructure/local-data/static-profession-recipe-repository';
 import { StaticResourceRepository } from './infrastructure/local-data/static-resource-repository';
 import { InMemoryHuntZoneScanStore } from './infrastructure/memory/in-memory-hunt-zone-scan-store';
@@ -37,16 +35,13 @@ function bootstrap(): void {
   const createLogEntry = new CreateBotLogEntryUseCase(clock);
   const resourceRepository = new StaticResourceRepository();
   const professionRecipeRepository = new StaticProfessionRecipeRepository(resourceRepository);
-  const huntLocationRepository = new StaticHuntLocationRepository();
   const listResources = new ListResourcesUseCase(resourceRepository);
   const listProfessionRecipes = new ListProfessionRecipesUseCase(professionRecipeRepository);
-  const listHuntLocations = new ListHuntLocationsUseCase(huntLocationRepository);
   const soundVolumeStore = new LocalStorageSoundVolumeStore();
   const launcherPositionStore = new LocalStorageLauncherPositionStore();
   const panelSizeStore = new LocalStoragePanelSizeStore();
   const resourceSelectionStore = new LocalStorageResourceSelectionStore();
   const professionRecipeSelectionStore = new LocalStorageProfessionRecipeSelectionStore();
-  const locationSelectionStore = new LocalStorageHuntLocationSelectionStore();
   const huntZoneXmlParser = new DwarHuntZoneXmlParser(resourceRepository);
   const huntZoneScanner = new BrowserHuntZoneScanner(huntZoneXmlParser);
   const huntZoneScanStore = new InMemoryHuntZoneScanStore();
@@ -68,13 +63,13 @@ function bootstrap(): void {
   const runResourceMining = new RunResourceMiningUseCase(
     huntZoneScanner,
     resourceRepository,
-    huntLocationRepository,
     huntZoneScanStore,
     huntResourceFarmer,
     huntResourceFarmInterrupter,
     delay,
     clock,
-    detectCurrentPlayerSplinter
+    detectCurrentPlayerSplinter,
+    getAreaId
   );
   const runProfessionCrafting = new RunProfessionCraftingUseCase(
     professionRecipeRepository,
@@ -87,10 +82,8 @@ function bootstrap(): void {
     forceStopResourceMining,
     huntMinigameImageDownloader,
     huntMinigameRecognizer,
-    listHuntLocations,
     listProfessionRecipes,
     listResources,
-    locationSelectionStore,
     launcherPositionStore,
     panelSizeStore,
     professionRecipeSelectionStore,

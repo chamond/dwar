@@ -30,9 +30,11 @@ export class DwarBackpackHtmlParser {
     const quantityElement = slot.querySelector(quantitySelector);
 
     if (!quantityElement) {
-      throw new UnexpectedServerResponseError(
-        `Backpack item ${articleId} has no quantity element.`
-      );
+      return {
+        articleId,
+        artifactId,
+        quantity: 1
+      };
     }
 
     const quantityText = quantityElement.textContent?.trim() ?? '';

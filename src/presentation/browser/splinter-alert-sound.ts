@@ -1,19 +1,19 @@
 import { EMPTY, catchError, from, take } from 'rxjs';
 
-export interface MinigameCueSound {
+export interface SplinterAlertSound {
   prepare(): void;
   play(): void;
   setVolume(volume: number): void;
 }
 
-export function createMinigameCueSound(): MinigameCueSound {
-  return new BrowserMinigameCueSound();
+export function createSplinterAlertSound(): SplinterAlertSound {
+  return new BrowserSplinterAlertSound();
 }
 
-class BrowserMinigameCueSound implements MinigameCueSound {
+class BrowserSplinterAlertSound implements SplinterAlertSound {
   private audioContext: AudioContext | null = null;
   private masterGain: GainNode | null = null;
-  private stopActiveCue: (() => void) | null = null;
+  private stopActiveAlert: (() => void) | null = null;
   private volume = 1;
 
   prepare(): void {
@@ -26,21 +26,29 @@ class BrowserMinigameCueSound implements MinigameCueSound {
           take(1)
         ).subscribe();
       } catch {
-        // The cue is optional and must not interrupt mining when audio is unavailable.
+        // The alert is optional and must not interrupt mining when audio is unavailable.
       }
     }
   }
 
   play(): void {
     try {
-      this.playCue();
+      this.playAlert();
     } catch {
-      this.stopActiveCue?.();
-      this.stopActiveCue = null;
+      this.stopActiveAlert?.();
+      this.stopActiveAlert = null;
     }
   }
 
-  private playCue(): void {
+  setVolume(volume: number): void {
+    this.volume = clampVolume(volume);
+
+    if (this.masterGain && this.audioContext) {
+      this.masterGain.gain.setValueAtTime(this.volume, this.audioContext.currentTime);
+    }
+  }
+
+  private playAlert(): void {
     const context = this.getAudioContext();
     const masterGain = this.masterGain;
 
@@ -48,7 +56,7 @@ class BrowserMinigameCueSound implements MinigameCueSound {
       return;
     }
 
-    this.stopActiveCue?.();
+    this.stopActiveAlert?.();
 
     const startedAt = context.currentTime;
     const endedAt = startedAt + 1.05;
@@ -107,8 +115,8 @@ class BrowserMinigameCueSound implements MinigameCueSound {
       filter.disconnect();
       envelope.disconnect();
 
-      if (this.stopActiveCue === stop) {
-        this.stopActiveCue = null;
+      if (this.stopActiveAlert === stop) {
+        this.stopActiveAlert = null;
       }
     };
 
@@ -123,7 +131,7 @@ class BrowserMinigameCueSound implements MinigameCueSound {
       cleanup();
     };
 
-    this.stopActiveCue = stop;
+    this.stopActiveAlert = stop;
     tension.addEventListener('ended', cleanup, { once: true });
     tension.start(startedAt);
     body.start(startedAt);
@@ -134,14 +142,6 @@ class BrowserMinigameCueSound implements MinigameCueSound {
 
     if (context.state === 'suspended') {
       this.prepare();
-    }
-  }
-
-  setVolume(volume: number): void {
-    this.volume = clampVolume(volume);
-
-    if (this.masterGain && this.audioContext) {
-      this.masterGain.gain.setValueAtTime(this.volume, this.audioContext.currentTime);
     }
   }
 
