@@ -110,13 +110,13 @@ collected when its node disappears and considers the attempt failed when the
 node returns to an available state. Its progress bar uses the resource's
 20-second nominal duration; if the node is still being farmed when the bar
 fills, scans continue while the filled bar waits for the result. The crafting
-tab contains the recipe multiselect and one shared amount input defaulting to
-10. At the start of each crafting cycle, the bot loads backpack group 3 and
-reads the resource quantities for all selected recipes with one shared
-request by matching each stable mining article id. It then crafts no more than
-the selected amount or the available resource count, waits for all recipe
-cooldowns before the next shared cycle, logs the calculated remainder, and
-stops only the affected recipe when that resource is absent.
+tab contains the recipe multiselect. At the start of each crafting cycle, the
+bot loads backpack group 3 and reads the resource quantities for all selected
+recipes with one shared request by matching each stable mining article id. It
+then crafts the maximum amount allowed by each recipe or the available resource
+count, waits for all recipe cooldowns before the next shared cycle, logs the
+calculated remainder, and stops only the affected recipe when that resource is
+absent.
 Unexpected server responses stop the affected process and add a red
 human-attention log tag. There is no siren or alarm overlay. The header volume
 control adjusts the one-shot minigame cue and persists mute and volume in

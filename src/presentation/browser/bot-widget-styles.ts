@@ -58,7 +58,6 @@ export const BOT_WIDGET_STYLES = `
   .dwar-action-button:focus-visible,
   .dwar-mining-action__menu-toggle:focus-visible,
   .dwar-mining-action__force-stop:focus-visible,
-  .dwar-craft-amount:focus-within,
   .dwar-resource-picker__toggle:focus-visible {
     outline: 2px solid #78d9c2;
     outline-offset: 3px;
@@ -357,7 +356,6 @@ export const BOT_WIDGET_STYLES = `
   }
 
   .dwar-action-button,
-  .dwar-craft-amount,
   .dwar-resource-picker__toggle {
     height: 38px;
     border: 1px solid rgba(255, 255, 255, .11);
@@ -510,59 +508,9 @@ export const BOT_WIDGET_STYLES = `
     gap: 8px;
   }
 
-  .dwar-panel__recipe-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 74px;
-    min-width: 0;
-    gap: 8px;
-  }
-
   .dwar-resource-picker {
     position: relative;
     min-width: 0;
-  }
-
-  .dwar-craft-amount {
-    display: flex;
-    align-items: center;
-    min-width: 0;
-    padding: 0 8px 0 0;
-    color: #dbe3f1;
-    background: #0b1118;
-  }
-
-  .dwar-craft-amount:hover,
-  .dwar-craft-amount:focus-within {
-    border-color: rgba(120, 217, 194, .42);
-    color: #ffffff;
-    background-color: #111a24;
-  }
-
-  .dwar-craft-amount__input {
-    width: 100%;
-    min-width: 0;
-    height: 100%;
-    padding: 0 3px 0 8px;
-    color: inherit;
-    background: transparent;
-    border: 0;
-    outline: 0;
-    font: 800 12px/1 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    text-align: center;
-    appearance: textfield;
-  }
-
-  .dwar-craft-amount__input::-webkit-outer-spin-button,
-  .dwar-craft-amount__input::-webkit-inner-spin-button {
-    margin: 0;
-    appearance: none;
-  }
-
-  .dwar-craft-amount__unit {
-    flex: 0 0 auto;
-    color: #aeb8c7;
-    font-size: 11px;
-    font-weight: 700;
   }
 
   .dwar-resource-picker__toggle {

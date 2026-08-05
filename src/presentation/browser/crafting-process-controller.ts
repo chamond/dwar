@@ -2,7 +2,6 @@ import { EMPTY, catchError, finalize, type Subscription } from 'rxjs';
 import type { RunProfessionCraftingUseCase } from '../../application/use-cases/run-profession-crafting';
 import type { ProfessionRecipeId } from '../../domain/entities/profession-recipe';
 import type { AddBotLog } from './bot-log-appender';
-import type { CraftAmountInputElements } from './craft-amount-input';
 import { getCraftIcon } from './craft-icon';
 import type { CraftingProcessBarsController } from './crafting-process-bars';
 import { presentCraftingEvent } from './crafting-event-presenter';
@@ -18,7 +17,6 @@ export interface CraftingProcessController {
 export interface CraftingProcessControllerOptions {
   button: HTMLButtonElement;
   recipePicker: ProfessionRecipePickerElements;
-  craftAmountInput: CraftAmountInputElements;
   processBars: CraftingProcessBarsController;
   runProfessionCrafting: RunProfessionCraftingUseCase;
   addLog: AddBotLog;
@@ -50,8 +48,7 @@ export function createCraftingProcessController(
     setButtonActive(options.button, true);
 
     const subscription = options.runProfessionCrafting.execute({
-      getSelectedRecipeIds: () => options.recipePicker.getSelectedRecipes().map(({ id }) => id),
-      getAmountPerRequest: () => options.craftAmountInput.getAmount()
+      getSelectedRecipeIds: () => options.recipePicker.getSelectedRecipes().map(({ id }) => id)
     }).pipe(
       catchError((error: unknown) => {
         options.reportError(error);

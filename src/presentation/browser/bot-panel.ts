@@ -2,7 +2,6 @@ import type { BotResourceId, BotResourceSnapshot } from '../../domain/entities/b
 import type { ProfessionRecipeId, ProfessionRecipeSnapshot } from '../../domain/entities/profession-recipe';
 import { getClearLogIcon } from './clear-log-icon';
 import { getCraftIcon } from './craft-icon';
-import { createCraftAmountInput, type CraftAmountInputElements } from './craft-amount-input';
 import { createMiningActionControl, type MiningActionControl } from './mining-action-control';
 import { createProcessBar, type ProcessBarElements } from './process-bar';
 import {
@@ -22,7 +21,6 @@ export interface BotPanelElements {
   tabs: TabsElements<BotPanelTabId>;
   miningAction: MiningActionControl;
   startCraftingButton: HTMLButtonElement;
-  craftAmountInput: CraftAmountInputElements;
   resourcePicker: ResourcePickerElements;
   recipePicker: ProfessionRecipePickerElements;
   miningClearLogButton: HTMLButtonElement;
@@ -50,7 +48,6 @@ interface MiningTabElements {
 interface CraftingTabElements {
   root: HTMLElement;
   startCraftingButton: HTMLButtonElement;
-  craftAmountInput: CraftAmountInputElements;
   recipePicker: ProfessionRecipePickerElements;
   logSection: LogSectionElements;
   processBars: HTMLElement;
@@ -112,7 +109,6 @@ export function createBotPanel(
     tabs,
     miningAction: miningTab.miningAction,
     startCraftingButton: craftingTab.startCraftingButton,
-    craftAmountInput: craftingTab.craftAmountInput,
     resourcePicker: miningTab.resourcePicker,
     recipePicker: craftingTab.recipePicker,
     miningClearLogButton: miningTab.logSection.clearLogButton,
@@ -217,7 +213,6 @@ function createCraftingTab(
     selectedRecipeIds: options.selectedRecipeIds,
     onSelectionChange: options.onRecipeSelectionChange
   });
-  const craftAmountInput = createCraftAmountInput();
 
   const actionGroup = document.createElement('div');
   actionGroup.className = 'dwar-panel__action-buttons';
@@ -225,10 +220,7 @@ function createCraftingTab(
 
   const selectorGroup = document.createElement('div');
   selectorGroup.className = 'dwar-panel__selectors';
-  const recipeRow = document.createElement('div');
-  recipeRow.className = 'dwar-panel__recipe-row';
-  recipeRow.append(recipePicker.root, craftAmountInput.root);
-  selectorGroup.append(recipeRow);
+  selectorGroup.append(recipePicker.root);
   controls.append(actionGroup, selectorGroup);
 
   const logSection = createLogSection('Лог крафта');
@@ -241,7 +233,6 @@ function createCraftingTab(
   return {
     root,
     startCraftingButton,
-    craftAmountInput,
     recipePicker,
     logSection,
     processBars

@@ -104,7 +104,6 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   const craftingController = createCraftingProcessController({
     button: botPanel.startCraftingButton,
     recipePicker: botPanel.recipePicker,
-    craftAmountInput: botPanel.craftAmountInput,
     processBars: craftingProcessBars,
     runProfessionCrafting: dependencies.runProfessionCrafting,
     addLog: addCraftingLog,

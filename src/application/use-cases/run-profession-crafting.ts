@@ -27,7 +27,6 @@ import type { ProfessionRecipeCrafter } from '../ports/profession-recipe-crafter
 import type { ProfessionRecipeRepository } from '../ports/profession-recipe-repository';
 
 const DEFAULT_RESOURCE_BACKPACK_GROUP = 3;
-const DEFAULT_CRAFT_AMOUNT_PER_REQUEST = 10;
 const DEFAULT_CRAFT_COOLDOWN_PER_ITEM_MS = 30_000;
 const DEFAULT_POST_CRAFT_DELAY_MS = 5_000;
 const DEFAULT_NO_SELECTED_RECIPE_DELAY_MS = 5_000;
@@ -35,7 +34,6 @@ const DEFAULT_SELECTION_REFRESH_DELAY_MS = 1_000;
 
 export interface ProfessionCraftingConfig {
   resourceBackpackGroup: number;
-  amountPerRequest: number;
   cooldownPerItemMs: number;
   postCraftDelayMs: number;
   noSelectedRecipeDelayMs: number;
@@ -43,7 +41,6 @@ export interface ProfessionCraftingConfig {
 }
 
 export interface RunProfessionCraftingInput {
-  getAmountPerRequest?: (() => number) | undefined;
   getSelectedRecipeIds(): readonly ProfessionRecipeId[];
 }
 
@@ -59,7 +56,6 @@ export class RunProfessionCraftingUseCase {
   ) {
     this.config = {
       resourceBackpackGroup: config.resourceBackpackGroup ?? DEFAULT_RESOURCE_BACKPACK_GROUP,
-      amountPerRequest: config.amountPerRequest ?? DEFAULT_CRAFT_AMOUNT_PER_REQUEST,
       cooldownPerItemMs: config.cooldownPerItemMs ?? DEFAULT_CRAFT_COOLDOWN_PER_ITEM_MS,
       postCraftDelayMs: config.postCraftDelayMs ?? DEFAULT_POST_CRAFT_DELAY_MS,
       noSelectedRecipeDelayMs: config.noSelectedRecipeDelayMs ?? DEFAULT_NO_SELECTED_RECIPE_DELAY_MS,
@@ -132,7 +128,7 @@ export class RunProfessionCraftingUseCase {
     return concat(
       of(backpackCheckEvent),
       this.readBackpackQuantities(runnableRecipes).pipe(
-        switchMap((lookups) => this.runCraftTasks(lookups, stoppedRecipeIds, input))
+        switchMap((lookups) => this.runCraftTasks(lookups, stoppedRecipeIds))
       )
     );
   }
@@ -161,8 +157,7 @@ export class RunProfessionCraftingUseCase {
 
   private runCraftTasks(
     lookups: readonly RecipeBackpackLookup[],
-    stoppedRecipeIds: Set<ProfessionRecipeId>,
-    input: RunProfessionCraftingInput
+    stoppedRecipeIds: Set<ProfessionRecipeId>
   ): Observable<ProfessionCraftingEvent> {
     const taskErrors: unknown[] = [];
     const tasks = lookups.map(({ recipe, availableAmount }) => {
@@ -175,7 +170,7 @@ export class RunProfessionCraftingUseCase {
               recipe: createRecipeInfo(recipe)
             });
           })
-        : this.craftRecipe(recipe, availableAmount, input);
+        : this.craftRecipe(recipe, availableAmount);
 
       return task.pipe(
         catchError((error: unknown) => {
@@ -201,16 +196,11 @@ export class RunProfessionCraftingUseCase {
 
   private craftRecipe(
     recipe: ProfessionRecipe,
-    availableResourceAmount: number,
-    input: RunProfessionCraftingInput
+    availableResourceAmount: number
   ): Observable<ProfessionCraftingEvent> {
     return defer(() => {
       const recipeInfo = createRecipeInfo(recipe);
-      const amount = this.getCraftAmount(
-        recipe,
-        input.getAmountPerRequest?.(),
-        availableResourceAmount
-      );
+      const amount = Math.min(recipe.getMaxAmountPerRequest(), availableResourceAmount);
       const requestStartedEvent: ProfessionCraftingEvent = {
         type: 'craft-request-started',
         recipe: recipeInfo,
@@ -256,24 +246,6 @@ export class RunProfessionCraftingUseCase {
         stoppedRecipeIds.delete(stoppedRecipeId);
       }
     }
-  }
-
-  private getCraftAmount(
-    recipe: ProfessionRecipe,
-    requestedAmount: number | undefined,
-    availableResourceAmount: number
-  ): number {
-    const amount = normalizeCraftAmount(
-      requestedAmount ?? this.config.amountPerRequest,
-      this.config.amountPerRequest
-    );
-
-    return Math.min(
-      amount,
-      this.config.amountPerRequest,
-      recipe.getMaxAmountPerRequest(),
-      availableResourceAmount
-    );
   }
 
   private getSelectedRecipes(
@@ -326,12 +298,4 @@ function getRequiredQuantity(
   }
 
   return quantity;
-}
-
-function normalizeCraftAmount(amount: number, fallbackAmount: number): number {
-  if (!Number.isFinite(amount)) {
-    return fallbackAmount;
-  }
-
-  return Math.max(1, Math.trunc(amount));
 }
