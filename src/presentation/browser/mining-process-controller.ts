@@ -51,6 +51,7 @@ export interface MiningProcessControllerOptions {
   solveHuntMinigame: SolveHuntMinigameUseCase;
   splinterAlertSound: SplinterAlertSound;
   addLog: AddBotLog;
+  onSplinterDetected(): void;
   presentMinigameRecognition(recognition: HuntMinigameRecognition): void;
   reportError: ProcessErrorReporter;
 }
@@ -185,6 +186,7 @@ export function createMiningProcessController(
 
         if (event.type === 'splinter-detected') {
           options.splinterAlertSound.play();
+          options.onSplinterDetected();
         }
 
         presentMiningEvent(event, options.addLog, options.processBar);

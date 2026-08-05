@@ -39,6 +39,10 @@ export class LocationPlayer {
     return this.nick;
   }
 
+  getClanId(): number {
+    return this.clanId;
+  }
+
   toSnapshot(): LocationPlayerSnapshot {
     return {
       nick: this.nick,

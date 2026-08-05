@@ -20,7 +20,7 @@ export interface BotPanelElements {
   closeButton: HTMLButtonElement;
   tabs: TabsElements<BotPanelTabId>;
   miningAction: MiningActionControl;
-  listLocationPlayersButton: HTMLButtonElement;
+  splinterHelpButton: HTMLButtonElement;
   startCraftingButton: HTMLButtonElement;
   resourcePicker: ResourcePickerElements;
   recipePicker: ProfessionRecipePickerElements;
@@ -41,7 +41,7 @@ interface PanelHeaderElements {
 interface MiningTabElements {
   root: HTMLElement;
   miningAction: MiningActionControl;
-  listLocationPlayersButton: HTMLButtonElement;
+  splinterHelpButton: HTMLButtonElement;
   resourcePicker: ResourcePickerElements;
   logSection: LogSectionElements;
   processBar: ProcessBarElements;
@@ -110,7 +110,7 @@ export function createBotPanel(
     closeButton: headerElements.closeButton,
     tabs,
     miningAction: miningTab.miningAction,
-    listLocationPlayersButton: miningTab.listLocationPlayersButton,
+    splinterHelpButton: miningTab.splinterHelpButton,
     startCraftingButton: craftingTab.startCraftingButton,
     resourcePicker: miningTab.resourcePicker,
     recipePicker: craftingTab.recipePicker,
@@ -168,7 +168,7 @@ function createMiningTab(
   controls.className = 'dwar-panel__controls';
 
   const miningAction = createMiningActionControl();
-  const listLocationPlayersButton = createListLocationPlayersButton();
+  const splinterHelpButton = createSplinterHelpButton();
 
   const resourcePicker = createResourcePicker(resources, {
     selectedResourceIds: options.selectedResourceIds,
@@ -177,7 +177,7 @@ function createMiningTab(
 
   const actionGroup = document.createElement('div');
   actionGroup.className = 'dwar-panel__action-buttons';
-  actionGroup.append(miningAction.root, listLocationPlayersButton);
+  actionGroup.append(miningAction.root, splinterHelpButton);
 
   const selectorGroup = document.createElement('div');
   selectorGroup.className = 'dwar-panel__selectors';
@@ -193,19 +193,20 @@ function createMiningTab(
   return {
     root,
     miningAction,
-    listLocationPlayersButton,
+    splinterHelpButton,
     resourcePicker,
     logSection,
     processBar
   };
 }
 
-function createListLocationPlayersButton(): HTMLButtonElement {
+function createSplinterHelpButton(): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = 'dwar-action-button dwar-location-players-button';
-  button.setAttribute('aria-label', 'Показать игроков текущей локации');
-  button.textContent = 'Игроки';
+  button.className = 'dwar-action-button dwar-splinter-help-button';
+  button.disabled = true;
+  button.setAttribute('aria-label', 'Попросить игроков снять занозу');
+  button.textContent = 'Помощь';
 
   return button;
 }

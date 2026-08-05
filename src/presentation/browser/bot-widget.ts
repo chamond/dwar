@@ -7,9 +7,9 @@ import type { ResourceSelectionStore } from '../../application/ports/resource-se
 import type { SoundVolumeStore } from '../../application/ports/sound-volume-store';
 import type { CreateBotLogEntryUseCase } from '../../application/use-cases/create-bot-log-entry';
 import type { ForceStopResourceMiningUseCase } from '../../application/use-cases/force-stop-resource-mining';
-import type { ListCurrentLocationPlayersUseCase } from '../../application/use-cases/list-current-location-players';
 import type { ListProfessionRecipesUseCase } from '../../application/use-cases/list-profession-recipes';
 import type { ListResourcesUseCase } from '../../application/use-cases/list-resources';
+import type { RequestSplinterHelpUseCase } from '../../application/use-cases/request-splinter-help';
 import type { RunProfessionCraftingUseCase } from '../../application/use-cases/run-profession-crafting';
 import type { RunResourceMiningUseCase } from '../../application/use-cases/run-resource-mining';
 import type { SolveHuntMinigameUseCase } from '../../application/use-cases/solve-hunt-minigame';
@@ -22,7 +22,6 @@ import { createCraftingProcessBarsController } from './crafting-process-bars';
 import { attachDraggableLauncher, restoreLauncherPosition } from './draggable-launcher';
 import { attachDraggablePanel } from './draggable-panel';
 import { createLauncherButton } from './launcher-button';
-import { createLocationPlayersController } from './location-players-controller';
 import { clearLogList } from './log-list';
 import { appendMinigameRecognitionLog } from './minigame-recognition-log';
 import { createMiningProcessController } from './mining-process-controller';
@@ -31,19 +30,20 @@ import { createProcessBarController } from './process-bar';
 import { createProcessErrorReporter } from './process-error-reporter';
 import { attachResizablePanel, keepPanelSizeInViewport, restorePanelSize } from './resizable-panel';
 import { createSplinterAlertSound } from './splinter-alert-sound';
+import { createSplinterHelpController } from './splinter-help-controller';
 
 export interface BotWidgetDependencies {
   createLogEntry: CreateBotLogEntryUseCase;
   forceStopResourceMining: ForceStopResourceMiningUseCase;
   listProfessionRecipes: ListProfessionRecipesUseCase;
   listResources: ListResourcesUseCase;
-  listCurrentLocationPlayers: ListCurrentLocationPlayersUseCase;
   huntMinigameImageDownloader: HuntMinigameImageDownloader;
   huntMinigameRecognizer: HuntMinigameRecognizer;
   launcherPositionStore: LauncherPositionStore;
   panelSizeStore: PanelSizeStore;
   professionRecipeSelectionStore: ProfessionRecipeSelectionStore;
   resourceSelectionStore: ResourceSelectionStore;
+  requestSplinterHelp: RequestSplinterHelpUseCase;
   runProfessionCrafting: RunProfessionCraftingUseCase;
   runResourceMining: RunResourceMiningUseCase;
   solveHuntMinigame: SolveHuntMinigameUseCase;
@@ -77,6 +77,15 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   };
   const miningProcessBar = createProcessBarController(botPanel.miningProcessBar);
   const craftingProcessBars = createCraftingProcessBarsController(botPanel.craftingProcessBars);
+  const splinterHelpController = createSplinterHelpController({
+    button: botPanel.splinterHelpButton,
+    requestSplinterHelp: dependencies.requestSplinterHelp,
+    addLog: addMiningLog,
+    reportError: createProcessErrorReporter({
+      stoppedLabel: 'Протокол помощи остановлен',
+      addLog: addMiningLog
+    })
+  });
 
   const miningController = createMiningProcessController({
     action: botPanel.miningAction,
@@ -89,6 +98,9 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     solveHuntMinigame: dependencies.solveHuntMinigame,
     splinterAlertSound,
     addLog: addMiningLog,
+    onSplinterDetected: () => {
+      splinterHelpController.confirmSplinter();
+    },
     presentMinigameRecognition: (recognition) => {
       const entry = dependencies.createLogEntry.execute({
         message: `Распознана мини-игра: ${recognition.targetToSourceSequence.join(',')}`
@@ -115,16 +127,6 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
       addLog: addCraftingLog
     })
   });
-  const locationPlayersController = createLocationPlayersController({
-    button: botPanel.listLocationPlayersButton,
-    listCurrentLocationPlayers: dependencies.listCurrentLocationPlayers,
-    addLog: addMiningLog,
-    reportError: createProcessErrorReporter({
-      stoppedLabel: 'Список игроков не получен',
-      addLog: addMiningLog
-    })
-  });
-
   attachMutuallyExclusivePickers(botPanel);
   shadowRoot.append(createStyleElement(), launcher, botPanel.panel);
   document.documentElement.append(host);
@@ -178,8 +180,8 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     miningController.forceStop();
   });
 
-  botPanel.listLocationPlayersButton.addEventListener('click', () => {
-    locationPlayersController.show();
+  botPanel.splinterHelpButton.addEventListener('click', () => {
+    splinterHelpController.start();
   });
 
   botPanel.startCraftingButton.addEventListener('click', () => {

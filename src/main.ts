@@ -3,6 +3,7 @@ import { ForceStopResourceMiningUseCase } from './application/use-cases/force-st
 import { ListCurrentLocationPlayersUseCase } from './application/use-cases/list-current-location-players';
 import { ListProfessionRecipesUseCase } from './application/use-cases/list-profession-recipes';
 import { ListResourcesUseCase } from './application/use-cases/list-resources';
+import { RequestSplinterHelpUseCase } from './application/use-cases/request-splinter-help';
 import { RunProfessionCraftingUseCase } from './application/use-cases/run-profession-crafting';
 import { RunResourceMiningUseCase } from './application/use-cases/run-resource-mining';
 import { SolveHuntMinigameUseCase } from './application/use-cases/solve-hunt-minigame';
@@ -17,6 +18,7 @@ import { BrowserHuntResourceFarmInterrupter } from './infrastructure/browser/bro
 import { BrowserHuntZoneScanner } from './infrastructure/browser/browser-hunt-zone-scanner';
 import { BrowserDelay } from './infrastructure/browser/browser-delay';
 import { BrowserProfessionRecipeCrafter } from './infrastructure/browser/browser-profession-recipe-crafter';
+import { BrowserPrivateMessageSender } from './infrastructure/browser/browser-private-message-sender';
 import { detectCurrentPlayerSplinter } from './infrastructure/browser/detect-current-player-splinter';
 import { DwarBackpackHtmlParser } from './infrastructure/browser/dwar-backpack-html-parser';
 import { DwarChatUsersHtmlParser } from './infrastructure/browser/dwar-chat-users-html-parser';
@@ -46,6 +48,14 @@ function bootstrap(): void {
   const listCurrentLocationPlayers = new ListCurrentLocationPlayersUseCase(
     currentLocationPlayerReader
   );
+  const delay = new BrowserDelay();
+  const requestSplinterHelp = new RequestSplinterHelpUseCase(
+    listCurrentLocationPlayers,
+    new BrowserPrivateMessageSender(),
+    detectCurrentPlayerSplinter,
+    getAreaId,
+    delay
+  );
   const soundVolumeStore = new LocalStorageSoundVolumeStore();
   const launcherPositionStore = new LocalStorageLauncherPositionStore();
   const panelSizeStore = new LocalStoragePanelSizeStore();
@@ -61,7 +71,6 @@ function bootstrap(): void {
   const huntResourceFarmCancellationSender = new BrowserHuntResourceFarmCancellationSender();
   const huntResourceFarmInterrupter = new BrowserHuntResourceFarmInterrupter();
   const forceStopResourceMining = new ForceStopResourceMiningUseCase(huntResourceFarmInterrupter);
-  const delay = new BrowserDelay();
   const solveHuntMinigame = new SolveHuntMinigameUseCase(
     huntMinigameSolutionSubmitter,
     huntResourceFarmCancellationSender,
@@ -93,11 +102,11 @@ function bootstrap(): void {
     huntMinigameRecognizer,
     listProfessionRecipes,
     listResources,
-    listCurrentLocationPlayers,
     launcherPositionStore,
     panelSizeStore,
     professionRecipeSelectionStore,
     resourceSelectionStore,
+    requestSplinterHelp,
     runProfessionCrafting,
     runResourceMining,
     solveHuntMinigame,
