@@ -4,10 +4,11 @@ import { UnexpectedServerResponseError } from '../../application/errors/unexpect
 import { CURRENT_PLAYER_NICKNAME } from '../../domain/current-player';
 
 const SPLINTER_ARTICLE_ID = 2299;
-const INJURY_INFO_URL = 'https://w1.dwar.ru/injury_info.php';
+const SPLINTER_NAME = 'Заноза';
+const EFFECT_INFO_URL = 'https://w1.dwar.ru/effect_info.php';
 
 export function detectCurrentPlayerSplinter(): Observable<boolean> {
-  return fromFetch(buildCurrentPlayerInjuryInfoUrl(), {
+  return fromFetch(buildCurrentPlayerEffectInfoUrl(), {
     cache: 'no-store',
     credentials: 'same-origin',
     method: 'GET'
@@ -15,7 +16,7 @@ export function detectCurrentPlayerSplinter(): Observable<boolean> {
     switchMap((response) => {
       if (!response.ok) {
         throw new UnexpectedServerResponseError(
-          `Injury info request failed with HTTP ${response.status}.`
+          `Effect info request failed with HTTP ${response.status}.`
         );
       }
 
@@ -26,17 +27,37 @@ export function detectCurrentPlayerSplinter(): Observable<boolean> {
   );
 }
 
-function buildCurrentPlayerInjuryInfoUrl(): string {
-  return `${INJURY_INFO_URL}?nick=${encodeURIComponent(CURRENT_PLAYER_NICKNAME)}`;
+function buildCurrentPlayerEffectInfoUrl(): string {
+  return `${EFFECT_INFO_URL}?nick=${encodeURIComponent(CURRENT_PLAYER_NICKNAME)}`;
 }
 
 function hasSplinter(htmlText: string): boolean {
   const document = new DOMParser().parseFromString(htmlText, 'text/html');
-  const artifactLinks = document.querySelectorAll<HTMLAnchorElement>('a[href]');
+  const artifactLinks = document.querySelectorAll<HTMLAnchorElement>('a');
 
   return Array.from(artifactLinks).some((link) => {
-    const url = new URL(link.href, INJURY_INFO_URL);
+    const href = link.getAttribute('href');
 
-    return url.searchParams.get('artikul_id') === String(SPLINTER_ARTICLE_ID);
+    if (href) {
+      const url = new URL(href, EFFECT_INFO_URL);
+
+      if (url.searchParams.get('artikul_id') === String(SPLINTER_ARTICLE_ID)) {
+        return true;
+      }
+    }
+
+    const onClick = link.getAttribute('onclick');
+
+    if (onClick && containsSplinterArticleId(onClick)) {
+      return true;
+    }
+
+    return link.textContent?.trim() === SPLINTER_NAME;
   });
+}
+
+function containsSplinterArticleId(onClick: string): boolean {
+  const match = onClick.match(/showArtifactInfo\s*\(\s*[^,]*,\s*['"]?(\d+)['"]?/i);
+
+  return match?.[1] === String(SPLINTER_ARTICLE_ID);
 }
