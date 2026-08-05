@@ -12,6 +12,7 @@ import {
 import { readChatSessionCrc } from './read-chat-session-crc';
 
 const SUCCESS_STATUS = 100;
+const CHAT_SEND_RESPONSE_KEY = 'chat|send';
 
 export class BrowserPrivateMessageSender implements PrivateMessageSender {
   send(input: PrivateMessageSendInput): Observable<void> {
@@ -56,18 +57,27 @@ function parsePrivateMessageResponse(responseText: string): void {
     );
   }
 
-  const status = typeof response.status === 'number'
-    ? response.status
-    : typeof response.status === 'string'
-      ? Number(response.status)
+  const chatSendResponse = response[CHAT_SEND_RESPONSE_KEY];
+
+  if (!isRecord(chatSendResponse)) {
+    throw new UnexpectedServerResponseError(
+      'Private message response does not contain a chat send result.'
+    );
+  }
+
+  const status = typeof chatSendResponse.status === 'number'
+    ? chatSendResponse.status
+    : typeof chatSendResponse.status === 'string'
+      ? Number(chatSendResponse.status)
       : Number.NaN;
 
   if (status === SUCCESS_STATUS) {
     return;
   }
 
-  const serverError = typeof response.error === 'string' && response.error.trim().length > 0
-    ? ` ${response.error.trim()}`
+  const serverError = typeof chatSendResponse.error === 'string'
+    && chatSendResponse.error.trim().length > 0
+    ? ` ${chatSendResponse.error.trim()}`
     : '';
 
   throw new UnexpectedServerResponseError(
