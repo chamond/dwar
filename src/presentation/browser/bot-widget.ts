@@ -7,6 +7,7 @@ import type { ResourceSelectionStore } from '../../application/ports/resource-se
 import type { SoundVolumeStore } from '../../application/ports/sound-volume-store';
 import type { CreateBotLogEntryUseCase } from '../../application/use-cases/create-bot-log-entry';
 import type { ForceStopResourceMiningUseCase } from '../../application/use-cases/force-stop-resource-mining';
+import type { ListCurrentLocationPlayersUseCase } from '../../application/use-cases/list-current-location-players';
 import type { ListProfessionRecipesUseCase } from '../../application/use-cases/list-profession-recipes';
 import type { ListResourcesUseCase } from '../../application/use-cases/list-resources';
 import type { RunProfessionCraftingUseCase } from '../../application/use-cases/run-profession-crafting';
@@ -21,6 +22,7 @@ import { createCraftingProcessBarsController } from './crafting-process-bars';
 import { attachDraggableLauncher, restoreLauncherPosition } from './draggable-launcher';
 import { attachDraggablePanel } from './draggable-panel';
 import { createLauncherButton } from './launcher-button';
+import { createLocationPlayersController } from './location-players-controller';
 import { clearLogList } from './log-list';
 import { appendMinigameRecognitionLog } from './minigame-recognition-log';
 import { createMiningProcessController } from './mining-process-controller';
@@ -35,6 +37,7 @@ export interface BotWidgetDependencies {
   forceStopResourceMining: ForceStopResourceMiningUseCase;
   listProfessionRecipes: ListProfessionRecipesUseCase;
   listResources: ListResourcesUseCase;
+  listCurrentLocationPlayers: ListCurrentLocationPlayersUseCase;
   huntMinigameImageDownloader: HuntMinigameImageDownloader;
   huntMinigameRecognizer: HuntMinigameRecognizer;
   launcherPositionStore: LauncherPositionStore;
@@ -112,6 +115,15 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
       addLog: addCraftingLog
     })
   });
+  const locationPlayersController = createLocationPlayersController({
+    button: botPanel.listLocationPlayersButton,
+    listCurrentLocationPlayers: dependencies.listCurrentLocationPlayers,
+    addLog: addMiningLog,
+    reportError: createProcessErrorReporter({
+      stoppedLabel: 'Список игроков не получен',
+      addLog: addMiningLog
+    })
+  });
 
   attachMutuallyExclusivePickers(botPanel);
   shadowRoot.append(createStyleElement(), launcher, botPanel.panel);
@@ -164,6 +176,10 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
 
   botPanel.miningAction.forceStopButton.addEventListener('click', () => {
     miningController.forceStop();
+  });
+
+  botPanel.listLocationPlayersButton.addEventListener('click', () => {
+    locationPlayersController.show();
   });
 
   botPanel.startCraftingButton.addEventListener('click', () => {

@@ -1,8 +1,8 @@
 import { map, switchMap, take, type Observable } from 'rxjs';
 import { fromFetch } from 'rxjs/fetch';
 import { UnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
+import { CURRENT_PLAYER_NICKNAME } from '../../domain/current-player';
 
-const CURRENT_PLAYER_NICKNAME = 'Чамодан';
 const SPLINTER_ARTICLE_ID = 2299;
 const INJURY_INFO_URL = 'https://w1.dwar.ru/injury_info.php';
 

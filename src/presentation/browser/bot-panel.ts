@@ -20,6 +20,7 @@ export interface BotPanelElements {
   closeButton: HTMLButtonElement;
   tabs: TabsElements<BotPanelTabId>;
   miningAction: MiningActionControl;
+  listLocationPlayersButton: HTMLButtonElement;
   startCraftingButton: HTMLButtonElement;
   resourcePicker: ResourcePickerElements;
   recipePicker: ProfessionRecipePickerElements;
@@ -40,6 +41,7 @@ interface PanelHeaderElements {
 interface MiningTabElements {
   root: HTMLElement;
   miningAction: MiningActionControl;
+  listLocationPlayersButton: HTMLButtonElement;
   resourcePicker: ResourcePickerElements;
   logSection: LogSectionElements;
   processBar: ProcessBarElements;
@@ -108,6 +110,7 @@ export function createBotPanel(
     closeButton: headerElements.closeButton,
     tabs,
     miningAction: miningTab.miningAction,
+    listLocationPlayersButton: miningTab.listLocationPlayersButton,
     startCraftingButton: craftingTab.startCraftingButton,
     resourcePicker: miningTab.resourcePicker,
     recipePicker: craftingTab.recipePicker,
@@ -165,6 +168,7 @@ function createMiningTab(
   controls.className = 'dwar-panel__controls';
 
   const miningAction = createMiningActionControl();
+  const listLocationPlayersButton = createListLocationPlayersButton();
 
   const resourcePicker = createResourcePicker(resources, {
     selectedResourceIds: options.selectedResourceIds,
@@ -173,7 +177,7 @@ function createMiningTab(
 
   const actionGroup = document.createElement('div');
   actionGroup.className = 'dwar-panel__action-buttons';
-  actionGroup.append(miningAction.root);
+  actionGroup.append(miningAction.root, listLocationPlayersButton);
 
   const selectorGroup = document.createElement('div');
   selectorGroup.className = 'dwar-panel__selectors';
@@ -189,10 +193,21 @@ function createMiningTab(
   return {
     root,
     miningAction,
+    listLocationPlayersButton,
     resourcePicker,
     logSection,
     processBar
   };
+}
+
+function createListLocationPlayersButton(): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'dwar-action-button dwar-location-players-button';
+  button.setAttribute('aria-label', 'Показать игроков текущей локации');
+  button.textContent = 'Игроки';
+
+  return button;
 }
 
 function createCraftingTab(

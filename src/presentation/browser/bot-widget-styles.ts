@@ -479,6 +479,23 @@ export const BOT_WIDGET_STYLES = `
     background: linear-gradient(180deg, #8cebd6 0%, #42b79c 100%);
   }
 
+  .dwar-location-players-button {
+    color: #dbe3f1;
+    background: linear-gradient(180deg, #273548 0%, #182331 100%);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, .2);
+  }
+
+  .dwar-location-players-button:hover {
+    color: #ffffff;
+    border-color: rgba(120, 217, 194, .42);
+    background: linear-gradient(180deg, #30445c 0%, #1c2c3d 100%);
+  }
+
+  .dwar-action-button.dwar-location-players-button:disabled {
+    color: #8d99aa;
+    background: linear-gradient(180deg, #202b3a 0%, #151e2a 100%);
+  }
+
   .dwar-action-button.is-active {
     color: #ffe9e9;
     background: linear-gradient(180deg, #d65a63 0%, #8f2e38 100%);
