@@ -6,7 +6,7 @@ const MINIMUM_HELPER_LEVEL = 4;
 const MAXIMUM_RECIPIENTS_PER_ROUND = 3;
 
 const HELP_MESSAGES = [
-  'дернитезанозу, пожалуйста',
+  'дерните занозу, пожалуйста',
   'заноза( помогите',
   'можете занозу дернуть, пожалуйста?',
   ' :zanoza: помогите'
@@ -14,7 +14,10 @@ const HELP_MESSAGES = [
 
 export class SplinterHelpSession {
   private readonly contactedNickKeys = new Set<string>();
-  private nextMessageIndex = 0;
+  private availableMessages: string[] = [];
+  private previousMessage: string | null = null;
+
+  constructor(private readonly random: () => number = Math.random) {}
 
   selectRecipients(
     players: readonly LocationPlayerSnapshot[]
@@ -50,15 +53,37 @@ export class SplinterHelpSession {
   }
 
   takeNextMessage(): string {
-    const message = HELP_MESSAGES[this.nextMessageIndex];
+    if (this.availableMessages.length === 0) {
+      this.availableMessages = this.shuffleMessages();
 
-    if (message === undefined) {
-      throw new Error('Splinter help message rotation is invalid.');
+      if (
+        this.availableMessages.length > 1
+        && this.availableMessages[0] === this.previousMessage
+      ) {
+        swapMessages(this.availableMessages, 0, 1);
+      }
     }
 
-    this.nextMessageIndex = (this.nextMessageIndex + 1) % HELP_MESSAGES.length;
+    const message = this.availableMessages.shift();
+
+    if (message === undefined) {
+      throw new Error('Splinter help message selection is invalid.');
+    }
+
+    this.previousMessage = message;
 
     return message;
+  }
+
+  private shuffleMessages(): string[] {
+    const messages = [...HELP_MESSAGES];
+
+    for (let index = messages.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(this.random() * (index + 1));
+      swapMessages(messages, index, swapIndex);
+    }
+
+    return messages;
   }
 
   private canContact(player: LocationPlayerSnapshot, nickKey: string): boolean {
@@ -71,6 +96,18 @@ export class SplinterHelpSession {
 
 function normalizeNick(nick: string): string {
   return nick.trim().toLocaleLowerCase('ru-RU');
+}
+
+function swapMessages(messages: string[], firstIndex: number, secondIndex: number): void {
+  const firstMessage = messages[firstIndex];
+  const secondMessage = messages[secondIndex];
+
+  if (firstMessage === undefined || secondMessage === undefined) {
+    throw new Error('Splinter help message selection is invalid.');
+  }
+
+  messages[firstIndex] = secondMessage;
+  messages[secondIndex] = firstMessage;
 }
 
 const CURRENT_PLAYER_NICK_KEY = normalizeNick(CURRENT_PLAYER_NICKNAME);

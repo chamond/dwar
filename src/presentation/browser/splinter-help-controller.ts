@@ -19,7 +19,7 @@ export interface SplinterHelpControllerOptions {
 
 export interface SplinterHelpController {
   confirmSplinter(): void;
-  start(): void;
+  toggle(): void;
   destroy(): void;
 }
 
@@ -31,13 +31,19 @@ export function createSplinterHelpController(
 
   const setButtonState = (): void => {
     const isRunning = executionSubscription !== null && !executionSubscription.closed;
-    options.button.disabled = !splinterConfirmed || isRunning;
+    options.button.disabled = !splinterConfirmed;
 
-    if (isRunning) {
+    if (isRunning && splinterConfirmed) {
+      options.button.textContent = 'Отмена';
+      options.button.classList.add('is-active');
+      options.button.setAttribute('aria-label', 'Отменить цикл просьб о помощи');
       options.button.setAttribute('aria-busy', 'true');
       return;
     }
 
+    options.button.textContent = 'Помощь';
+    options.button.classList.remove('is-active');
+    options.button.setAttribute('aria-label', 'Попросить игроков снять занозу');
     options.button.removeAttribute('aria-busy');
   };
 
@@ -53,6 +59,7 @@ export function createSplinterHelpController(
       tap((event) => {
         if (event.type === 'splinter-removed') {
           splinterConfirmed = false;
+          setButtonState();
         }
 
         presentSplinterHelpEvent(event, options.addLog);
@@ -71,6 +78,24 @@ export function createSplinterHelpController(
     setButtonState();
   };
 
+  const cancel = (): void => {
+    if (!executionSubscription || executionSubscription.closed) {
+      return;
+    }
+
+    options.addLog('Протокол помощи отменён.');
+    executionSubscription.unsubscribe();
+  };
+
+  const toggle = (): void => {
+    if (executionSubscription && !executionSubscription.closed) {
+      cancel();
+      return;
+    }
+
+    start();
+  };
+
   setButtonState();
 
   return {
@@ -79,7 +104,7 @@ export function createSplinterHelpController(
       splinterConfirmed = true;
       setButtonState();
     },
-    start,
+    toggle,
     destroy(): void {
       splinterConfirmed = false;
       executionSubscription?.unsubscribe();

@@ -181,7 +181,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   });
 
   botPanel.splinterHelpButton.addEventListener('click', () => {
-    splinterHelpController.start();
+    splinterHelpController.toggle();
   });
 
   botPanel.startCraftingButton.addEventListener('click', () => {
