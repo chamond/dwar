@@ -28,6 +28,12 @@ export function presentSplinterHelpEvent(
       addLog('Заноза ещё не снята. Ищу других игроков.');
       return;
 
+    case 'mining-tool-equipped':
+      addLog(`${event.tool.name} экипирована.`, {
+        tone: 'success'
+      });
+      return;
+
     case 'splinter-removed':
       addLog('Заноза снята. Протокол помощи завершён.', {
         tone: 'success'

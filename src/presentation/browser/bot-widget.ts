@@ -31,6 +31,7 @@ import { createProcessErrorReporter } from './process-error-reporter';
 import { attachResizablePanel, keepPanelSizeInViewport, restorePanelSize } from './resizable-panel';
 import { createSplinterAlertSound } from './splinter-alert-sound';
 import { createSplinterHelpController } from './splinter-help-controller';
+import type { SplinterHelpController } from './splinter-help-controller';
 
 export interface BotWidgetDependencies {
   createLogEntry: CreateBotLogEntryUseCase;
@@ -77,15 +78,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   };
   const miningProcessBar = createProcessBarController(botPanel.miningProcessBar);
   const craftingProcessBars = createCraftingProcessBarsController(botPanel.craftingProcessBars);
-  const splinterHelpController = createSplinterHelpController({
-    button: botPanel.splinterHelpButton,
-    requestSplinterHelp: dependencies.requestSplinterHelp,
-    addLog: addMiningLog,
-    reportError: createProcessErrorReporter({
-      stoppedLabel: 'Протокол помощи остановлен',
-      addLog: addMiningLog
-    })
-  });
+  let splinterHelpController: SplinterHelpController | null = null;
 
   const miningController = createMiningProcessController({
     action: botPanel.miningAction,
@@ -99,7 +92,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     splinterAlertSound,
     addLog: addMiningLog,
     onSplinterDetected: () => {
-      splinterHelpController.confirmSplinter();
+      splinterHelpController?.confirmSplinter();
     },
     presentMinigameRecognition: (recognition) => {
       const entry = dependencies.createLogEntry.execute({
@@ -115,6 +108,18 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
       stoppedLabel: 'Добыча остановлена',
       addLog: addMiningLog
     })
+  });
+  splinterHelpController = createSplinterHelpController({
+    button: botPanel.splinterHelpButton,
+    requestSplinterHelp: dependencies.requestSplinterHelp,
+    addLog: addMiningLog,
+    reportError: createProcessErrorReporter({
+      stoppedLabel: 'Протокол помощи остановлен',
+      addLog: addMiningLog
+    }),
+    onSplinterRemoved: () => {
+      miningController.restartAfterSplinter();
+    }
   });
   const craftingController = createCraftingProcessController({
     button: botPanel.startCraftingButton,
@@ -181,7 +186,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   });
 
   botPanel.splinterHelpButton.addEventListener('click', () => {
-    splinterHelpController.toggle();
+    splinterHelpController?.toggle();
   });
 
   botPanel.startCraftingButton.addEventListener('click', () => {

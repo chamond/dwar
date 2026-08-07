@@ -15,6 +15,7 @@ export interface SplinterHelpControllerOptions {
   requestSplinterHelp: RequestSplinterHelpUseCase;
   addLog: AddBotLog;
   reportError: ProcessErrorReporter;
+  onSplinterRemoved(): void;
 }
 
 export interface SplinterHelpController {
@@ -63,6 +64,10 @@ export function createSplinterHelpController(
         }
 
         presentSplinterHelpEvent(event, options.addLog);
+
+        if (event.type === 'splinter-removed') {
+          options.onSplinterRemoved();
+        }
       }),
       catchError((error: unknown) => {
         options.reportError(error);

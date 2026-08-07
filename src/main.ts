@@ -1,4 +1,5 @@
 import { CreateBotLogEntryUseCase } from './application/use-cases/create-bot-log-entry';
+import { EquipAncientClanPickaxeUseCase } from './application/use-cases/equip-ancient-clan-pickaxe';
 import { ForceStopResourceMiningUseCase } from './application/use-cases/force-stop-resource-mining';
 import { ListCurrentLocationPlayersUseCase } from './application/use-cases/list-current-location-players';
 import { ListProfessionRecipesUseCase } from './application/use-cases/list-profession-recipes';
@@ -8,6 +9,7 @@ import { RunProfessionCraftingUseCase } from './application/use-cases/run-profes
 import { RunResourceMiningUseCase } from './application/use-cases/run-resource-mining';
 import { SolveHuntMinigameUseCase } from './application/use-cases/solve-hunt-minigame';
 import { BrowserBackpackItemQuantityReader } from './infrastructure/browser/browser-backpack-item-quantity-reader';
+import { BrowserEquipmentItemEquipper } from './infrastructure/browser/browser-equipment-item-equipper';
 import { BrowserCurrentLocationPlayerReader } from './infrastructure/browser/browser-current-location-player-reader';
 import { BrowserHuntResourceFarmer } from './infrastructure/browser/browser-hunt-resource-farmer';
 import { BrowserHuntMinigameImageDownloader } from './infrastructure/browser/browser-hunt-minigame-image-downloader';
@@ -30,6 +32,7 @@ import { LocalStorageProfessionRecipeSelectionStore } from './infrastructure/bro
 import { LocalStorageResourceSelectionStore } from './infrastructure/browser/local-storage-resource-selection-store';
 import { LocalStorageSoundVolumeStore } from './infrastructure/browser/local-storage-sound-volume-store';
 import { StaticProfessionRecipeRepository } from './infrastructure/local-data/static-profession-recipe-repository';
+import { StaticEquipmentItemRepository } from './infrastructure/local-data/static-equipment-item-repository';
 import { StaticResourceRepository } from './infrastructure/local-data/static-resource-repository';
 import { InMemoryHuntZoneScanStore } from './infrastructure/memory/in-memory-hunt-zone-scan-store';
 import { SystemClock } from './infrastructure/system/system-clock';
@@ -49,12 +52,17 @@ function bootstrap(): void {
     currentLocationPlayerReader
   );
   const delay = new BrowserDelay();
+  const equipAncientClanPickaxe = new EquipAncientClanPickaxeUseCase(
+    new StaticEquipmentItemRepository(),
+    new BrowserEquipmentItemEquipper()
+  );
   const requestSplinterHelp = new RequestSplinterHelpUseCase(
     listCurrentLocationPlayers,
     new BrowserPrivateMessageSender(),
     detectCurrentPlayerSplinter,
     getAreaId,
-    delay
+    delay,
+    equipAncientClanPickaxe
   );
   const soundVolumeStore = new LocalStorageSoundVolumeStore();
   const launcherPositionStore = new LocalStorageLauncherPositionStore();

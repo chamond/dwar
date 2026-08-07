@@ -15,6 +15,7 @@ import type { GetAreaId } from '../ports/get-area-id';
 import type { PrivateMessageSender } from '../ports/private-message-sender';
 import { SplinterHelpSession } from '../../domain/services/splinter-help-session';
 import type { ListCurrentLocationPlayersUseCase } from './list-current-location-players';
+import type { EquipAncientClanPickaxeUseCase } from './equip-ancient-clan-pickaxe';
 
 const DEFAULT_HELP_DELAY_MS = 60_000;
 
@@ -32,6 +33,7 @@ export class RequestSplinterHelpUseCase {
     private readonly detectCurrentPlayerSplinter: CurrentPlayerSplinterDetector,
     private readonly getAreaId: GetAreaId,
     private readonly delay: Delay,
+    private readonly equipAncientClanPickaxe: EquipAncientClanPickaxeUseCase,
     config: Partial<SplinterHelpConfig> = {}
   ) {
     this.config = {
@@ -151,12 +153,23 @@ export class RequestSplinterHelpUseCase {
   }
 
   private finishSession(session: SplinterHelpSession): Observable<SplinterHelpEvent> {
-    if (this.session === session) {
-      this.session = null;
-    }
+    return defer(() => this.equipAncientClanPickaxe.execute()).pipe(
+      take(1),
+      switchMap((tool) => {
+        if (this.session === session) {
+          this.session = null;
+        }
 
-    return of({
-      type: 'splinter-removed'
-    });
+        const miningToolEquippedEvent: SplinterHelpEvent = {
+          type: 'mining-tool-equipped',
+          tool
+        };
+        const splinterRemovedEvent: SplinterHelpEvent = {
+          type: 'splinter-removed'
+        };
+
+        return of(miningToolEquippedEvent, splinterRemovedEvent);
+      })
+    );
   }
 }

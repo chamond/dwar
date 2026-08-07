@@ -38,6 +38,7 @@ import type { SplinterAlertSound } from './splinter-alert-sound';
 export interface MiningProcessController {
   toggle(): void;
   forceStop(): void;
+  restartAfterSplinter(): void;
 }
 
 export interface MiningProcessControllerOptions {
@@ -142,7 +143,7 @@ export function createMiningProcessController(
     );
   };
 
-  const start = (): void => {
+  const start = (isRestartAfterSplinter = false): void => {
     const selectedResources = options.resourcePicker.getSelectedResources();
 
     if (selectedResources.length === 0) {
@@ -156,7 +157,10 @@ export function createMiningProcessController(
     stoppedByUser = false;
     options.resourcePicker.close();
     options.action.setState('active');
-    options.addLog(`Добыча запущена: ${selectedResources.map(formatResourceLabel).join(', ')}.`);
+    const actionLabel = isRestartAfterSplinter
+      ? 'Добыча возобновлена после снятия занозы'
+      : 'Добыча запущена';
+    options.addLog(`${actionLabel}: ${selectedResources.map(formatResourceLabel).join(', ')}.`);
 
     const miningEvents: Observable<ResourceMiningEvent> = options.runResourceMining.execute({
       getSelectedResourceIds: () => options.resourcePicker.getSelectedResources().map(({ id }) => id)
@@ -280,7 +284,17 @@ export function createMiningProcessController(
 
       start();
     },
-    forceStop
+    forceStop,
+    restartAfterSplinter(): void {
+      if (
+        (executionSubscription && !executionSubscription.closed)
+        || (forceStopSubscription && !forceStopSubscription.closed)
+      ) {
+        return;
+      }
+
+      start(true);
+    }
   };
 }
 
