@@ -34,6 +34,7 @@ export function restorePanelSize(panel: HTMLElement, sizeStore: PanelSizeStore):
   }
 
   applyPanelSize(panel, savedSize.width, savedSize.height);
+  sizeStore.save(readPanelSize(panel));
 }
 
 export function keepPanelSizeInViewport(panel: HTMLElement): PanelSize {
@@ -78,6 +79,7 @@ export function attachResizablePanel(options: ResizablePanelOptions): void {
 
     resizeState.didResize = true;
     options.onResize?.(nextSize);
+    options.sizeStore.save(readPanelSize(options.panel));
     event.preventDefault();
   });
 

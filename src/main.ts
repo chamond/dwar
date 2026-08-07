@@ -27,6 +27,7 @@ import { DwarChatUsersHtmlParser } from './infrastructure/browser/dwar-chat-user
 import { DwarHuntZoneXmlParser } from './infrastructure/browser/dwar-hunt-zone-xml-parser';
 import { getAreaId } from './infrastructure/browser/get-area-id';
 import { LocalStorageLauncherPositionStore } from './infrastructure/browser/local-storage-launcher-position-store';
+import { LocalStoragePanelPositionStore } from './infrastructure/browser/local-storage-panel-position-store';
 import { LocalStoragePanelSizeStore } from './infrastructure/browser/local-storage-panel-size-store';
 import { LocalStorageProfessionRecipeSelectionStore } from './infrastructure/browser/local-storage-profession-recipe-selection-store';
 import { LocalStorageResourceSelectionStore } from './infrastructure/browser/local-storage-resource-selection-store';
@@ -66,6 +67,7 @@ function bootstrap(): void {
   );
   const soundVolumeStore = new LocalStorageSoundVolumeStore();
   const launcherPositionStore = new LocalStorageLauncherPositionStore();
+  const panelPositionStore = new LocalStoragePanelPositionStore();
   const panelSizeStore = new LocalStoragePanelSizeStore();
   const resourceSelectionStore = new LocalStorageResourceSelectionStore();
   const professionRecipeSelectionStore = new LocalStorageProfessionRecipeSelectionStore();
@@ -111,6 +113,7 @@ function bootstrap(): void {
     listProfessionRecipes,
     listResources,
     launcherPositionStore,
+    panelPositionStore,
     panelSizeStore,
     professionRecipeSelectionStore,
     resourceSelectionStore,

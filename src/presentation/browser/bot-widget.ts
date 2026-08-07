@@ -1,6 +1,7 @@
 import type { HuntMinigameImageDownloader } from '../../application/ports/hunt-minigame-image-downloader';
 import type { HuntMinigameRecognizer } from '../../application/ports/hunt-minigame-recognizer';
 import type { LauncherPositionStore } from '../../application/ports/launcher-position-store';
+import type { PanelPositionStore } from '../../application/ports/panel-position-store';
 import type { PanelSizeStore } from '../../application/ports/panel-size-store';
 import type { ProfessionRecipeSelectionStore } from '../../application/ports/profession-recipe-selection-store';
 import type { ResourceSelectionStore } from '../../application/ports/resource-selection-store';
@@ -20,7 +21,7 @@ import { DRAG_IGNORE_SELECTOR, ROOT_ID } from './bot-widget-constants';
 import { createCraftingProcessController } from './crafting-process-controller';
 import { createCraftingProcessBarsController } from './crafting-process-bars';
 import { attachDraggableLauncher, restoreLauncherPosition } from './draggable-launcher';
-import { attachDraggablePanel } from './draggable-panel';
+import { attachDraggablePanel, restorePanelPosition } from './draggable-panel';
 import { createLauncherButton } from './launcher-button';
 import { clearLogList } from './log-list';
 import { appendMinigameRecognitionLog } from './minigame-recognition-log';
@@ -41,6 +42,7 @@ export interface BotWidgetDependencies {
   huntMinigameImageDownloader: HuntMinigameImageDownloader;
   huntMinigameRecognizer: HuntMinigameRecognizer;
   launcherPositionStore: LauncherPositionStore;
+  panelPositionStore: PanelPositionStore;
   panelSizeStore: PanelSizeStore;
   professionRecipeSelectionStore: ProfessionRecipeSelectionStore;
   resourceSelectionStore: ResourceSelectionStore;
@@ -136,16 +138,10 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   shadowRoot.append(createStyleElement(), launcher, botPanel.panel);
   document.documentElement.append(host);
   restoreLauncherPosition(launcher, dependencies.launcherPositionStore);
-  restorePanelSize(botPanel.panel, dependencies.panelSizeStore);
 
   const launcherDrag = attachDraggableLauncher({
     launcher,
-    positionStore: dependencies.launcherPositionStore,
-    onMoved: () => {
-      if (!botPanel.panel.hidden) {
-        positionPanelNearLauncher(botPanel.panel, launcher);
-      }
-    }
+    positionStore: dependencies.launcherPositionStore
   });
 
   launcher.addEventListener('click', (event) => {
@@ -155,7 +151,12 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     }
 
     if (botPanel.panel.hidden) {
-      showPanel(botPanel.panel, launcher);
+      showPanel(
+        botPanel.panel,
+        launcher,
+        dependencies.panelPositionStore,
+        dependencies.panelSizeStore
+      );
       addActiveTabLog('Интерфейс открыт.');
       return;
     }
@@ -196,7 +197,8 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   attachDraggablePanel({
     panel: botPanel.panel,
     handle: botPanel.header,
-    ignoreSelector: DRAG_IGNORE_SELECTOR
+    ignoreSelector: DRAG_IGNORE_SELECTOR,
+    positionStore: dependencies.panelPositionStore
   });
 
   attachResizablePanel({
@@ -204,7 +206,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     handle: botPanel.resizeHandle,
     sizeStore: dependencies.panelSizeStore,
     onResize: () => {
-      keepPanelInViewport(botPanel.panel);
+      dependencies.panelPositionStore.save(keepPanelInViewport(botPanel.panel));
     }
   });
 
@@ -227,8 +229,8 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     launcherDrag.keepInViewport();
 
     if (!botPanel.panel.hidden) {
-      keepPanelSizeInViewport(botPanel.panel);
-      keepPanelInViewport(botPanel.panel);
+      dependencies.panelSizeStore.save(keepPanelSizeInViewport(botPanel.panel));
+      dependencies.panelPositionStore.save(keepPanelInViewport(botPanel.panel));
     }
   });
 
@@ -285,10 +287,19 @@ function closePickers(botPanel: BotPanelElements): void {
   botPanel.miningAction.closeMenu();
 }
 
-function showPanel(panel: HTMLElement, launcher: HTMLElement): void {
+function showPanel(
+  panel: HTMLElement,
+  launcher: HTMLElement,
+  panelPositionStore: PanelPositionStore,
+  panelSizeStore: PanelSizeStore
+): void {
   panel.hidden = false;
   launcher.setAttribute('aria-expanded', 'true');
-  positionPanelNearLauncher(panel, launcher);
+  restorePanelSize(panel, panelSizeStore);
+
+  if (!restorePanelPosition(panel, panelPositionStore)) {
+    panelPositionStore.save(positionPanelNearLauncher(panel, launcher));
+  }
 }
 
 function hidePanel(panel: HTMLElement, launcher: HTMLElement): void {

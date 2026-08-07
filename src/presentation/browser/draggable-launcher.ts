@@ -5,7 +5,6 @@ import { keepFixedElementInViewport, moveFixedElement } from './fixed-element-po
 export interface DraggableLauncherOptions {
   launcher: HTMLElement;
   positionStore: LauncherPositionStore;
-  onMoved: () => void;
 }
 
 export interface DraggableLauncherController {
@@ -38,7 +37,6 @@ export function attachDraggableLauncher(options: DraggableLauncherOptions): Drag
 
       suppressNextClick = true;
       options.positionStore.save(position);
-      options.onMoved();
 
       window.setTimeout(() => {
         suppressNextClick = false;
