@@ -42,6 +42,7 @@ import type { HuntResourceFarmInterrupter } from '../ports/hunt-resource-farm-in
 import type { HuntZoneScanner } from '../ports/hunt-zone-scanner';
 import type { HuntZoneScanStore } from '../ports/hunt-zone-scan-store';
 import type { ResourceRepository } from '../ports/resource-repository';
+import type { TaskScheduler } from '../ports/task-scheduler';
 
 const DEFAULT_DANGER_RADIUS = 100;
 const DEFAULT_MONITORING_SCAN_INTERVAL_MS = 4_000;
@@ -79,6 +80,7 @@ export class RunResourceMiningUseCase {
     private readonly clock: Clock,
     private readonly detectCurrentPlayerSplinter: CurrentPlayerSplinterDetector,
     private readonly getAreaId: GetAreaId,
+    private readonly taskScheduler: TaskScheduler,
     config: Partial<ResourceMiningConfig> = {}
   ) {
     this.config = {
@@ -93,13 +95,27 @@ export class RunResourceMiningUseCase {
   }
 
   execute(input: RunResourceMiningInput): Observable<ResourceMiningEvent> {
-    return defer(() => this.getAreaId()).pipe(
-      take(1),
-      switchMap((areaId) => defer(() => this.runIteration(areaId, input)).pipe(
+    return defer(() => {
+      let areaId: number | null = null;
+
+      return defer(() => this.taskScheduler.schedule(() => {
+        const areaIdSource = areaId === null
+          ? this.getAreaId().pipe(
+              tap((currentAreaId) => {
+                areaId = currentAreaId;
+              }),
+              take(1)
+            )
+          : of(areaId);
+
+        return areaIdSource.pipe(
+          switchMap((currentAreaId) => this.runIteration(currentAreaId, input))
+        );
+      })).pipe(
         repeat(),
         takeWhile((event) => event.type !== 'splinter-detected', true)
-      ))
-    );
+      );
+    });
   }
 
   private runIteration(

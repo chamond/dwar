@@ -39,6 +39,7 @@ import { StaticProfessionRecipeRepository } from './infrastructure/local-data/st
 import { StaticHuntTargetRepository } from './infrastructure/local-data/static-hunt-target-repository';
 import { StaticEquipmentItemRepository } from './infrastructure/local-data/static-equipment-item-repository';
 import { StaticResourceRepository } from './infrastructure/local-data/static-resource-repository';
+import { FifoTaskScheduler } from './infrastructure/memory/fifo-task-scheduler';
 import { InMemoryHuntZoneScanStore } from './infrastructure/memory/in-memory-hunt-zone-scan-store';
 import { SystemClock } from './infrastructure/system/system-clock';
 import { mountBotWidget } from './presentation/browser/bot-widget';
@@ -101,6 +102,7 @@ function bootstrap(): void {
   );
   const backpackItemQuantityReader = new BrowserBackpackItemQuantityReader(new DwarBackpackHtmlParser());
   const professionRecipeCrafter = new BrowserProfessionRecipeCrafter();
+  const gameActionScheduler = new FifoTaskScheduler();
   const runResourceMining = new RunResourceMiningUseCase(
     huntZoneScanner,
     resourceRepository,
@@ -110,13 +112,15 @@ function bootstrap(): void {
     delay,
     clock,
     detectCurrentPlayerSplinter,
-    getAreaId
+    getAreaId,
+    gameActionScheduler
   );
   const runProfessionCrafting = new RunProfessionCraftingUseCase(
     professionRecipeRepository,
     backpackItemQuantityReader,
     professionRecipeCrafter,
-    delay
+    delay,
+    gameActionScheduler
   );
   mountBotWidget({
     attackHuntMob,

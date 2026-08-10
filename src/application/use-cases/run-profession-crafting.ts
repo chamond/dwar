@@ -25,6 +25,7 @@ import type {
 import type { Delay } from '../ports/delay';
 import type { ProfessionRecipeCrafter } from '../ports/profession-recipe-crafter';
 import type { ProfessionRecipeRepository } from '../ports/profession-recipe-repository';
+import type { TaskScheduler } from '../ports/task-scheduler';
 
 const DEFAULT_RESOURCE_BACKPACK_GROUP = 3;
 const DEFAULT_CRAFT_COOLDOWN_PER_ITEM_MS = 30_000;
@@ -52,6 +53,7 @@ export class RunProfessionCraftingUseCase {
     private readonly backpackItemQuantityReader: BackpackItemQuantityReader,
     private readonly crafter: ProfessionRecipeCrafter,
     private readonly delay: Delay,
+    private readonly taskScheduler: TaskScheduler,
     config: Partial<ProfessionCraftingConfig> = {}
   ) {
     this.config = {
@@ -120,15 +122,49 @@ export class RunProfessionCraftingUseCase {
       );
     }
 
+    const cooldownTasks: CraftCooldownTask[] = [];
+    const taskErrors: unknown[] = [];
+
+    return concat(
+      this.taskScheduler.schedule(() => this.requestCraftBatch(
+        runnableRecipes,
+        stoppedRecipeIds,
+        cooldownTasks,
+        taskErrors
+      )),
+      defer(() => this.waitForCraftCooldowns(cooldownTasks)),
+      defer(() => {
+        if (taskErrors.length > 0) {
+          return throwError(() => taskErrors[0]);
+        }
+
+        return of<ProfessionCraftingEvent>({
+          type: 'crafting-cycle-completed'
+        });
+      })
+    );
+  }
+
+  private requestCraftBatch(
+    recipes: readonly ProfessionRecipe[],
+    stoppedRecipeIds: Set<ProfessionRecipeId>,
+    cooldownTasks: CraftCooldownTask[],
+    taskErrors: unknown[]
+  ): Observable<ProfessionCraftingEvent> {
     const backpackCheckEvent: ProfessionCraftingEvent = {
       type: 'backpack-check-started',
-      recipes: runnableRecipes.map(createRecipeInfo)
+      recipes: recipes.map(createRecipeInfo)
     };
 
     return concat(
       of(backpackCheckEvent),
-      this.readBackpackQuantities(runnableRecipes).pipe(
-        switchMap((lookups) => this.runCraftTasks(lookups, stoppedRecipeIds))
+      this.readBackpackQuantities(recipes).pipe(
+        switchMap((lookups) => this.requestCraftTasks(
+          lookups,
+          stoppedRecipeIds,
+          cooldownTasks,
+          taskErrors
+        ))
       )
     );
   }
@@ -155,11 +191,12 @@ export class RunProfessionCraftingUseCase {
     );
   }
 
-  private runCraftTasks(
+  private requestCraftTasks(
     lookups: readonly RecipeBackpackLookup[],
-    stoppedRecipeIds: Set<ProfessionRecipeId>
+    stoppedRecipeIds: Set<ProfessionRecipeId>,
+    cooldownTasks: CraftCooldownTask[],
+    taskErrors: unknown[]
   ): Observable<ProfessionCraftingEvent> {
-    const taskErrors: unknown[] = [];
     const tasks = lookups.map(({ recipe, availableAmount }) => {
       const task = availableAmount <= 0
         ? defer(() => {
@@ -170,7 +207,7 @@ export class RunProfessionCraftingUseCase {
               recipe: createRecipeInfo(recipe)
             });
           })
-        : this.craftRecipe(recipe, availableAmount);
+        : this.requestCraft(recipe, availableAmount, cooldownTasks);
 
       return task.pipe(
         catchError((error: unknown) => {
@@ -180,23 +217,13 @@ export class RunProfessionCraftingUseCase {
       );
     });
 
-    return concat(
-      merge(...tasks),
-      defer(() => {
-        if (taskErrors.length > 0) {
-          return throwError(() => taskErrors[0]);
-        }
-
-        return of<ProfessionCraftingEvent>({
-          type: 'crafting-cycle-completed'
-        });
-      })
-    );
+    return merge(...tasks);
   }
 
-  private craftRecipe(
+  private requestCraft(
     recipe: ProfessionRecipe,
-    availableResourceAmount: number
+    availableResourceAmount: number,
+    cooldownTasks: CraftCooldownTask[]
   ): Observable<ProfessionCraftingEvent> {
     return defer(() => {
       const recipeInfo = createRecipeInfo(recipe);
@@ -210,7 +237,7 @@ export class RunProfessionCraftingUseCase {
       return concat(
         of(requestStartedEvent),
         this.crafter.craft(recipe, amount).pipe(
-          switchMap(() => {
+          map(() => {
             const durationMs = amount * this.config.cooldownPerItemMs + this.config.postCraftDelayMs;
             const craftStartedEvent: ProfessionCraftingEvent = {
               type: 'craft-started',
@@ -219,20 +246,33 @@ export class RunProfessionCraftingUseCase {
               durationMs,
               remainingResourceAmount: availableResourceAmount - amount
             };
-            const craftCompletedEvent: ProfessionCraftingEvent = {
-              type: 'craft-completed',
-              recipe: recipeInfo
-            };
 
-            return concat(
-              of(craftStartedEvent),
-              this.delay.wait(durationMs).pipe(ignoreElements()),
-              of(craftCompletedEvent)
-            );
+            cooldownTasks.push({
+              recipe: recipeInfo,
+              durationMs
+            });
+
+            return craftStartedEvent;
           })
         )
       );
     });
+  }
+
+  private waitForCraftCooldowns(
+    cooldownTasks: readonly CraftCooldownTask[]
+  ): Observable<ProfessionCraftingEvent> {
+    if (cooldownTasks.length === 0) {
+      return EMPTY;
+    }
+
+    return merge(...cooldownTasks.map(({ recipe, durationMs }) => concat(
+      this.delay.wait(durationMs).pipe(ignoreElements()),
+      of<ProfessionCraftingEvent>({
+        type: 'craft-completed',
+        recipe
+      })
+    )));
   }
 
   private restoreDeselectedRecipes(
@@ -271,6 +311,11 @@ export class RunProfessionCraftingUseCase {
 interface RecipeBackpackLookup {
   recipe: ProfessionRecipe;
   availableAmount: number;
+}
+
+interface CraftCooldownTask {
+  recipe: ProfessionCraftingRecipeInfo;
+  durationMs: number;
 }
 
 function createRecipeInfo(recipe: ProfessionRecipe): ProfessionCraftingRecipeInfo {
