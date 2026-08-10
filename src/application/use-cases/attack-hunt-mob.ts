@@ -71,8 +71,8 @@ export class AttackHuntMobUseCase {
           const selectedMob = selection.selectedMob;
 
           return this.attacker.attack(selectedMob).pipe(
-            map((result): HuntAttackEvent => ({
-              type: result.type,
+            map((): HuntAttackEvent => ({
+              type: 'attack-request-sent',
               mob: createMobInfo(selectedMob)
             })),
             take(1)

@@ -12,10 +12,6 @@ export type HuntAttackEvent =
       targetCandidateCount: number;
     }
   | {
-      type: 'fight-opened';
-      mob: HuntAttackMobInfo;
-    }
-  | {
-      type: 'confirmation-opened';
+      type: 'attack-request-sent';
       mob: HuntAttackMobInfo;
     };

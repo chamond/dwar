@@ -1,5 +1,4 @@
 import { UnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
-import { findHighestAccessibleWindow } from './accessible-window-tree';
 
 const SESSION_CRC_PATTERN = /^[0-9a-f]{32}$/i;
 
@@ -14,6 +13,25 @@ export function readChatSessionCrc(): string {
   }
 
   return sessionCrc;
+}
+
+function findHighestAccessibleWindow(startWindow: Window): Window {
+  let currentWindow = startWindow;
+
+  while (true) {
+    try {
+      const parentWindow = currentWindow.parent;
+
+      if (parentWindow === currentWindow) {
+        return currentWindow;
+      }
+
+      void parentWindow.document;
+      currentWindow = parentWindow;
+    } catch {
+      return currentWindow;
+    }
+  }
 }
 
 function findSessionCrc(candidate: Window, visited: Set<Window>): string | null {

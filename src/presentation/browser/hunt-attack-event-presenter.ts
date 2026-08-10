@@ -21,25 +21,12 @@ export function presentHuntAttackEvent(
       );
       return;
 
-    case 'confirmation-opened':
+    case 'attack-request-sent':
       addLog(
-        `Открыто подтверждение нападения на ${formatMobLabel(event.mob)}.`,
+        `Отправлен запрос нападения на ${formatMobLabel(event.mob)}.`,
         {
           parts: [
-            'Открыто подтверждение нападения на ',
-            createMobLogPart(event.mob),
-            '.'
-          ]
-        }
-      );
-      return;
-
-    case 'fight-opened':
-      addLog(
-        `Начато нападение на ${formatMobLabel(event.mob)}.`,
-        {
-          parts: [
-            'Начато нападение на ',
+            'Отправлен запрос нападения на ',
             createMobLogPart(event.mob),
             '.'
           ],
