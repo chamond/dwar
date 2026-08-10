@@ -1,10 +1,14 @@
 import {
   Observable,
   defer,
+  filter,
   map,
   of,
   switchMap,
-  take
+  take,
+  throwError,
+  timeout,
+  timer
 } from 'rxjs';
 import { fromFetch } from 'rxjs/fetch';
 import { UnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
@@ -18,6 +22,8 @@ import { buildHuntCheckUrl, HUNT_CHECK_REQUEST } from './hunt-check-request';
 
 const HUNT_CHECK_RESPONSE_KEY = 'fight|HuntCheck';
 const ATTACK_END_TYPE = 2;
+const HUNT_CANVAS_POLL_INTERVAL_MS = 100;
+const HUNT_CANVAS_READY_TIMEOUT_MS = 30_000;
 
 type DwarEventHandler = (event: unknown) => void;
 
@@ -58,35 +64,60 @@ interface DwarHuntRuntime {
 
 export class BrowserHuntMobAttacker implements HuntMobAttacker {
   attack(mob: HuntMob): Observable<HuntMobAttackResult> {
-    return defer(() => {
-      const runtime = readDwarHuntRuntime();
+    return prepareDwarHuntRuntime().pipe(
+      switchMap((runtime): Observable<HuntMobAttackResult> => {
+        if (!runtime.needsConfirmation) {
+          return sendAttack(runtime, mob.getId());
+        }
 
-      if (!runtime.needsConfirmation) {
-        return sendAttack(runtime, mob.getId());
-      }
+        return requestHuntCheck(mob.getId()).pipe(
+          switchMap((confirmation): Observable<HuntMobAttackResult> => {
+            if (confirmation === null) {
+              return sendAttack(runtime, mob.getId());
+            }
 
-      return requestHuntCheck(mob.getId()).pipe(
-        switchMap((confirmation): Observable<HuntMobAttackResult> => {
-          if (confirmation === null) {
-            return sendAttack(runtime, mob.getId());
-          }
+            if (!runtime.showBotConfirmDialog) {
+              throw new Error(
+                'The live hunt frame cannot open the required attack confirmation.'
+              );
+            }
 
-          if (!runtime.showBotConfirmDialog) {
-            throw new Error(
-              'The live hunt frame cannot open the required attack confirmation.'
-            );
-          }
+            runtime.showBotConfirmDialog(confirmation);
 
-          runtime.showBotConfirmDialog(confirmation);
-
-          return of({
-            type: 'confirmation-opened'
-          });
-        }),
-        take(1)
-      );
-    });
+            return of({
+              type: 'confirmation-opened'
+            });
+          }),
+          take(1)
+        );
+      }),
+      take(1)
+    );
   }
+}
+
+function prepareDwarHuntRuntime(): Observable<DwarHuntRuntime> {
+  return defer(() => {
+    const availableRuntime = readDwarHuntRuntime();
+
+    if (availableRuntime) {
+      return of(availableRuntime);
+    }
+
+    openHuntInterface();
+
+    return timer(0, HUNT_CANVAS_POLL_INTERVAL_MS).pipe(
+      map(() => readDwarHuntRuntime()),
+      filter((runtime): runtime is DwarHuntRuntime => runtime !== null),
+      take(1),
+      timeout({
+        first: HUNT_CANVAS_READY_TIMEOUT_MS,
+        with: () => throwError(() => new Error(
+          'The game hunt interface did not become ready in time.'
+        ))
+      })
+    );
+  });
 }
 
 function requestHuntCheck(mobId: string): Observable<string | null> {
@@ -223,49 +254,96 @@ function sendAttack(runtime: DwarHuntRuntime, mobId: string): Observable<HuntMob
   }).pipe(take(1));
 }
 
-function readDwarHuntRuntime(): DwarHuntRuntime {
-  const runtimeWindow = findAccessibleWindow(window, hasDwarHuntRuntime);
+function readDwarHuntRuntime(): DwarHuntRuntime | null {
+  const canvasWindow = findAccessibleWindow(window, hasDwarHuntCanvasRuntime);
 
-  if (!runtimeWindow) {
-    throw new Error(
-      'The live hunt frame with the official battle opener is unavailable.'
-    );
+  if (!canvasWindow) {
+    return null;
   }
 
-  const windowRecord = runtimeWindow as unknown as Record<string, unknown>;
-  const canvas = asRecord(windowRecord.canvas);
+  const attackWindow = findAccessibleWindow(window, (candidate) => {
+    return hasWindowFunction(candidate, 'huntAttack');
+  });
+
+  if (!attackWindow) {
+    return null;
+  }
+
+  const confirmationWindow = findAccessibleWindow(window, (candidate) => {
+    return hasWindowFunction(candidate, 'showBotConfirmDialog');
+  });
+  const canvasWindowRecord = canvasWindow as unknown as Record<string, unknown>;
+  const attackWindowRecord = attackWindow as unknown as Record<string, unknown>;
+  const confirmationWindowRecord = confirmationWindow as unknown as Record<string, unknown> | null;
+  const canvas = asRecord(canvasWindowRecord.canvas);
   const utils = asRecord(canvas?.utils);
   const app = asRecord(canvas?.app);
   const hunt = asRecord(app?.hunt);
   const huntModel = asRecord(hunt?.model);
+  const needsConfirmation = Boolean(huntModel?.needConfirm);
   const eventManager = canvas?.EventManager as DwarEventManager;
   const abController = utils?.ABController as DwarAbController;
   const abcAbout = asRecord(utils?.ABCAbout);
   const requestEvents = asRecord(utils?.URLRequestEvent);
-  const huntAttack = windowRecord.huntAttack as (mobId: string) => void;
-  const showBotConfirmDialog = typeof windowRecord.showBotConfirmDialog === 'function'
-    ? windowRecord.showBotConfirmDialog as (confirmation: string) => void
+  const huntAttack = attackWindowRecord.huntAttack as (mobId: string) => void;
+  const showBotConfirmDialog = typeof confirmationWindowRecord?.showBotConfirmDialog === 'function'
+    ? confirmationWindowRecord.showBotConfirmDialog as (confirmation: string) => void
     : null;
 
+  if (needsConfirmation && !showBotConfirmDialog) {
+    return null;
+  }
+
   return {
-    needsConfirmation: Boolean(huntModel?.needConfirm),
+    needsConfirmation,
     eventManager,
     abController,
     attackTelemetryUrl: String(abcAbout?.REQUEST_URL_DWAR),
     requestCompleteEvent: String(requestEvents?.EVENT_COMPLETE),
     requestErrorEvent: String(requestEvents?.EVENT_ERROR),
     huntAttack: (mobId) => {
-      huntAttack.call(runtimeWindow, mobId);
+      huntAttack.call(attackWindow, mobId);
     },
     showBotConfirmDialog: showBotConfirmDialog
       ? (confirmation) => {
-          showBotConfirmDialog.call(runtimeWindow, confirmation);
+          showBotConfirmDialog.call(confirmationWindow, confirmation);
         }
       : null
   };
 }
 
-function hasDwarHuntRuntime(candidate: Window): boolean {
+function openHuntInterface(): void {
+  const openHuntWindow = findAccessibleWindow(window, (candidate) => {
+    return hasWindowFunction(candidate, 'openHunt');
+  });
+
+  if (openHuntWindow) {
+    const openHunt = (openHuntWindow as unknown as Record<string, unknown>).openHunt as () => void;
+
+    try {
+      openHunt.call(openHuntWindow);
+      return;
+    } catch {
+      // Fall back to the main-frame menu function below.
+    }
+  }
+
+  const menuWindow = findAccessibleWindow(window, (candidate) => {
+    return hasWindowFunction(candidate, 'processMenu');
+  });
+
+  if (menuWindow) {
+    const processMenu = (menuWindow as unknown as Record<string, unknown>).processMenu as (
+      menuId: string
+    ) => void;
+    processMenu.call(menuWindow, 'b07');
+    return;
+  }
+
+  throw new Error('The game frame cannot open the hunt interface.');
+}
+
+function hasDwarHuntCanvasRuntime(candidate: Window): boolean {
   const windowRecord = candidate as unknown as Record<string, unknown>;
   const canvas = asRecord(windowRecord.canvas);
   const utils = asRecord(canvas?.utils);
@@ -276,14 +354,19 @@ function hasDwarHuntRuntime(candidate: Window): boolean {
   const abcAbout = asRecord(utils?.ABCAbout);
   const requestEvents = asRecord(utils?.URLRequestEvent);
 
-  return typeof windowRecord.huntAttack === 'function'
-    && isRecord(hunt?.model)
+  return isRecord(hunt?.model)
     && typeof eventManager?.addEventListener === 'function'
     && typeof eventManager.removeEventListener === 'function'
     && typeof abController?.makeRequest === 'function'
     && typeof abcAbout?.REQUEST_URL_DWAR === 'string'
     && typeof requestEvents?.EVENT_COMPLETE === 'string'
     && typeof requestEvents.EVENT_ERROR === 'string';
+}
+
+function hasWindowFunction(candidate: Window, name: string): boolean {
+  const windowRecord = candidate as unknown as Record<string, unknown>;
+
+  return typeof windowRecord[name] === 'function';
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
