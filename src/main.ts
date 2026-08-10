@@ -1,7 +1,9 @@
+import { AttackHuntMobUseCase } from './application/use-cases/attack-hunt-mob';
 import { CreateBotLogEntryUseCase } from './application/use-cases/create-bot-log-entry';
 import { EquipAncientClanPickaxeUseCase } from './application/use-cases/equip-ancient-clan-pickaxe';
 import { ForceStopResourceMiningUseCase } from './application/use-cases/force-stop-resource-mining';
 import { ListCurrentLocationPlayersUseCase } from './application/use-cases/list-current-location-players';
+import { ListHuntTargetsUseCase } from './application/use-cases/list-hunt-targets';
 import { ListProfessionRecipesUseCase } from './application/use-cases/list-profession-recipes';
 import { ListResourcesUseCase } from './application/use-cases/list-resources';
 import { RequestSplinterHelpUseCase } from './application/use-cases/request-splinter-help';
@@ -15,6 +17,7 @@ import { BrowserHuntResourceFarmer } from './infrastructure/browser/browser-hunt
 import { BrowserHuntMinigameImageDownloader } from './infrastructure/browser/browser-hunt-minigame-image-downloader';
 import { BrowserHuntMinigameRecognizer } from './infrastructure/browser/browser-hunt-minigame-recognizer';
 import { BrowserHuntMinigameSolutionSubmitter } from './infrastructure/browser/browser-hunt-minigame-solution-submitter';
+import { BrowserHuntMobAttacker } from './infrastructure/browser/browser-hunt-mob-attacker';
 import { BrowserHuntResourceFarmCancellationSender } from './infrastructure/browser/browser-hunt-resource-farm-cancellation-sender';
 import { BrowserHuntResourceFarmInterrupter } from './infrastructure/browser/browser-hunt-resource-farm-interrupter';
 import { BrowserHuntZoneScanner } from './infrastructure/browser/browser-hunt-zone-scanner';
@@ -33,6 +36,7 @@ import { LocalStorageProfessionRecipeSelectionStore } from './infrastructure/bro
 import { LocalStorageResourceSelectionStore } from './infrastructure/browser/local-storage-resource-selection-store';
 import { LocalStorageSoundVolumeStore } from './infrastructure/browser/local-storage-sound-volume-store';
 import { StaticProfessionRecipeRepository } from './infrastructure/local-data/static-profession-recipe-repository';
+import { StaticHuntTargetRepository } from './infrastructure/local-data/static-hunt-target-repository';
 import { StaticEquipmentItemRepository } from './infrastructure/local-data/static-equipment-item-repository';
 import { StaticResourceRepository } from './infrastructure/local-data/static-resource-repository';
 import { InMemoryHuntZoneScanStore } from './infrastructure/memory/in-memory-hunt-zone-scan-store';
@@ -43,9 +47,11 @@ function bootstrap(): void {
   const clock = new SystemClock();
   const createLogEntry = new CreateBotLogEntryUseCase(clock);
   const resourceRepository = new StaticResourceRepository();
+  const huntTargetRepository = new StaticHuntTargetRepository();
   const professionRecipeRepository = new StaticProfessionRecipeRepository(resourceRepository);
   const listResources = new ListResourcesUseCase(resourceRepository);
   const listProfessionRecipes = new ListProfessionRecipesUseCase(professionRecipeRepository);
+  const listHuntTargets = new ListHuntTargetsUseCase(huntTargetRepository);
   const currentLocationPlayerReader = new BrowserCurrentLocationPlayerReader(
     new DwarChatUsersHtmlParser()
   );
@@ -74,6 +80,13 @@ function bootstrap(): void {
   const huntZoneXmlParser = new DwarHuntZoneXmlParser(resourceRepository);
   const huntZoneScanner = new BrowserHuntZoneScanner(huntZoneXmlParser);
   const huntZoneScanStore = new InMemoryHuntZoneScanStore();
+  const attackHuntMob = new AttackHuntMobUseCase(
+    huntZoneScanner,
+    huntZoneScanStore,
+    huntTargetRepository,
+    new BrowserHuntMobAttacker(),
+    getAreaId
+  );
   const huntResourceFarmer = new BrowserHuntResourceFarmer();
   const huntMinigameImageDownloader = new BrowserHuntMinigameImageDownloader();
   const huntMinigameRecognizer = new BrowserHuntMinigameRecognizer();
@@ -106,12 +119,14 @@ function bootstrap(): void {
     delay
   );
   mountBotWidget({
+    attackHuntMob,
     createLogEntry,
     forceStopResourceMining,
     huntMinigameImageDownloader,
     huntMinigameRecognizer,
     listProfessionRecipes,
     listResources,
+    listHuntTargets,
     launcherPositionStore,
     panelPositionStore,
     panelSizeStore,

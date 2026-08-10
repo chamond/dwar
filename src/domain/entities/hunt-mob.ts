@@ -70,6 +70,10 @@ export class HuntMob {
     return this.props.name;
   }
 
+  getId(): string {
+    return this.props.id;
+  }
+
   getLevel(): number {
     return this.props.level;
   }

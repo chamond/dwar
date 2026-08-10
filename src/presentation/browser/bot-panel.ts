@@ -1,8 +1,10 @@
 import type { BotResourceId, BotResourceSnapshot } from '../../domain/entities/bot-resource';
+import type { BotHuntTargetSnapshot } from '../../domain/entities/bot-hunt-target';
 import type { ProfessionRecipeId, ProfessionRecipeSnapshot } from '../../domain/entities/profession-recipe';
 import { getClearLogIcon } from './clear-log-icon';
 import { getCraftIcon } from './craft-icon';
 import { createMiningActionControl, type MiningActionControl } from './mining-action-control';
+import { createHuntingControls, type HuntingControlsElements } from './hunting-controls';
 import { createProcessBar, type ProcessBarElements } from './process-bar';
 import {
   createProfessionRecipePicker,
@@ -12,7 +14,7 @@ import { createResourcePicker, type ResourcePickerElements } from './resource-pi
 import { createTabs, type TabsElements } from './tabs';
 import { createVolumeControl } from './volume-control';
 
-export type BotPanelTabId = 'mining' | 'crafting';
+export type BotPanelTabId = 'mining' | 'hunting' | 'crafting';
 
 export interface BotPanelElements {
   panel: HTMLElement;
@@ -21,12 +23,15 @@ export interface BotPanelElements {
   tabs: TabsElements<BotPanelTabId>;
   miningAction: MiningActionControl;
   splinterHelpButton: HTMLButtonElement;
+  huntingControls: HuntingControlsElements;
   startCraftingButton: HTMLButtonElement;
   resourcePicker: ResourcePickerElements;
   recipePicker: ProfessionRecipePickerElements;
   miningClearLogButton: HTMLButtonElement;
   miningLogList: HTMLElement;
   miningProcessBar: ProcessBarElements;
+  huntingClearLogButton: HTMLButtonElement;
+  huntingLogList: HTMLElement;
   craftingClearLogButton: HTMLButtonElement;
   craftingLogList: HTMLElement;
   craftingProcessBars: HTMLElement;
@@ -55,6 +60,12 @@ interface CraftingTabElements {
   processBars: HTMLElement;
 }
 
+interface HuntingTabElements {
+  root: HTMLElement;
+  controls: HuntingControlsElements;
+  logSection: LogSectionElements;
+}
+
 interface LogSectionElements {
   root: HTMLElement;
   clearLogButton: HTMLButtonElement;
@@ -73,6 +84,7 @@ export interface BotPanelOptions {
 export function createBotPanel(
   resources: readonly BotResourceSnapshot[],
   recipes: readonly ProfessionRecipeSnapshot[],
+  huntTargets: readonly BotHuntTargetSnapshot[],
   options: BotPanelOptions = {}
 ): BotPanelElements {
   const panel = document.createElement('section');
@@ -84,12 +96,18 @@ export function createBotPanel(
   });
   const headerElements = createPanelHeader(volumeControl.root);
   const miningTab = createMiningTab(resources, options);
+  const huntingTab = createHuntingTab(huntTargets);
   const craftingTab = createCraftingTab(recipes, options);
   const tabs = createTabs<BotPanelTabId>([
     {
       id: 'mining',
       label: 'Добыча',
       panel: miningTab.root
+    },
+    {
+      id: 'hunting',
+      label: 'Охота',
+      panel: huntingTab.root
     },
     {
       id: 'crafting',
@@ -111,12 +129,15 @@ export function createBotPanel(
     tabs,
     miningAction: miningTab.miningAction,
     splinterHelpButton: miningTab.splinterHelpButton,
+    huntingControls: huntingTab.controls,
     startCraftingButton: craftingTab.startCraftingButton,
     resourcePicker: miningTab.resourcePicker,
     recipePicker: craftingTab.recipePicker,
     miningClearLogButton: miningTab.logSection.clearLogButton,
     miningLogList: miningTab.logSection.logList,
     miningProcessBar: miningTab.processBar,
+    huntingClearLogButton: huntingTab.logSection.clearLogButton,
+    huntingLogList: huntingTab.logSection.logList,
     craftingClearLogButton: craftingTab.logSection.clearLogButton,
     craftingLogList: craftingTab.logSection.logList,
     craftingProcessBars: craftingTab.processBars,
@@ -209,6 +230,21 @@ function createSplinterHelpButton(): HTMLButtonElement {
   button.textContent = 'Помощь';
 
   return button;
+}
+
+function createHuntingTab(
+  targets: readonly BotHuntTargetSnapshot[]
+): HuntingTabElements {
+  const root = document.createElement('div');
+  const controls = createHuntingControls(targets);
+  const logSection = createLogSection('Лог охоты');
+  root.append(controls.root, logSection.root);
+
+  return {
+    root,
+    controls,
+    logSection
+  };
 }
 
 function createCraftingTab(

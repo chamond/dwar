@@ -7,7 +7,9 @@ import type { ProfessionRecipeSelectionStore } from '../../application/ports/pro
 import type { ResourceSelectionStore } from '../../application/ports/resource-selection-store';
 import type { SoundVolumeStore } from '../../application/ports/sound-volume-store';
 import type { CreateBotLogEntryUseCase } from '../../application/use-cases/create-bot-log-entry';
+import type { AttackHuntMobUseCase } from '../../application/use-cases/attack-hunt-mob';
 import type { ForceStopResourceMiningUseCase } from '../../application/use-cases/force-stop-resource-mining';
+import type { ListHuntTargetsUseCase } from '../../application/use-cases/list-hunt-targets';
 import type { ListProfessionRecipesUseCase } from '../../application/use-cases/list-profession-recipes';
 import type { ListResourcesUseCase } from '../../application/use-cases/list-resources';
 import type { RequestSplinterHelpUseCase } from '../../application/use-cases/request-splinter-help';
@@ -20,6 +22,7 @@ import { BOT_WIDGET_STYLES } from './bot-widget-styles';
 import { DRAG_IGNORE_SELECTOR, ROOT_ID } from './bot-widget-constants';
 import { createCraftingProcessController } from './crafting-process-controller';
 import { createCraftingProcessBarsController } from './crafting-process-bars';
+import { createHuntingController } from './hunting-controller';
 import { attachDraggableLauncher, restoreLauncherPosition } from './draggable-launcher';
 import { attachDraggablePanel, restorePanelPosition } from './draggable-panel';
 import { createLauncherButton } from './launcher-button';
@@ -35,10 +38,12 @@ import { createSplinterHelpController } from './splinter-help-controller';
 import type { SplinterHelpController } from './splinter-help-controller';
 
 export interface BotWidgetDependencies {
+  attackHuntMob: AttackHuntMobUseCase;
   createLogEntry: CreateBotLogEntryUseCase;
   forceStopResourceMining: ForceStopResourceMiningUseCase;
   listProfessionRecipes: ListProfessionRecipesUseCase;
   listResources: ListResourcesUseCase;
+  listHuntTargets: ListHuntTargetsUseCase;
   huntMinigameImageDownloader: HuntMinigameImageDownloader;
   huntMinigameRecognizer: HuntMinigameRecognizer;
   launcherPositionStore: LauncherPositionStore;
@@ -73,9 +78,15 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     dependencies.soundVolumeStore.save(volume);
   });
   const addMiningLog = createBotLogAppender(botPanel.miningLogList, dependencies.createLogEntry);
+  const addHuntingLog = createBotLogAppender(botPanel.huntingLogList, dependencies.createLogEntry);
   const addCraftingLog = createBotLogAppender(botPanel.craftingLogList, dependencies.createLogEntry);
   const addActiveTabLog: AddBotLog = (message, options): void => {
-    const addLog = botPanel.tabs.getActiveTab() === 'mining' ? addMiningLog : addCraftingLog;
+    const activeTab = botPanel.tabs.getActiveTab();
+    const addLog = activeTab === 'mining'
+      ? addMiningLog
+      : activeTab === 'hunting'
+        ? addHuntingLog
+        : addCraftingLog;
     addLog(message, options);
   };
   const miningProcessBar = createProcessBarController(botPanel.miningProcessBar);
@@ -134,6 +145,15 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
       addLog: addCraftingLog
     })
   });
+  const huntingController = createHuntingController({
+    controls: botPanel.huntingControls,
+    attackHuntMob: dependencies.attackHuntMob,
+    addLog: addHuntingLog,
+    reportError: createProcessErrorReporter({
+      stoppedLabel: 'Охота остановлена',
+      addLog: addHuntingLog
+    })
+  });
   attachMutuallyExclusivePickers(botPanel);
   shadowRoot.append(createStyleElement(), launcher, botPanel.panel);
   document.documentElement.append(host);
@@ -178,6 +198,10 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     clearLogList(botPanel.craftingLogList);
   });
 
+  botPanel.huntingClearLogButton.addEventListener('click', () => {
+    clearLogList(botPanel.huntingLogList);
+  });
+
   botPanel.miningAction.mainButton.addEventListener('click', () => {
     miningController.toggle();
   });
@@ -192,6 +216,10 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
 
   botPanel.startCraftingButton.addEventListener('click', () => {
     craftingController.toggle();
+  });
+
+  botPanel.huntingControls.attackButton.addEventListener('click', () => {
+    huntingController.attack();
   });
 
   attachDraggablePanel({
@@ -235,6 +263,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   });
 
   addMiningLog('Скрипт загружен.');
+  addHuntingLog('Скрипт загружен.');
   addCraftingLog('Скрипт загружен.');
 }
 
@@ -245,8 +274,9 @@ function createPanel(
 ): BotPanelElements {
   const resources = dependencies.listResources.execute().map((resource) => resource.toSnapshot());
   const recipes = dependencies.listProfessionRecipes.execute().map((recipe) => recipe.toSnapshot());
+  const huntTargets = dependencies.listHuntTargets.execute().map((target) => target.toSnapshot());
 
-  return createBotPanel(resources, recipes, {
+  return createBotPanel(resources, recipes, huntTargets, {
     initialSoundVolume,
     selectedResourceIds: dependencies.resourceSelectionStore.load(),
     onResourceSelectionChange: (selectedResources) => {
