@@ -787,8 +787,8 @@ export const BOT_WIDGET_STYLES = `
   .dwar-exchange-monitoring__settings {
     display: grid;
     flex: 0 0 auto;
-    gap: 8px;
-    padding: 9px 10px 10px;
+    gap: 6px;
+    padding: 7px 8px 8px;
     background: #101720;
     border-bottom: 1px solid rgba(255, 255, 255, .07);
   }
@@ -811,13 +811,13 @@ export const BOT_WIDGET_STYLES = `
   }
 
   .dwar-exchange-monitoring__interval-control .dwar-exchange-monitoring__input {
-    width: 70px;
+    width: 58px;
   }
 
   .dwar-exchange-monitoring__input {
     display: block;
     width: 100%;
-    height: 32px;
+    height: 28px;
     min-width: 0;
     padding: 0 8px;
     color: #e9edf5;
@@ -840,9 +840,9 @@ export const BOT_WIDGET_STYLES = `
 
   .dwar-exchange-rule-form {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 7px;
-    padding: 8px;
+    grid-template-columns: minmax(0, 1fr) 104px;
+    gap: 5px 6px;
+    padding: 6px;
     background: rgba(255, 255, 255, .025);
     border: 1px solid rgba(255, 255, 255, .08);
     border-radius: 7px;
@@ -861,11 +861,6 @@ export const BOT_WIDGET_STYLES = `
     gap: 4px;
   }
 
-  .dwar-exchange-rule-form__field--title,
-  .dwar-exchange-rule-form__field--price {
-    grid-column: 1 / -1;
-  }
-
   .dwar-exchange-rule-form__label {
     color: #8e9aac;
     font: 700 10px/1.15 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -876,7 +871,7 @@ export const BOT_WIDGET_STYLES = `
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     min-width: 0;
-    gap: 7px;
+    gap: 5px;
   }
 
   .dwar-exchange-rule-form__price-preview {
@@ -886,8 +881,9 @@ export const BOT_WIDGET_STYLES = `
   }
 
   .dwar-exchange-rule-form__submit {
-    grid-column: 1 / -1;
-    height: 32px;
+    align-self: end;
+    height: 28px;
+    padding: 0 8px;
     color: #15120b;
     background: linear-gradient(180deg, #f3c96b 0%, #d69b3f 100%);
     box-shadow: none;

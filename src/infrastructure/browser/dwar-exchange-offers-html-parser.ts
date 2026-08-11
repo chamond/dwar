@@ -26,12 +26,15 @@ export class DwarExchangeOffersHtmlParser {
 
   private parseOffer(row: HTMLTableRowElement): ExchangeOffer {
     const itemElement = row.querySelector<HTMLElement>('[art_id][cnt]');
-    const titleElement = row.querySelector<HTMLAnchorElement>(
-      'a[onclick*="showArtifactInfo"]'
-    );
+    const titleElement = findTitleElement(row);
     const priceElement = row.querySelector<HTMLElement>('.bid-container');
 
-    if (!itemElement || !titleElement || !priceElement) {
+    if (
+      !itemElement
+      || !titleElement
+      || !priceElement
+      || !priceElement.querySelector('.mgold, .msilver, .mbronze')
+    ) {
       throw new UnexpectedServerResponseError('Exchange offer row has an unexpected structure.');
     }
 
@@ -94,9 +97,7 @@ function parseDenomination(
   const denominationElement = priceElement.querySelector(selector);
 
   if (!denominationElement) {
-    throw new UnexpectedServerResponseError(
-      `Exchange offer ${denominationName} denomination is missing.`
-    );
+    return 0;
   }
 
   const normalizedValue = (denominationElement.textContent ?? '').replace(/\s/g, '');
@@ -120,4 +121,13 @@ function parseDenomination(
   }
 
   return parsedValue;
+}
+
+function findTitleElement(row: HTMLTableRowElement): HTMLAnchorElement | null {
+  return Array.from(row.querySelectorAll<HTMLAnchorElement>('a[onclick]')).find((anchor) => {
+    const onClick = anchor.getAttribute('onclick') ?? '';
+    const title = anchor.textContent?.trim() ?? '';
+
+    return /showArtifactInfo/i.test(onClick) && title.length > 0;
+  }) ?? null;
 }

@@ -2,8 +2,10 @@ import type { PanelSize, PanelSizeStore } from '../../application/ports/panel-si
 import { PANEL_MARGIN } from './bot-widget-constants';
 
 const MIN_PANEL_WIDTH_PX = 296;
-const MIN_PANEL_HEIGHT_PX = 240;
+const MIN_PANEL_HEIGHT_PX = 364;
 const KEYBOARD_RESIZE_STEP_PX = 16;
+
+type PanelSizeConstraint = 'current-position' | 'viewport';
 
 interface ResizeState {
   pointerId: number;
@@ -33,7 +35,7 @@ export function restorePanelSize(panel: HTMLElement, sizeStore: PanelSizeStore):
     return;
   }
 
-  applyPanelSize(panel, savedSize.width, savedSize.height);
+  applyPanelSize(panel, savedSize.width, savedSize.height, 'viewport');
   sizeStore.save(readPanelSize(panel));
 }
 
@@ -124,11 +126,13 @@ export function attachResizablePanel(options: ResizablePanelOptions): void {
   });
 }
 
-function applyPanelSize(panel: HTMLElement, width: number, height: number): PanelSize {
-  const nextSize = clampPanelSize(panel, {
-    width,
-    height
-  });
+function applyPanelSize(
+  panel: HTMLElement,
+  width: number,
+  height: number,
+  constraint: PanelSizeConstraint = 'current-position'
+): PanelSize {
+  const nextSize = clampPanelSize(panel, { width, height }, constraint);
 
   panel.style.width = `${Math.round(nextSize.width)}px`;
   panel.style.height = `${Math.round(nextSize.height)}px`;
@@ -145,10 +149,19 @@ function readPanelSize(panel: HTMLElement): PanelSize {
   };
 }
 
-function clampPanelSize(panel: HTMLElement, size: PanelSize): PanelSize {
+function clampPanelSize(
+  panel: HTMLElement,
+  size: PanelSize,
+  constraint: PanelSizeConstraint
+): PanelSize {
   const panelRect = panel.getBoundingClientRect();
-  const left = panelRect.width > 0 ? panelRect.left : PANEL_MARGIN;
-  const top = panelRect.height > 0 ? panelRect.top : PANEL_MARGIN;
+  const constrainToCurrentPosition = constraint === 'current-position';
+  const left = constrainToCurrentPosition && panelRect.width > 0
+    ? panelRect.left
+    : PANEL_MARGIN;
+  const top = constrainToCurrentPosition && panelRect.height > 0
+    ? panelRect.top
+    : PANEL_MARGIN;
   const maxWidth = Math.max(MIN_PANEL_WIDTH_PX, window.innerWidth - left - PANEL_MARGIN);
   const maxHeight = Math.max(MIN_PANEL_HEIGHT_PX, window.innerHeight - top - PANEL_MARGIN);
 

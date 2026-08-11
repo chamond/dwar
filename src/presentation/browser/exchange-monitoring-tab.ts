@@ -92,13 +92,13 @@ export function createExchangeMonitoringTab(): ExchangeMonitoringTabElements {
   const addRuleButton = document.createElement('button');
   addRuleButton.type = 'submit';
   addRuleButton.className = 'dwar-action-button dwar-exchange-rule-form__submit';
-  addRuleButton.textContent = 'Добавить правило';
+  addRuleButton.textContent = 'Добавить';
 
   ruleForm.append(
     formTitle,
-    createField('Название', titleInput, 'dwar-exchange-rule-form__field--title'),
+    createField('Название', titleInput),
     createField('Качество', qualitySelect),
-    createField('Минимальная цена, медь', priceControl, 'dwar-exchange-rule-form__field--price'),
+    createField('Минимальная цена, медь', priceControl),
     addRuleButton
   );
   settings.append(intervalField, ruleForm);
@@ -129,15 +129,10 @@ export function createExchangeMonitoringTab(): ExchangeMonitoringTabElements {
 
 function createField(
   labelText: string,
-  control: HTMLElement,
-  extraClassName?: string
+  control: HTMLElement
 ): HTMLLabelElement {
   const field = document.createElement('label');
   field.className = 'dwar-exchange-rule-form__field';
-
-  if (extraClassName) {
-    field.classList.add(extraClassName);
-  }
 
   const label = document.createElement('span');
   label.className = 'dwar-exchange-rule-form__label';
