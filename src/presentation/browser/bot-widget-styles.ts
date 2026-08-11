@@ -306,6 +306,11 @@ export const BOT_WIDGET_STYLES = `
     transition: color .14s ease, background-color .14s ease;
   }
 
+  .dwar-tabs__label {
+    position: relative;
+    z-index: 1;
+  }
+
   .dwar-tabs__button::after {
     position: absolute;
     right: 10px;
@@ -315,6 +320,7 @@ export const BOT_WIDGET_STYLES = `
     content: "";
     background: transparent;
     border-radius: 999px 999px 0 0;
+    z-index: 2;
   }
 
   .dwar-tabs__button:hover {
@@ -333,12 +339,27 @@ export const BOT_WIDGET_STYLES = `
   }
 
   .dwar-tabs__button.has-exchange-alert {
+    overflow: hidden;
     color: #fff0b8;
-    background:
-      linear-gradient(110deg, rgba(176, 113, 24, .28), rgba(255, 220, 117, .5), rgba(176, 113, 24, .28));
-    background-size: 220% 100%;
+    background: rgba(176, 113, 24, .28);
     box-shadow: inset 0 0 0 1px rgba(255, 218, 111, .35), 0 0 14px rgba(244, 186, 64, .34);
-    animation: dwar-exchange-alert-shimmer 1.45s linear infinite;
+  }
+
+  .dwar-tabs__button.has-exchange-alert::before {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 200%;
+    content: "";
+    pointer-events: none;
+    background: linear-gradient(
+      110deg,
+      rgba(176, 113, 24, .28),
+      rgba(255, 220, 117, .5),
+      rgba(176, 113, 24, .28)
+    ) 0 0 / 50% 100% repeat-x;
+    animation: dwar-exchange-shimmer 1.45s linear infinite;
   }
 
   .dwar-tabs__button.has-exchange-alert::after {
@@ -841,7 +862,7 @@ export const BOT_WIDGET_STYLES = `
   .dwar-exchange-rule-form {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 104px;
-    gap: 5px 6px;
+    gap: 5px 12px;
     padding: 6px;
     background: rgba(255, 255, 255, .025);
     border: 1px solid rgba(255, 255, 255, .08);
@@ -916,6 +937,7 @@ export const BOT_WIDGET_STYLES = `
 
   .dwar-exchange-rules {
     display: grid;
+    grid-auto-rows: max-content;
     align-content: start;
     flex: 1 1 auto;
     min-height: 0;
@@ -949,12 +971,27 @@ export const BOT_WIDGET_STYLES = `
   }
 
   .dwar-exchange-rule.has-matches {
-    background:
-      linear-gradient(110deg, rgba(88, 57, 14, .75), rgba(183, 127, 30, .7), rgba(255, 218, 108, .28), rgba(88, 57, 14, .75));
-    background-size: 260% 100%;
+    background: rgba(88, 57, 14, .75);
     border-color: rgba(255, 215, 103, .58);
     box-shadow: 0 0 18px rgba(230, 169, 50, .28), inset 0 0 16px rgba(255, 221, 125, .08);
-    animation: dwar-exchange-rule-shimmer 1.8s linear infinite;
+  }
+
+  .dwar-exchange-rule.has-matches::before {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 200%;
+    content: "";
+    pointer-events: none;
+    background: linear-gradient(
+      110deg,
+      rgba(88, 57, 14, .75),
+      rgba(183, 127, 30, .7),
+      rgba(255, 218, 108, .28),
+      rgba(88, 57, 14, .75)
+    ) 0 0 / 50% 100% repeat-x;
+    animation: dwar-exchange-shimmer 1.8s linear infinite;
   }
 
   .dwar-exchange-rule__header {
@@ -1050,6 +1087,7 @@ export const BOT_WIDGET_STYLES = `
     position: relative;
     z-index: 1;
     display: grid;
+    min-height: 100px;
     max-height: 126px;
     gap: 1px;
     overflow: auto;
@@ -1087,29 +1125,19 @@ export const BOT_WIDGET_STYLES = `
     font-weight: 800;
   }
 
-  @keyframes dwar-exchange-alert-shimmer {
+  @keyframes dwar-exchange-shimmer {
     from {
-      background-position: 100% 0;
+      transform: translateX(0);
     }
 
     to {
-      background-position: -120% 0;
-    }
-  }
-
-  @keyframes dwar-exchange-rule-shimmer {
-    from {
-      background-position: 100% 0;
-    }
-
-    to {
-      background-position: -160% 0;
+      transform: translateX(-50%);
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .dwar-tabs__button.has-exchange-alert,
-    .dwar-exchange-rule.has-matches {
+    .dwar-tabs__button.has-exchange-alert::before,
+    .dwar-exchange-rule.has-matches::before {
       animation: none;
     }
   }

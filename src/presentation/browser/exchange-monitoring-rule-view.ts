@@ -88,6 +88,12 @@ export function setExchangeMonitoringRuleActive(
   view.toggleButton.setAttribute('aria-pressed', String(isActive));
 }
 
+export function clearExchangeMonitoringRuleMatches(
+  view: ExchangeMonitoringRuleView
+): void {
+  view.root.classList.remove('has-matches');
+}
+
 export function presentExchangeMonitoringRuleChecking(
   view: ExchangeMonitoringRuleView
 ): void {

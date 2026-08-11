@@ -16,6 +16,7 @@ import { renderCopperAmount } from './exchange-money';
 import type { ExchangeMonitoringTabElements } from './exchange-monitoring-tab';
 import { DEFAULT_EXCHANGE_MONITORING_INTERVAL_MINUTES } from './exchange-monitoring-tab';
 import {
+  clearExchangeMonitoringRuleMatches,
   createExchangeMonitoringRuleView,
   presentExchangeMonitoringRuleChecking,
   presentExchangeMonitoringRuleCompleted,
@@ -29,6 +30,7 @@ interface RuleRuntime {
   rule: ExchangeMonitoringRule;
   view: ExchangeMonitoringRuleView;
   subscription: Subscription | null;
+  acknowledgeHandler: () => void;
   toggleHandler: () => void;
   removeHandler: () => void;
 }
@@ -124,6 +126,7 @@ export function createExchangeMonitoringController(
     stopRuntime(runtime);
     runtime.view.toggleButton.removeEventListener('click', runtime.toggleHandler);
     runtime.view.removeButton.removeEventListener('click', runtime.removeHandler);
+    runtime.view.root.removeEventListener('click', runtime.acknowledgeHandler, true);
     runtime.view.root.remove();
     runtimes.delete(runtime.rule.getId());
     updateEmptyState();
@@ -150,14 +153,19 @@ export function createExchangeMonitoringController(
     const removeHandler = (): void => {
       removeRuntime(runtime);
     };
+    const acknowledgeHandler = (): void => {
+      clearExchangeMonitoringRuleMatches(view);
+    };
     runtime = {
       rule,
       view,
       subscription: null,
+      acknowledgeHandler,
       toggleHandler,
       removeHandler
     };
 
+    view.root.addEventListener('click', runtime.acknowledgeHandler, { capture: true });
     view.toggleButton.addEventListener('click', runtime.toggleHandler);
     view.removeButton.addEventListener('click', runtime.removeHandler);
     runtimes.set(rule.getId(), runtime);
@@ -239,6 +247,7 @@ export function createExchangeMonitoringController(
       runtimes.forEach((runtime) => {
         runtime.subscription?.unsubscribe();
         runtime.subscription = null;
+        runtime.view.root.removeEventListener('click', runtime.acknowledgeHandler, true);
         runtime.view.toggleButton.removeEventListener('click', runtime.toggleHandler);
         runtime.view.removeButton.removeEventListener('click', runtime.removeHandler);
       });

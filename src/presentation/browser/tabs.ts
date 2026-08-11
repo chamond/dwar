@@ -65,10 +65,13 @@ export function createTabs<TabId extends string>(
     const tabId = `dwar-tab-${definition.id}`;
     const panelId = `dwar-tab-panel-${definition.id}`;
     const button = document.createElement('button');
+    const buttonLabel = document.createElement('span');
     button.type = 'button';
     button.id = tabId;
     button.className = 'dwar-tabs__button';
-    button.textContent = definition.label;
+    buttonLabel.className = 'dwar-tabs__label';
+    buttonLabel.textContent = definition.label;
+    button.append(buttonLabel);
     button.setAttribute('role', 'tab');
     button.setAttribute('aria-controls', panelId);
 
