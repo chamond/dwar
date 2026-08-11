@@ -1,6 +1,7 @@
 import type { HuntMinigameImageDownloader } from '../../application/ports/hunt-minigame-image-downloader';
 import type { HuntMinigameRecognizer } from '../../application/ports/hunt-minigame-recognizer';
 import type { LauncherPositionStore } from '../../application/ports/launcher-position-store';
+import type { MainChatHtmlReader } from '../../application/ports/main-chat-html-reader';
 import type { PanelPositionStore } from '../../application/ports/panel-position-store';
 import type { PanelSizeStore } from '../../application/ports/panel-size-store';
 import type { ProfessionRecipeSelectionStore } from '../../application/ports/profession-recipe-selection-store';
@@ -27,6 +28,7 @@ import { attachDraggableLauncher, restoreLauncherPosition } from './draggable-la
 import { attachDraggablePanel, restorePanelPosition } from './draggable-panel';
 import { createLauncherButton } from './launcher-button';
 import { clearLogList } from './log-list';
+import { createMainChatLogController } from './main-chat-log-controller';
 import { appendMinigameRecognitionLog } from './minigame-recognition-log';
 import { createMiningProcessController } from './mining-process-controller';
 import { keepPanelInViewport, positionPanelNearLauncher } from './panel-position';
@@ -47,6 +49,7 @@ export interface BotWidgetDependencies {
   huntMinigameImageDownloader: HuntMinigameImageDownloader;
   huntMinigameRecognizer: HuntMinigameRecognizer;
   launcherPositionStore: LauncherPositionStore;
+  mainChatHtmlReader: MainChatHtmlReader;
   panelPositionStore: PanelPositionStore;
   panelSizeStore: PanelSizeStore;
   professionRecipeSelectionStore: ProfessionRecipeSelectionStore;
@@ -91,6 +94,11 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   };
   const miningProcessBar = createProcessBarController(botPanel.miningProcessBar);
   const craftingProcessBars = createCraftingProcessBarsController(botPanel.craftingProcessBars);
+  const mainChatLogController = createMainChatLogController({
+    checkbox: botPanel.mainChatLogCheckbox,
+    mainChatHtmlReader: dependencies.mainChatHtmlReader,
+    addLog: addMiningLog
+  });
   let splinterHelpController: SplinterHelpController | null = null;
 
   const miningController = createMiningProcessController({
@@ -262,6 +270,9 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
       dependencies.panelPositionStore.save(keepPanelInViewport(botPanel.panel));
     }
   });
+  window.addEventListener('pagehide', () => {
+    mainChatLogController.destroy();
+  }, { once: true });
 
   addMiningLog('Скрипт загружен.');
   addHuntingLog('Скрипт загружен.');

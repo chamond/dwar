@@ -25,6 +25,7 @@ export interface BotPanelElements {
   miningAction: MiningActionControl;
   splinterHelpButton: HTMLButtonElement;
   autoSplinterHelpCheckbox: HTMLInputElement;
+  mainChatLogCheckbox: HTMLInputElement;
   huntingControls: HuntingControlsElements;
   startCraftingButton: HTMLButtonElement;
   resourcePicker: ResourcePickerElements;
@@ -50,6 +51,7 @@ interface MiningTabElements {
   miningAction: MiningActionControl;
   splinterHelpButton: HTMLButtonElement;
   autoSplinterHelpCheckbox: HTMLInputElement;
+  mainChatLogCheckbox: HTMLInputElement;
   resourcePicker: ResourcePickerElements;
   logSection: LogSectionElements;
   processBar: ProcessBarElements;
@@ -133,6 +135,7 @@ export function createBotPanel(
     miningAction: miningTab.miningAction,
     splinterHelpButton: miningTab.splinterHelpButton,
     autoSplinterHelpCheckbox: miningTab.autoSplinterHelpCheckbox,
+    mainChatLogCheckbox: miningTab.mainChatLogCheckbox,
     huntingControls: huntingTab.controls,
     startCraftingButton: craftingTab.startCraftingButton,
     resourcePicker: miningTab.resourcePicker,
@@ -198,6 +201,10 @@ function createMiningTab(
     text: 'Автоматически просить о помощи',
     title: 'При обнаружении занозы автоматически запускать цикл просьб о помощи'
   });
+  const mainChatLogOption = createCheckboxOption({
+    text: 'Дублировать чат «Основной»',
+    title: 'Выводить текущие и новые сообщения чата в лог как текст их HTML-разметки'
+  });
 
   const resourcePicker = createResourcePicker(resources, {
     selectedResourceIds: options.selectedResourceIds,
@@ -210,7 +217,11 @@ function createMiningTab(
 
   const selectorGroup = document.createElement('div');
   selectorGroup.className = 'dwar-panel__selectors';
-  selectorGroup.append(resourcePicker.root, autoSplinterHelpOption.label);
+  selectorGroup.append(
+    resourcePicker.root,
+    autoSplinterHelpOption.label,
+    mainChatLogOption.label
+  );
   controls.append(actionGroup, selectorGroup);
 
   const logSection = createLogSection('Лог добычи');
@@ -224,6 +235,7 @@ function createMiningTab(
     miningAction,
     splinterHelpButton,
     autoSplinterHelpCheckbox: autoSplinterHelpOption.checkbox,
+    mainChatLogCheckbox: mainChatLogOption.checkbox,
     resourcePicker,
     logSection,
     processBar
