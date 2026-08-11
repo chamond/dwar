@@ -2,6 +2,10 @@ import type { BotResourceId, BotResourceSnapshot } from '../../domain/entities/b
 import type { BotHuntTargetSnapshot } from '../../domain/entities/bot-hunt-target';
 import type { ProfessionRecipeId, ProfessionRecipeSnapshot } from '../../domain/entities/profession-recipe';
 import { createCheckboxOption } from './checkbox-option';
+import {
+  createExchangeMonitoringTab,
+  type ExchangeMonitoringTabElements
+} from './exchange-monitoring-tab';
 import { getClearLogIcon } from './clear-log-icon';
 import { getCraftIcon } from './craft-icon';
 import { createMiningActionControl, type MiningActionControl } from './mining-action-control';
@@ -15,7 +19,7 @@ import { createResourcePicker, type ResourcePickerElements } from './resource-pi
 import { createTabs, type TabsElements } from './tabs';
 import { createVolumeControl } from './volume-control';
 
-export type BotPanelTabId = 'mining' | 'hunting' | 'crafting';
+export type BotPanelTabId = 'mining' | 'hunting' | 'crafting' | 'exchange-monitoring';
 
 export interface BotPanelElements {
   panel: HTMLElement;
@@ -27,6 +31,7 @@ export interface BotPanelElements {
   autoSplinterHelpCheckbox: HTMLInputElement;
   mainChatLogCheckbox: HTMLInputElement;
   huntingControls: HuntingControlsElements;
+  exchangeMonitoring: ExchangeMonitoringTabElements;
   startCraftingButton: HTMLButtonElement;
   resourcePicker: ResourcePickerElements;
   recipePicker: ProfessionRecipePickerElements;
@@ -103,6 +108,7 @@ export function createBotPanel(
   const miningTab = createMiningTab(resources, options);
   const huntingTab = createHuntingTab(huntTargets);
   const craftingTab = createCraftingTab(recipes, options);
+  const exchangeMonitoringTab = createExchangeMonitoringTab();
   const tabs = createTabs<BotPanelTabId>([
     {
       id: 'mining',
@@ -118,6 +124,11 @@ export function createBotPanel(
       id: 'crafting',
       label: 'Крафт',
       panel: craftingTab.root
+    },
+    {
+      id: 'exchange-monitoring',
+      label: 'Мониторинг биржи',
+      panel: exchangeMonitoringTab.root
     }
   ], 'mining');
   const resizeHandle = createResizeHandle();
@@ -137,6 +148,7 @@ export function createBotPanel(
     autoSplinterHelpCheckbox: miningTab.autoSplinterHelpCheckbox,
     mainChatLogCheckbox: miningTab.mainChatLogCheckbox,
     huntingControls: huntingTab.controls,
+    exchangeMonitoring: exchangeMonitoringTab,
     startCraftingButton: craftingTab.startCraftingButton,
     resourcePicker: miningTab.resourcePicker,
     recipePicker: craftingTab.recipePicker,

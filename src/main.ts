@@ -6,12 +6,14 @@ import { ListCurrentLocationPlayersUseCase } from './application/use-cases/list-
 import { ListHuntTargetsUseCase } from './application/use-cases/list-hunt-targets';
 import { ListProfessionRecipesUseCase } from './application/use-cases/list-profession-recipes';
 import { ListResourcesUseCase } from './application/use-cases/list-resources';
+import { MonitorExchangeRuleUseCase } from './application/use-cases/monitor-exchange-rule';
 import { RequestSplinterHelpUseCase } from './application/use-cases/request-splinter-help';
 import { RunProfessionCraftingUseCase } from './application/use-cases/run-profession-crafting';
 import { RunResourceMiningUseCase } from './application/use-cases/run-resource-mining';
 import { SolveHuntMinigameUseCase } from './application/use-cases/solve-hunt-minigame';
 import { ThankSplinterHealerUseCase } from './application/use-cases/thank-splinter-healer';
 import { BrowserBackpackItemQuantityReader } from './infrastructure/browser/browser-backpack-item-quantity-reader';
+import { BrowserExchangeOfferReader } from './infrastructure/browser/browser-exchange-offer-reader';
 import { BrowserEquipmentItemEquipper } from './infrastructure/browser/browser-equipment-item-equipper';
 import { BrowserCurrentLocationPlayerReader } from './infrastructure/browser/browser-current-location-player-reader';
 import { BrowserHuntResourceFarmer } from './infrastructure/browser/browser-hunt-resource-farmer';
@@ -30,10 +32,12 @@ import { BrowserSplinterHealerReader } from './infrastructure/browser/browser-sp
 import { detectCurrentPlayerSplinter } from './infrastructure/browser/detect-current-player-splinter';
 import { DwarBackpackHtmlParser } from './infrastructure/browser/dwar-backpack-html-parser';
 import { DwarChatUsersHtmlParser } from './infrastructure/browser/dwar-chat-users-html-parser';
+import { DwarExchangeOffersHtmlParser } from './infrastructure/browser/dwar-exchange-offers-html-parser';
 import { DwarHuntZoneXmlParser } from './infrastructure/browser/dwar-hunt-zone-xml-parser';
 import { DwarSplinterHealerMessageParser } from './infrastructure/browser/dwar-splinter-healer-message-parser';
 import { getAreaId } from './infrastructure/browser/get-area-id';
 import { LocalStorageLauncherPositionStore } from './infrastructure/browser/local-storage-launcher-position-store';
+import { LocalStorageExchangeMonitoringSettingsStore } from './infrastructure/browser/local-storage-exchange-monitoring-settings-store';
 import { LocalStoragePanelPositionStore } from './infrastructure/browser/local-storage-panel-position-store';
 import { LocalStoragePanelSizeStore } from './infrastructure/browser/local-storage-panel-size-store';
 import { LocalStorageProfessionRecipeSelectionStore } from './infrastructure/browser/local-storage-profession-recipe-selection-store';
@@ -64,6 +68,7 @@ function bootstrap(): void {
     currentLocationPlayerReader
   );
   const delay = new BrowserDelay();
+  const gameActionScheduler = new FifoTaskScheduler();
   const privateMessageSender = new BrowserPrivateMessageSender();
   const equipAncientClanPickaxe = new EquipAncientClanPickaxeUseCase(
     new StaticEquipmentItemRepository(),
@@ -83,6 +88,7 @@ function bootstrap(): void {
   const panelSizeStore = new LocalStoragePanelSizeStore();
   const resourceSelectionStore = new LocalStorageResourceSelectionStore();
   const professionRecipeSelectionStore = new LocalStorageProfessionRecipeSelectionStore();
+  const exchangeMonitoringSettingsStore = new LocalStorageExchangeMonitoringSettingsStore();
   const mainChatHtmlReader = new BrowserMainChatHtmlReader();
   const thankSplinterHealer = new ThankSplinterHealerUseCase(
     new BrowserSplinterHealerReader(
@@ -117,7 +123,11 @@ function bootstrap(): void {
   );
   const backpackItemQuantityReader = new BrowserBackpackItemQuantityReader(new DwarBackpackHtmlParser());
   const professionRecipeCrafter = new BrowserProfessionRecipeCrafter();
-  const gameActionScheduler = new FifoTaskScheduler();
+  const monitorExchangeRule = new MonitorExchangeRuleUseCase(
+    new BrowserExchangeOfferReader(new DwarExchangeOffersHtmlParser()),
+    delay,
+    gameActionScheduler
+  );
   const runResourceMining = new RunResourceMiningUseCase(
     huntZoneScanner,
     resourceRepository,
@@ -140,6 +150,7 @@ function bootstrap(): void {
   mountBotWidget({
     attackHuntMob,
     createLogEntry,
+    exchangeMonitoringSettingsStore,
     forceStopResourceMining,
     huntMinigameImageDownloader,
     huntMinigameRecognizer,
@@ -148,6 +159,7 @@ function bootstrap(): void {
     listHuntTargets,
     launcherPositionStore,
     mainChatHtmlReader,
+    monitorExchangeRule,
     panelPositionStore,
     panelSizeStore,
     professionRecipeSelectionStore,

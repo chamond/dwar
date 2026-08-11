@@ -11,6 +11,7 @@ export interface TabsElements<TabId extends string> {
   panels: ReadonlyMap<TabId, HTMLElement>;
   getActiveTab(): TabId;
   selectTab(tabId: TabId): void;
+  onActiveTabChange(listener: (tabId: TabId) => void): () => void;
 }
 
 export function createTabs<TabId extends string>(
@@ -33,6 +34,7 @@ export function createTabs<TabId extends string>(
 
   const buttons = new Map<TabId, HTMLButtonElement>();
   const panels = new Map<TabId, HTMLElement>();
+  const activeTabListeners = new Set<(tabId: TabId) => void>();
   let activeTabId = initialTabId;
 
   const selectTab = (tabId: TabId): void => {
@@ -53,6 +55,10 @@ export function createTabs<TabId extends string>(
         panel.hidden = !isActive;
       }
     }
+
+    activeTabListeners.forEach((listener) => {
+      listener(activeTabId);
+    });
   };
 
   definitions.forEach((definition, index) => {
@@ -110,7 +116,14 @@ export function createTabs<TabId extends string>(
     getActiveTab(): TabId {
       return activeTabId;
     },
-    selectTab
+    selectTab,
+    onActiveTabChange(listener: (tabId: TabId) => void): () => void {
+      activeTabListeners.add(listener);
+
+      return () => {
+        activeTabListeners.delete(listener);
+      };
+    }
   };
 }
 

@@ -60,7 +60,9 @@ export const BOT_WIDGET_STYLES = `
   .dwar-mining-action__force-stop:focus-visible,
   .dwar-resource-picker__toggle:focus-visible,
   .dwar-hunt-target-select:focus-visible,
-  .dwar-option-checkbox__input:focus-visible {
+  .dwar-option-checkbox__input:focus-visible,
+  .dwar-exchange-monitoring__input:focus-visible,
+  .dwar-exchange-rule__remove:focus-visible {
     outline: 2px solid #78d9c2;
     outline-offset: 3px;
   }
@@ -284,7 +286,7 @@ export const BOT_WIDGET_STYLES = `
 
   .dwar-tabs__list {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     flex: 0 0 auto;
     padding: 5px 7px 0;
     background: #121923;
@@ -293,14 +295,14 @@ export const BOT_WIDGET_STYLES = `
 
   .dwar-tabs__button {
     position: relative;
-    height: 34px;
-    padding: 0 12px;
+    height: 40px;
+    padding: 0 5px;
     color: #7f8ca1;
     background: transparent;
     border: 0;
     border-radius: 6px 6px 0 0;
     cursor: pointer;
-    font: 800 12px/1 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font: 800 11px/1.15 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     transition: color .14s ease, background-color .14s ease;
   }
 
@@ -328,6 +330,20 @@ export const BOT_WIDGET_STYLES = `
   .dwar-tabs__button.is-active::after {
     background: #78d9c2;
     box-shadow: 0 0 10px rgba(120, 217, 194, .58);
+  }
+
+  .dwar-tabs__button.has-exchange-alert {
+    color: #fff0b8;
+    background:
+      linear-gradient(110deg, rgba(176, 113, 24, .28), rgba(255, 220, 117, .5), rgba(176, 113, 24, .28));
+    background-size: 220% 100%;
+    box-shadow: inset 0 0 0 1px rgba(255, 218, 111, .35), 0 0 14px rgba(244, 186, 64, .34);
+    animation: dwar-exchange-alert-shimmer 1.45s linear infinite;
+  }
+
+  .dwar-tabs__button.has-exchange-alert::after {
+    background: #ffd66f;
+    box-shadow: 0 0 12px rgba(255, 214, 111, .85);
   }
 
   .dwar-tabs__panels {
@@ -758,6 +774,348 @@ export const BOT_WIDGET_STYLES = `
       #090d13;
     font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
     scrollbar-color: #394353 #090d13;
+  }
+
+  .dwar-exchange-monitoring {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    background: #090d13;
+  }
+
+  .dwar-exchange-monitoring__settings {
+    display: grid;
+    flex: 0 0 auto;
+    gap: 8px;
+    padding: 9px 10px 10px;
+    background: #101720;
+    border-bottom: 1px solid rgba(255, 255, 255, .07);
+  }
+
+  .dwar-exchange-monitoring__interval {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: #cfd7e6;
+    font: 700 11px/1.2 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .dwar-exchange-monitoring__interval-control {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 6px;
+    color: #8e9aac;
+  }
+
+  .dwar-exchange-monitoring__interval-control .dwar-exchange-monitoring__input {
+    width: 70px;
+  }
+
+  .dwar-exchange-monitoring__input {
+    display: block;
+    width: 100%;
+    height: 32px;
+    min-width: 0;
+    padding: 0 8px;
+    color: #e9edf5;
+    color-scheme: dark;
+    background: #0b1118;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 6px;
+    font: 600 12px/1 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .dwar-exchange-monitoring__input:hover,
+  .dwar-exchange-monitoring__input:focus-visible {
+    background: #111a24;
+    border-color: rgba(120, 217, 194, .42);
+  }
+
+  .dwar-exchange-monitoring__input:invalid {
+    border-color: rgba(242, 99, 110, .62);
+  }
+
+  .dwar-exchange-rule-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 7px;
+    padding: 8px;
+    background: rgba(255, 255, 255, .025);
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 7px;
+  }
+
+  .dwar-exchange-rule-form__title {
+    grid-column: 1 / -1;
+    color: #f3c96b;
+    font: 800 11px/1.2 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    text-transform: uppercase;
+  }
+
+  .dwar-exchange-rule-form__field {
+    display: grid;
+    min-width: 0;
+    gap: 4px;
+  }
+
+  .dwar-exchange-rule-form__field--title,
+  .dwar-exchange-rule-form__field--price {
+    grid-column: 1 / -1;
+  }
+
+  .dwar-exchange-rule-form__label {
+    color: #8e9aac;
+    font: 700 10px/1.15 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .dwar-exchange-rule-form__price-control {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    min-width: 0;
+    gap: 7px;
+  }
+
+  .dwar-exchange-rule-form__price-preview {
+    display: inline-flex;
+    min-width: 30px;
+    justify-content: flex-end;
+  }
+
+  .dwar-exchange-rule-form__submit {
+    grid-column: 1 / -1;
+    height: 32px;
+    color: #15120b;
+    background: linear-gradient(180deg, #f3c96b 0%, #d69b3f 100%);
+    box-shadow: none;
+  }
+
+  .dwar-exchange-rule-form__submit:hover {
+    background: linear-gradient(180deg, #ffd982 0%, #dda948 100%);
+  }
+
+  .dwar-exchange-money {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px;
+    color: #f6e7b8;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .dwar-exchange-money__unit {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .dwar-exchange-money__unit img {
+    display: block;
+    flex: 0 0 auto;
+  }
+
+  .dwar-exchange-rules {
+    display: grid;
+    align-content: start;
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: 8px;
+    padding: 9px 10px 14px;
+    overflow: auto;
+    scrollbar-color: #394353 #090d13;
+  }
+
+  .dwar-exchange-rules__empty {
+    padding: 18px 8px;
+    color: #7f8ca1;
+    font: 12px/1.4 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    text-align: center;
+  }
+
+  .dwar-exchange-rules__empty[hidden] {
+    display: none;
+  }
+
+  .dwar-exchange-rule {
+    position: relative;
+    display: grid;
+    gap: 7px;
+    padding: 9px;
+    overflow: hidden;
+    background: linear-gradient(180deg, #141c27 0%, #0d141d 100%);
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 8px;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, .2);
+  }
+
+  .dwar-exchange-rule.has-matches {
+    background:
+      linear-gradient(110deg, rgba(88, 57, 14, .75), rgba(183, 127, 30, .7), rgba(255, 218, 108, .28), rgba(88, 57, 14, .75));
+    background-size: 260% 100%;
+    border-color: rgba(255, 215, 103, .58);
+    box-shadow: 0 0 18px rgba(230, 169, 50, .28), inset 0 0 16px rgba(255, 221, 125, .08);
+    animation: dwar-exchange-rule-shimmer 1.8s linear infinite;
+  }
+
+  .dwar-exchange-rule__header {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .dwar-exchange-rule__title {
+    min-width: 0;
+    overflow: hidden;
+    color: #f2f5fa;
+    font: 800 12px/1.2 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dwar-exchange-rule__remove {
+    display: grid;
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+    place-items: center;
+    padding: 0;
+    color: #9ba7b9;
+    background: rgba(0, 0, 0, .18);
+    border: 0;
+    border-radius: 5px;
+    cursor: pointer;
+    font: 19px/1 ui-sans-serif, system-ui, sans-serif;
+  }
+
+  .dwar-exchange-rule__remove:hover {
+    color: #fff;
+    background: rgba(214, 90, 99, .28);
+  }
+
+  .dwar-exchange-rule__settings {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    color: #aeb8c7;
+    font: 700 10px/1.2 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .dwar-exchange-rule__quality {
+    color: var(--dwar-exchange-quality-color);
+  }
+
+  .dwar-exchange-rule__minimum {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .dwar-exchange-rule__toggle {
+    position: relative;
+    z-index: 1;
+    height: 32px;
+  }
+
+  .dwar-exchange-rule__toggle:not(.is-active) {
+    color: #e7edf6;
+    background: linear-gradient(180deg, #2c3c50 0%, #1a2737 100%);
+  }
+
+  .dwar-exchange-rule__toggle:not(.is-active):hover {
+    background: linear-gradient(180deg, #36506a 0%, #20354a 100%);
+    border-color: rgba(120, 217, 194, .42);
+  }
+
+  .dwar-exchange-rule__status {
+    position: relative;
+    z-index: 1;
+    color: #9eabbd;
+    font: 10px/1.3 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .dwar-exchange-rule__status.is-error {
+    color: #f2a3aa;
+    font-weight: 800;
+  }
+
+  .dwar-exchange-rule__results {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    max-height: 126px;
+    gap: 1px;
+    overflow: auto;
+    background: rgba(3, 6, 10, .42);
+    border: 1px solid rgba(255, 255, 255, .07);
+    border-radius: 5px;
+    scrollbar-color: #65522d rgba(3, 6, 10, .42);
+  }
+
+  .dwar-exchange-rule__results[hidden] {
+    display: none;
+  }
+
+  .dwar-exchange-rule__result {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;
+    gap: 8px;
+    padding: 5px 6px;
+    color: #dce3ef;
+    background: rgba(255, 255, 255, .025);
+    font: 10px/1.25 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .dwar-exchange-rule__result-item {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dwar-exchange-rule__result-price {
+    flex: 0 0 auto;
+    font-weight: 800;
+  }
+
+  @keyframes dwar-exchange-alert-shimmer {
+    from {
+      background-position: 100% 0;
+    }
+
+    to {
+      background-position: -120% 0;
+    }
+  }
+
+  @keyframes dwar-exchange-rule-shimmer {
+    from {
+      background-position: 100% 0;
+    }
+
+    to {
+      background-position: -160% 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dwar-tabs__button.has-exchange-alert,
+    .dwar-exchange-rule.has-matches {
+      animation: none;
+    }
   }
 
   .dwar-process-bars {

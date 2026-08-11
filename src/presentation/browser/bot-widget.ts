@@ -1,6 +1,7 @@
 import type { HuntMinigameImageDownloader } from '../../application/ports/hunt-minigame-image-downloader';
 import type { HuntMinigameRecognizer } from '../../application/ports/hunt-minigame-recognizer';
 import type { LauncherPositionStore } from '../../application/ports/launcher-position-store';
+import type { ExchangeMonitoringSettingsStore } from '../../application/ports/exchange-monitoring-settings-store';
 import type { MainChatHtmlReader } from '../../application/ports/main-chat-html-reader';
 import type { PanelPositionStore } from '../../application/ports/panel-position-store';
 import type { PanelSizeStore } from '../../application/ports/panel-size-store';
@@ -13,6 +14,7 @@ import type { ForceStopResourceMiningUseCase } from '../../application/use-cases
 import type { ListHuntTargetsUseCase } from '../../application/use-cases/list-hunt-targets';
 import type { ListProfessionRecipesUseCase } from '../../application/use-cases/list-profession-recipes';
 import type { ListResourcesUseCase } from '../../application/use-cases/list-resources';
+import type { MonitorExchangeRuleUseCase } from '../../application/use-cases/monitor-exchange-rule';
 import type { RequestSplinterHelpUseCase } from '../../application/use-cases/request-splinter-help';
 import type { RunProfessionCraftingUseCase } from '../../application/use-cases/run-profession-crafting';
 import type { RunResourceMiningUseCase } from '../../application/use-cases/run-resource-mining';
@@ -23,6 +25,7 @@ import { createBotPanel, type BotPanelElements } from './bot-panel';
 import { BOT_WIDGET_STYLES } from './bot-widget-styles';
 import { DRAG_IGNORE_SELECTOR, ROOT_ID } from './bot-widget-constants';
 import { createCraftingProcessController } from './crafting-process-controller';
+import { createExchangeMonitoringController } from './exchange-monitoring-controller';
 import { createCraftingProcessBarsController } from './crafting-process-bars';
 import { createHuntingController } from './hunting-controller';
 import { attachDraggableLauncher, restoreLauncherPosition } from './draggable-launcher';
@@ -43,6 +46,7 @@ import type { SplinterHelpController } from './splinter-help-controller';
 export interface BotWidgetDependencies {
   attackHuntMob: AttackHuntMobUseCase;
   createLogEntry: CreateBotLogEntryUseCase;
+  exchangeMonitoringSettingsStore: ExchangeMonitoringSettingsStore;
   forceStopResourceMining: ForceStopResourceMiningUseCase;
   listProfessionRecipes: ListProfessionRecipesUseCase;
   listResources: ListResourcesUseCase;
@@ -51,6 +55,7 @@ export interface BotWidgetDependencies {
   huntMinigameRecognizer: HuntMinigameRecognizer;
   launcherPositionStore: LauncherPositionStore;
   mainChatHtmlReader: MainChatHtmlReader;
+  monitorExchangeRule: MonitorExchangeRuleUseCase;
   panelPositionStore: PanelPositionStore;
   panelSizeStore: PanelSizeStore;
   professionRecipeSelectionStore: ProfessionRecipeSelectionStore;
@@ -87,12 +92,15 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   const addCraftingLog = createBotLogAppender(botPanel.craftingLogList, dependencies.createLogEntry);
   const addActiveTabLog: AddBotLog = (message, options): void => {
     const activeTab = botPanel.tabs.getActiveTab();
-    const addLog = activeTab === 'mining'
+    const addLog = activeTab === 'exchange-monitoring'
+      ? null
+      : activeTab === 'mining'
       ? addMiningLog
       : activeTab === 'hunting'
         ? addHuntingLog
         : addCraftingLog;
-    addLog(message, options);
+
+    addLog?.(message, options);
   };
   const miningProcessBar = createProcessBarController(botPanel.miningProcessBar);
   const craftingProcessBars = createCraftingProcessBarsController(botPanel.craftingProcessBars);
@@ -100,6 +108,40 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     checkbox: botPanel.mainChatLogCheckbox,
     mainChatHtmlReader: dependencies.mainChatHtmlReader,
     addLog: addMiningLog
+  });
+  const exchangeMonitoringTabButton = botPanel.tabs.buttons.get('exchange-monitoring');
+
+  if (!exchangeMonitoringTabButton) {
+    throw new Error('Exchange monitoring tab button is missing.');
+  }
+
+  const clearExchangeMonitoringTabAlert = (): void => {
+    exchangeMonitoringTabButton.classList.remove('has-exchange-alert');
+    exchangeMonitoringTabButton.removeAttribute('aria-label');
+  };
+  const exchangeMonitoringController = createExchangeMonitoringController({
+    elements: botPanel.exchangeMonitoring,
+    monitorExchangeRule: dependencies.monitorExchangeRule,
+    settingsStore: dependencies.exchangeMonitoringSettingsStore,
+    onMatchingOffersFound: () => {
+      if (
+        botPanel.tabs.getActiveTab() === 'exchange-monitoring'
+        && !botPanel.panel.hidden
+      ) {
+        return;
+      }
+
+      exchangeMonitoringTabButton.classList.add('has-exchange-alert');
+      exchangeMonitoringTabButton.setAttribute(
+        'aria-label',
+        'Мониторинг биржи: найдены совпадения'
+      );
+    }
+  });
+  const detachActiveTabListener = botPanel.tabs.onActiveTabChange((tabId) => {
+    if (tabId === 'exchange-monitoring') {
+      clearExchangeMonitoringTabAlert();
+    }
   });
   let splinterHelpController: SplinterHelpController | null = null;
 
@@ -274,6 +316,8 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     }
   });
   window.addEventListener('pagehide', () => {
+    detachActiveTabListener();
+    exchangeMonitoringController.destroy();
     mainChatLogController.destroy();
     splinterHelpController?.destroy();
   }, { once: true });
