@@ -6,6 +6,8 @@ import { HuntZoneScan } from '../../domain/entities/hunt-zone-scan';
 import { MapPosition } from '../../domain/entities/map-position';
 import { throwIfHuntMinigameRequired } from './dwar-hunt-minigame-xml';
 
+const GEOLOGIST_PROFESSION_ID = 2;
+
 export class DwarHuntZoneXmlParser {
   constructor(private readonly resourceRepository: ResourceRepository) {}
 
@@ -52,6 +54,12 @@ export class DwarHuntZoneXmlParser {
 
   private parseResources(document: Document): readonly HuntResourceNode[] {
     return Array.from(document.querySelectorAll('hunt > farm > item')).flatMap((element) => {
+      const professionId = getIntegerAttribute(element, 'prof');
+
+      if (professionId !== GEOLOGIST_PROFESSION_ID) {
+        return [];
+      }
+
       const articleId = getIntegerAttribute(element, 'artikul_id');
       const resource = this.resourceRepository.findByArticleId(articleId);
 
@@ -63,7 +71,7 @@ export class DwarHuntZoneXmlParser {
         HuntResourceNode.create({
           serverNumber: getRequiredAttribute(element, 'num'),
           resource,
-          professionId: getIntegerAttribute(element, 'prof'),
+          professionId,
           quality: getIntegerAttribute(element, 'quality'),
           requiredSkill: getIntegerAttribute(element, 'skill'),
           position: MapPosition.create({
