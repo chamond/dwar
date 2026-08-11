@@ -88,8 +88,7 @@ export class RequestSplinterHelpUseCase {
           );
         }
 
-        const onlyRecipient = recipients.length === 1 ? recipients[0] : undefined;
-        const message = session.takeNextMessage(onlyRecipient?.nick);
+        const message = session.takeNextMessage(recipients.length === 1);
 
         const recipientsSelectedEvent: SplinterHelpEvent = {
           type: 'recipients-selected',

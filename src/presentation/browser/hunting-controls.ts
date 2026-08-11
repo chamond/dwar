@@ -2,6 +2,7 @@ import type {
   BotHuntTargetId,
   BotHuntTargetSnapshot
 } from '../../domain/entities/bot-hunt-target';
+import { createCheckboxOption } from './checkbox-option';
 
 export interface HuntingControlsElements {
   root: HTMLElement;
@@ -28,7 +29,10 @@ export function createHuntingControls(
   actionGroup.append(attackButton);
 
   const targetSelect = createTargetSelect(targets);
-  const crowdingOption = createCrowdingOption();
+  const crowdingOption = createCheckboxOption({
+    text: 'Выбирать кучного моба',
+    title: 'Выбирать цель с минимальным расстоянием до ближайшего моба того же вида'
+  });
   const selectorGroup = document.createElement('div');
   selectorGroup.className = 'dwar-panel__selectors dwar-hunting-controls__settings';
   selectorGroup.append(targetSelect, crowdingOption.label);
@@ -74,28 +78,4 @@ function createTargetSelect(
   }
 
   return select;
-}
-
-function createCrowdingOption(): {
-  label: HTMLLabelElement;
-  checkbox: HTMLInputElement;
-} {
-  const label = document.createElement('label');
-  label.className = 'dwar-hunt-checkbox';
-  label.title = 'Выбирать цель с минимальным расстоянием до ближайшего моба того же вида';
-
-  const checkbox = document.createElement('input');
-  checkbox.type = 'checkbox';
-  checkbox.className = 'dwar-hunt-checkbox__input';
-
-  const text = document.createElement('span');
-  text.className = 'dwar-hunt-checkbox__label';
-  text.textContent = 'Выбирать кучного моба';
-
-  label.append(checkbox, text);
-
-  return {
-    label,
-    checkbox
-  };
 }

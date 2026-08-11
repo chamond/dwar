@@ -12,6 +12,7 @@ import { presentSplinterHelpEvent } from './splinter-help-event-presenter';
 
 export interface SplinterHelpControllerOptions {
   button: HTMLButtonElement;
+  autoRequestCheckbox: HTMLInputElement;
   requestSplinterHelp: RequestSplinterHelpUseCase;
   addLog: AddBotLog;
   reportError: ProcessErrorReporter;
@@ -101,6 +102,13 @@ export function createSplinterHelpController(
     start();
   };
 
+  const handleAutoRequestChange = (): void => {
+    if (options.autoRequestCheckbox.checked) {
+      start();
+    }
+  };
+
+  options.autoRequestCheckbox.addEventListener('change', handleAutoRequestChange);
   setButtonState();
 
   return {
@@ -108,10 +116,15 @@ export function createSplinterHelpController(
       options.requestSplinterHelp.confirmSplinter();
       splinterConfirmed = true;
       setButtonState();
+
+      if (options.autoRequestCheckbox.checked) {
+        start();
+      }
     },
     toggle,
     destroy(): void {
       splinterConfirmed = false;
+      options.autoRequestCheckbox.removeEventListener('change', handleAutoRequestChange);
       executionSubscription?.unsubscribe();
       executionSubscription = null;
       setButtonState();

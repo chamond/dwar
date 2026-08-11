@@ -94,7 +94,7 @@ export class SplinterHelpSession {
     });
   }
 
-  takeNextMessage(recipientNick?: string): string {
+  takeNextMessage(isPersonal: boolean): string {
     if (this.availableMessages.length === 0) {
       this.availableMessages = this.shuffleMessages();
 
@@ -114,9 +114,7 @@ export class SplinterHelpSession {
 
     this.previousMessage = message;
 
-    return recipientNick === undefined
-      ? message.group
-      : `${recipientNick}, ${message.personal}`;
+    return isPersonal ? message.personal : message.group;
   }
 
   private shuffleMessages(): HelpMessage[] {

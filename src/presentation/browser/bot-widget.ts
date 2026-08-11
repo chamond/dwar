@@ -124,6 +124,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   });
   splinterHelpController = createSplinterHelpController({
     button: botPanel.splinterHelpButton,
+    autoRequestCheckbox: botPanel.autoSplinterHelpCheckbox,
     requestSplinterHelp: dependencies.requestSplinterHelp,
     addLog: addMiningLog,
     reportError: createProcessErrorReporter({

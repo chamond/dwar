@@ -1,6 +1,7 @@
 import type { BotResourceId, BotResourceSnapshot } from '../../domain/entities/bot-resource';
 import type { BotHuntTargetSnapshot } from '../../domain/entities/bot-hunt-target';
 import type { ProfessionRecipeId, ProfessionRecipeSnapshot } from '../../domain/entities/profession-recipe';
+import { createCheckboxOption } from './checkbox-option';
 import { getClearLogIcon } from './clear-log-icon';
 import { getCraftIcon } from './craft-icon';
 import { createMiningActionControl, type MiningActionControl } from './mining-action-control';
@@ -23,6 +24,7 @@ export interface BotPanelElements {
   tabs: TabsElements<BotPanelTabId>;
   miningAction: MiningActionControl;
   splinterHelpButton: HTMLButtonElement;
+  autoSplinterHelpCheckbox: HTMLInputElement;
   huntingControls: HuntingControlsElements;
   startCraftingButton: HTMLButtonElement;
   resourcePicker: ResourcePickerElements;
@@ -47,6 +49,7 @@ interface MiningTabElements {
   root: HTMLElement;
   miningAction: MiningActionControl;
   splinterHelpButton: HTMLButtonElement;
+  autoSplinterHelpCheckbox: HTMLInputElement;
   resourcePicker: ResourcePickerElements;
   logSection: LogSectionElements;
   processBar: ProcessBarElements;
@@ -129,6 +132,7 @@ export function createBotPanel(
     tabs,
     miningAction: miningTab.miningAction,
     splinterHelpButton: miningTab.splinterHelpButton,
+    autoSplinterHelpCheckbox: miningTab.autoSplinterHelpCheckbox,
     huntingControls: huntingTab.controls,
     startCraftingButton: craftingTab.startCraftingButton,
     resourcePicker: miningTab.resourcePicker,
@@ -190,6 +194,10 @@ function createMiningTab(
 
   const miningAction = createMiningActionControl();
   const splinterHelpButton = createSplinterHelpButton();
+  const autoSplinterHelpOption = createCheckboxOption({
+    text: 'Автоматически просить о помощи',
+    title: 'При обнаружении занозы автоматически запускать цикл просьб о помощи'
+  });
 
   const resourcePicker = createResourcePicker(resources, {
     selectedResourceIds: options.selectedResourceIds,
@@ -202,7 +210,7 @@ function createMiningTab(
 
   const selectorGroup = document.createElement('div');
   selectorGroup.className = 'dwar-panel__selectors';
-  selectorGroup.append(resourcePicker.root);
+  selectorGroup.append(resourcePicker.root, autoSplinterHelpOption.label);
   controls.append(actionGroup, selectorGroup);
 
   const logSection = createLogSection('Лог добычи');
@@ -215,6 +223,7 @@ function createMiningTab(
     root,
     miningAction,
     splinterHelpButton,
+    autoSplinterHelpCheckbox: autoSplinterHelpOption.checkbox,
     resourcePicker,
     logSection,
     processBar

@@ -60,7 +60,7 @@ export const BOT_WIDGET_STYLES = `
   .dwar-mining-action__force-stop:focus-visible,
   .dwar-resource-picker__toggle:focus-visible,
   .dwar-hunt-target-select:focus-visible,
-  .dwar-hunt-checkbox__input:focus-visible {
+  .dwar-option-checkbox__input:focus-visible {
     outline: 2px solid #78d9c2;
     outline-offset: 3px;
   }
@@ -360,7 +360,7 @@ export const BOT_WIDGET_STYLES = `
   .dwar-action-button,
   .dwar-resource-picker__toggle,
   .dwar-hunt-target-select,
-  .dwar-hunt-checkbox {
+  .dwar-option-checkbox {
     height: 38px;
     border: 1px solid rgba(255, 255, 255, .11);
     border-radius: 7px;
@@ -566,7 +566,7 @@ export const BOT_WIDGET_STYLES = `
     border-color: rgba(120, 217, 194, .42);
   }
 
-  .dwar-hunt-checkbox {
+  .dwar-option-checkbox {
     display: grid;
     grid-template-columns: 16px minmax(0, 1fr);
     align-items: center;
@@ -578,13 +578,13 @@ export const BOT_WIDGET_STYLES = `
     cursor: pointer;
   }
 
-  .dwar-hunt-checkbox:hover {
+  .dwar-option-checkbox:hover {
     color: #ffffff;
     background: #111a24;
     border-color: rgba(120, 217, 194, .42);
   }
 
-  .dwar-hunt-checkbox__input {
+  .dwar-option-checkbox__input {
     display: block;
     width: 16px;
     height: 16px;
@@ -592,13 +592,13 @@ export const BOT_WIDGET_STYLES = `
     accent-color: #78d9c2;
   }
 
-  .dwar-hunt-checkbox__label {
+  .dwar-option-checkbox__label {
     min-width: 0;
     line-height: 1.2;
   }
 
   .dwar-hunt-target-select:disabled,
-  .dwar-hunt-checkbox:has(.dwar-hunt-checkbox__input:disabled) {
+  .dwar-option-checkbox:has(.dwar-option-checkbox__input:disabled) {
     color: #7f8ca1;
     cursor: wait;
     background: #151d28;
