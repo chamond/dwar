@@ -30,6 +30,7 @@ interface RuleRuntime {
   rule: ExchangeMonitoringRule;
   view: ExchangeMonitoringRuleView;
   subscription: Subscription | null;
+  hasUnacknowledgedMatches: boolean;
   acknowledgeHandler: () => void;
   toggleHandler: () => void;
   removeHandler: () => void;
@@ -43,7 +44,7 @@ export interface ExchangeMonitoringControllerOptions {
   elements: ExchangeMonitoringTabElements;
   monitorExchangeRule: MonitorExchangeRuleUseCase;
   settingsStore: ExchangeMonitoringSettingsStore;
-  onMatchingOffersFound(): void;
+  onUnacknowledgedMatchesChange(hasUnacknowledgedMatches: boolean): void;
 }
 
 export function createExchangeMonitoringController(
@@ -66,6 +67,20 @@ export function createExchangeMonitoringController(
   const updateEmptyState = (): void => {
     options.elements.emptyState.hidden = runtimes.size > 0;
   };
+  let hasUnacknowledgedMatches = false;
+
+  const updateUnacknowledgedMatches = (): void => {
+    const nextValue = Array.from(runtimes.values()).some(
+      (runtime) => runtime.hasUnacknowledgedMatches
+    );
+
+    if (nextValue === hasUnacknowledgedMatches) {
+      return;
+    }
+
+    hasUnacknowledgedMatches = nextValue;
+    options.onUnacknowledgedMatchesChange(hasUnacknowledgedMatches);
+  };
 
   const stopRuntime = (runtime: RuleRuntime): void => {
     if (!runtime.subscription || runtime.subscription.closed) {
@@ -87,11 +102,9 @@ export function createExchangeMonitoringController(
       return;
     }
 
+    runtime.hasUnacknowledgedMatches = event.matchingOffers.length > 0;
     presentExchangeMonitoringRuleCompleted(runtime.view, event, intervalMinutes);
-
-    if (event.matchingOffers.length > 0) {
-      options.onMatchingOffersFound();
-    }
+    updateUnacknowledgedMatches();
   };
 
   const startRuntime = (runtime: RuleRuntime): void => {
@@ -129,6 +142,7 @@ export function createExchangeMonitoringController(
     runtime.view.root.removeEventListener('click', runtime.acknowledgeHandler, true);
     runtime.view.root.remove();
     runtimes.delete(runtime.rule.getId());
+    updateUnacknowledgedMatches();
     updateEmptyState();
     saveSettings();
   };
@@ -155,11 +169,17 @@ export function createExchangeMonitoringController(
     };
     const acknowledgeHandler = (): void => {
       clearExchangeMonitoringRuleMatches(view);
+
+      if (runtime.hasUnacknowledgedMatches) {
+        runtime.hasUnacknowledgedMatches = false;
+        updateUnacknowledgedMatches();
+      }
     };
     runtime = {
       rule,
       view,
       subscription: null,
+      hasUnacknowledgedMatches: false,
       acknowledgeHandler,
       toggleHandler,
       removeHandler

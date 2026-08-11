@@ -115,33 +115,33 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     throw new Error('Exchange monitoring tab button is missing.');
   }
 
-  const clearExchangeMonitoringTabAlert = (): void => {
-    exchangeMonitoringTabButton.classList.remove('has-exchange-alert');
+  let hasUnacknowledgedExchangeMatches = false;
+  const updateExchangeMonitoringTabAlert = (): void => {
+    const shouldShowAlert = hasUnacknowledgedExchangeMatches
+      && botPanel.tabs.getActiveTab() !== 'exchange-monitoring';
+    exchangeMonitoringTabButton.classList.toggle('has-exchange-alert', shouldShowAlert);
+
+    if (shouldShowAlert) {
+      exchangeMonitoringTabButton.setAttribute(
+        'aria-label',
+        'Мониторинг биржи: найдены непросмотренные совпадения'
+      );
+      return;
+    }
+
     exchangeMonitoringTabButton.removeAttribute('aria-label');
   };
   const exchangeMonitoringController = createExchangeMonitoringController({
     elements: botPanel.exchangeMonitoring,
     monitorExchangeRule: dependencies.monitorExchangeRule,
     settingsStore: dependencies.exchangeMonitoringSettingsStore,
-    onMatchingOffersFound: () => {
-      if (
-        botPanel.tabs.getActiveTab() === 'exchange-monitoring'
-        && !botPanel.panel.hidden
-      ) {
-        return;
-      }
-
-      exchangeMonitoringTabButton.classList.add('has-exchange-alert');
-      exchangeMonitoringTabButton.setAttribute(
-        'aria-label',
-        'Мониторинг биржи: найдены совпадения'
-      );
+    onUnacknowledgedMatchesChange: (hasUnacknowledgedMatches) => {
+      hasUnacknowledgedExchangeMatches = hasUnacknowledgedMatches;
+      updateExchangeMonitoringTabAlert();
     }
   });
-  const detachActiveTabListener = botPanel.tabs.onActiveTabChange((tabId) => {
-    if (tabId === 'exchange-monitoring') {
-      clearExchangeMonitoringTabAlert();
-    }
+  const detachActiveTabListener = botPanel.tabs.onActiveTabChange(() => {
+    updateExchangeMonitoringTabAlert();
   });
   let splinterHelpController: SplinterHelpController | null = null;
 
