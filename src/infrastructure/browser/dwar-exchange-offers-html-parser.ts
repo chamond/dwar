@@ -19,9 +19,13 @@ export class DwarExchangeOffersHtmlParser {
       return [];
     }
 
-    return Array.from(itemList.querySelectorAll('tr'))
-      .filter((row) => row.querySelector('[art_id][cnt]') !== null)
-      .map((row) => this.parseOffer(row));
+    const offerRows = Array.from(
+      itemList.querySelectorAll<HTMLElement>('.bid-container')
+    )
+      .map((priceElement) => priceElement.closest<HTMLTableRowElement>('tr'))
+      .filter((row): row is HTMLTableRowElement => row !== null);
+
+    return Array.from(new Set(offerRows)).map((row) => this.parseOffer(row));
   }
 
   private parseOffer(row: HTMLTableRowElement): ExchangeOffer {
