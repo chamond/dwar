@@ -6,14 +6,17 @@ import {
   type Subscription
 } from 'rxjs';
 import type { RequestSplinterHelpUseCase } from '../../application/use-cases/request-splinter-help';
+import type { ThankSplinterHealerUseCase } from '../../application/use-cases/thank-splinter-healer';
 import type { AddBotLog } from './bot-log-appender';
 import type { ProcessErrorReporter } from './process-error-reporter';
+import { presentSplinterHealerThanksEvent } from './splinter-healer-thanks-event-presenter';
 import { presentSplinterHelpEvent } from './splinter-help-event-presenter';
 
 export interface SplinterHelpControllerOptions {
   button: HTMLButtonElement;
   autoRequestCheckbox: HTMLInputElement;
   requestSplinterHelp: RequestSplinterHelpUseCase;
+  thankSplinterHealer: ThankSplinterHealerUseCase;
   addLog: AddBotLog;
   reportError: ProcessErrorReporter;
   onSplinterRemoved(): void;
@@ -30,6 +33,44 @@ export function createSplinterHelpController(
 ): SplinterHelpController {
   let splinterConfirmed = false;
   let executionSubscription: Subscription | null = null;
+  let thanksSubscription: Subscription | null = null;
+  let healerDetected = false;
+
+  const stopThanksWatcher = (): void => {
+    thanksSubscription?.unsubscribe();
+    thanksSubscription = null;
+    healerDetected = false;
+  };
+
+  const startThanksWatcher = (): void => {
+    if (thanksSubscription && !thanksSubscription.closed) {
+      return;
+    }
+
+    healerDetected = false;
+
+    const subscription = options.thankSplinterHealer.execute().pipe(
+      tap((event) => {
+        if (event.type === 'healer-detected') {
+          healerDetected = true;
+        }
+
+        presentSplinterHealerThanksEvent(event, options.addLog);
+      }),
+      catchError(() => {
+        options.addLog('Не удалось отправить благодарность лекарю.', {
+          tone: 'failure'
+        });
+        return EMPTY;
+      }),
+      finalize(() => {
+        thanksSubscription = null;
+        healerDetected = false;
+      })
+    ).subscribe();
+
+    thanksSubscription = subscription.closed ? null : subscription;
+  };
 
   const setButtonState = (): void => {
     const isRunning = executionSubscription !== null && !executionSubscription.closed;
@@ -76,12 +117,21 @@ export function createSplinterHelpController(
       }),
       finalize(() => {
         executionSubscription = null;
+
+        if (!healerDetected) {
+          stopThanksWatcher();
+        }
+
         setButtonState();
       })
     ).subscribe();
 
     executionSubscription = subscription.closed ? null : subscription;
     setButtonState();
+
+    if (executionSubscription !== null) {
+      startThanksWatcher();
+    }
   };
 
   const cancel = (): void => {
@@ -127,6 +177,7 @@ export function createSplinterHelpController(
       options.autoRequestCheckbox.removeEventListener('change', handleAutoRequestChange);
       executionSubscription?.unsubscribe();
       executionSubscription = null;
+      stopThanksWatcher();
       setButtonState();
     }
   };

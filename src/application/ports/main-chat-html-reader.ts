@@ -1,5 +1,9 @@
 import type { Observable } from 'rxjs';
 
+export interface MainChatHtmlObserveOptions {
+  includeCurrent?: boolean | undefined;
+}
+
 export interface MainChatHtmlReader {
-  observe(): Observable<string>;
+  observe(options?: MainChatHtmlObserveOptions): Observable<string>;
 }

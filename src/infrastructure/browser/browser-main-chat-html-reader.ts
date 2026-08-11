@@ -1,23 +1,35 @@
 import {
+  concat,
+  defer,
   distinctUntilChanged,
   filter,
   map,
+  of,
   switchMap,
   timer,
   Observable
 } from 'rxjs';
-import type { MainChatHtmlReader } from '../../application/ports/main-chat-html-reader';
+import type {
+  MainChatHtmlObserveOptions,
+  MainChatHtmlReader
+} from '../../application/ports/main-chat-html-reader';
 import { findInAccessibleWindowTree } from './accessible-window-tree';
 
 const CHAT_FRAME_SEARCH_INTERVAL_MS = 500;
 
 export class BrowserMainChatHtmlReader implements MainChatHtmlReader {
-  observe(): Observable<string> {
-    return timer(0, CHAT_FRAME_SEARCH_INTERVAL_MS).pipe(
-      map(() => findInAccessibleWindowTree(window, readMainChatBuffer)),
+  observe(options: MainChatHtmlObserveOptions = {}): Observable<string> {
+    const includeCurrent = options.includeCurrent ?? true;
+
+    return defer(() => concat(
+      of(findInAccessibleWindowTree(window, readMainChatBuffer)),
+      timer(CHAT_FRAME_SEARCH_INTERVAL_MS, CHAT_FRAME_SEARCH_INTERVAL_MS).pipe(
+        map(() => findInAccessibleWindowTree(window, readMainChatBuffer))
+      )
+    )).pipe(
       filter((buffer): buffer is Node => buffer !== null),
       distinctUntilChanged(),
-      switchMap(observeChatBuffer)
+      switchMap((buffer) => observeChatBuffer(buffer, includeCurrent))
     );
   }
 }
@@ -63,7 +75,7 @@ function readFirstNode(value: unknown): Node | null {
   return isNode(firstValue) ? firstValue : null;
 }
 
-function observeChatBuffer(buffer: Node): Observable<string> {
+function observeChatBuffer(buffer: Node, includeCurrent: boolean): Observable<string> {
   return new Observable<string>((subscriber) => {
     const emittedNodes = new WeakSet<Node>();
 
@@ -92,8 +104,10 @@ function observeChatBuffer(buffer: Node): Observable<string> {
 
     observer.observe(buffer, { childList: true });
 
-    for (const childNode of Array.from(buffer.childNodes)) {
-      emitNode(childNode);
+    if (includeCurrent) {
+      for (const childNode of Array.from(buffer.childNodes)) {
+        emitNode(childNode);
+      }
     }
 
     return () => {

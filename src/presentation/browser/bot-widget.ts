@@ -17,6 +17,7 @@ import type { RequestSplinterHelpUseCase } from '../../application/use-cases/req
 import type { RunProfessionCraftingUseCase } from '../../application/use-cases/run-profession-crafting';
 import type { RunResourceMiningUseCase } from '../../application/use-cases/run-resource-mining';
 import type { SolveHuntMinigameUseCase } from '../../application/use-cases/solve-hunt-minigame';
+import type { ThankSplinterHealerUseCase } from '../../application/use-cases/thank-splinter-healer';
 import { createBotLogAppender, type AddBotLog } from './bot-log-appender';
 import { createBotPanel, type BotPanelElements } from './bot-panel';
 import { BOT_WIDGET_STYLES } from './bot-widget-styles';
@@ -59,6 +60,7 @@ export interface BotWidgetDependencies {
   runResourceMining: RunResourceMiningUseCase;
   solveHuntMinigame: SolveHuntMinigameUseCase;
   soundVolumeStore: SoundVolumeStore;
+  thankSplinterHealer: ThankSplinterHealerUseCase;
 }
 
 export function mountBotWidget(dependencies: BotWidgetDependencies): void {
@@ -134,6 +136,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     button: botPanel.splinterHelpButton,
     autoRequestCheckbox: botPanel.autoSplinterHelpCheckbox,
     requestSplinterHelp: dependencies.requestSplinterHelp,
+    thankSplinterHealer: dependencies.thankSplinterHealer,
     addLog: addMiningLog,
     reportError: createProcessErrorReporter({
       stoppedLabel: 'Протокол помощи остановлен',
@@ -272,6 +275,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   });
   window.addEventListener('pagehide', () => {
     mainChatLogController.destroy();
+    splinterHelpController?.destroy();
   }, { once: true });
 
   addMiningLog('Скрипт загружен.');

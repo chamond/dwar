@@ -10,6 +10,7 @@ import { RequestSplinterHelpUseCase } from './application/use-cases/request-spli
 import { RunProfessionCraftingUseCase } from './application/use-cases/run-profession-crafting';
 import { RunResourceMiningUseCase } from './application/use-cases/run-resource-mining';
 import { SolveHuntMinigameUseCase } from './application/use-cases/solve-hunt-minigame';
+import { ThankSplinterHealerUseCase } from './application/use-cases/thank-splinter-healer';
 import { BrowserBackpackItemQuantityReader } from './infrastructure/browser/browser-backpack-item-quantity-reader';
 import { BrowserEquipmentItemEquipper } from './infrastructure/browser/browser-equipment-item-equipper';
 import { BrowserCurrentLocationPlayerReader } from './infrastructure/browser/browser-current-location-player-reader';
@@ -25,10 +26,12 @@ import { BrowserMainChatHtmlReader } from './infrastructure/browser/browser-main
 import { BrowserDelay } from './infrastructure/browser/browser-delay';
 import { BrowserProfessionRecipeCrafter } from './infrastructure/browser/browser-profession-recipe-crafter';
 import { BrowserPrivateMessageSender } from './infrastructure/browser/browser-private-message-sender';
+import { BrowserSplinterHealerReader } from './infrastructure/browser/browser-splinter-healer-reader';
 import { detectCurrentPlayerSplinter } from './infrastructure/browser/detect-current-player-splinter';
 import { DwarBackpackHtmlParser } from './infrastructure/browser/dwar-backpack-html-parser';
 import { DwarChatUsersHtmlParser } from './infrastructure/browser/dwar-chat-users-html-parser';
 import { DwarHuntZoneXmlParser } from './infrastructure/browser/dwar-hunt-zone-xml-parser';
+import { DwarSplinterHealerMessageParser } from './infrastructure/browser/dwar-splinter-healer-message-parser';
 import { getAreaId } from './infrastructure/browser/get-area-id';
 import { LocalStorageLauncherPositionStore } from './infrastructure/browser/local-storage-launcher-position-store';
 import { LocalStoragePanelPositionStore } from './infrastructure/browser/local-storage-panel-position-store';
@@ -61,13 +64,14 @@ function bootstrap(): void {
     currentLocationPlayerReader
   );
   const delay = new BrowserDelay();
+  const privateMessageSender = new BrowserPrivateMessageSender();
   const equipAncientClanPickaxe = new EquipAncientClanPickaxeUseCase(
     new StaticEquipmentItemRepository(),
     new BrowserEquipmentItemEquipper()
   );
   const requestSplinterHelp = new RequestSplinterHelpUseCase(
     listCurrentLocationPlayers,
-    new BrowserPrivateMessageSender(),
+    privateMessageSender,
     detectCurrentPlayerSplinter,
     getAreaId,
     delay,
@@ -79,6 +83,16 @@ function bootstrap(): void {
   const panelSizeStore = new LocalStoragePanelSizeStore();
   const resourceSelectionStore = new LocalStorageResourceSelectionStore();
   const professionRecipeSelectionStore = new LocalStorageProfessionRecipeSelectionStore();
+  const mainChatHtmlReader = new BrowserMainChatHtmlReader();
+  const thankSplinterHealer = new ThankSplinterHealerUseCase(
+    new BrowserSplinterHealerReader(
+      mainChatHtmlReader,
+      new DwarSplinterHealerMessageParser()
+    ),
+    delay,
+    getAreaId,
+    privateMessageSender
+  );
   const huntZoneXmlParser = new DwarHuntZoneXmlParser(resourceRepository);
   const huntZoneScanner = new BrowserHuntZoneScanner(huntZoneXmlParser);
   const huntZoneScanStore = new InMemoryHuntZoneScanStore();
@@ -133,7 +147,7 @@ function bootstrap(): void {
     listResources,
     listHuntTargets,
     launcherPositionStore,
-    mainChatHtmlReader: new BrowserMainChatHtmlReader(),
+    mainChatHtmlReader,
     panelPositionStore,
     panelSizeStore,
     professionRecipeSelectionStore,
@@ -142,7 +156,8 @@ function bootstrap(): void {
     runProfessionCrafting,
     runResourceMining,
     solveHuntMinigame,
-    soundVolumeStore
+    soundVolumeStore,
+    thankSplinterHealer
   });
 }
 
