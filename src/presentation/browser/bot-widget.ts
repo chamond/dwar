@@ -2,7 +2,6 @@ import type { HuntMinigameImageDownloader } from '../../application/ports/hunt-m
 import type { HuntMinigameRecognizer } from '../../application/ports/hunt-minigame-recognizer';
 import type { LauncherPositionStore } from '../../application/ports/launcher-position-store';
 import type { ExchangeMonitoringSettingsStore } from '../../application/ports/exchange-monitoring-settings-store';
-import type { MainChatHtmlReader } from '../../application/ports/main-chat-html-reader';
 import type { PanelPositionStore } from '../../application/ports/panel-position-store';
 import type { PanelSizeStore } from '../../application/ports/panel-size-store';
 import type { ProfessionRecipeSelectionStore } from '../../application/ports/profession-recipe-selection-store';
@@ -32,7 +31,6 @@ import { attachDraggableLauncher, restoreLauncherPosition } from './draggable-la
 import { attachDraggablePanel, restorePanelPosition } from './draggable-panel';
 import { createLauncherButton } from './launcher-button';
 import { clearLogList } from './log-list';
-import { createMainChatLogController } from './main-chat-log-controller';
 import { appendMinigameRecognitionLog } from './minigame-recognition-log';
 import { createMiningProcessController } from './mining-process-controller';
 import { keepPanelInViewport, positionPanelNearLauncher } from './panel-position';
@@ -54,7 +52,6 @@ export interface BotWidgetDependencies {
   huntMinigameImageDownloader: HuntMinigameImageDownloader;
   huntMinigameRecognizer: HuntMinigameRecognizer;
   launcherPositionStore: LauncherPositionStore;
-  mainChatHtmlReader: MainChatHtmlReader;
   monitorExchangeRule: MonitorExchangeRuleUseCase;
   panelPositionStore: PanelPositionStore;
   panelSizeStore: PanelSizeStore;
@@ -104,11 +101,6 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   };
   const miningProcessBar = createProcessBarController(botPanel.miningProcessBar);
   const craftingProcessBars = createCraftingProcessBarsController(botPanel.craftingProcessBars);
-  const mainChatLogController = createMainChatLogController({
-    checkbox: botPanel.mainChatLogCheckbox,
-    mainChatHtmlReader: dependencies.mainChatHtmlReader,
-    addLog: addMiningLog
-  });
   const exchangeMonitoringTabButton = botPanel.tabs.buttons.get('exchange-monitoring');
 
   if (!exchangeMonitoringTabButton) {
@@ -318,7 +310,6 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   window.addEventListener('pagehide', () => {
     detachActiveTabListener();
     exchangeMonitoringController.destroy();
-    mainChatLogController.destroy();
     splinterHelpController?.destroy();
   }, { once: true });
 

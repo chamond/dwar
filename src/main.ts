@@ -158,7 +158,6 @@ function bootstrap(): void {
     listResources,
     listHuntTargets,
     launcherPositionStore,
-    mainChatHtmlReader,
     monitorExchangeRule,
     panelPositionStore,
     panelSizeStore,

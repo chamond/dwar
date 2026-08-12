@@ -29,7 +29,6 @@ export interface BotPanelElements {
   miningAction: MiningActionControl;
   splinterHelpButton: HTMLButtonElement;
   autoSplinterHelpCheckbox: HTMLInputElement;
-  mainChatLogCheckbox: HTMLInputElement;
   huntingControls: HuntingControlsElements;
   exchangeMonitoring: ExchangeMonitoringTabElements;
   startCraftingButton: HTMLButtonElement;
@@ -56,7 +55,6 @@ interface MiningTabElements {
   miningAction: MiningActionControl;
   splinterHelpButton: HTMLButtonElement;
   autoSplinterHelpCheckbox: HTMLInputElement;
-  mainChatLogCheckbox: HTMLInputElement;
   resourcePicker: ResourcePickerElements;
   logSection: LogSectionElements;
   processBar: ProcessBarElements;
@@ -146,7 +144,6 @@ export function createBotPanel(
     miningAction: miningTab.miningAction,
     splinterHelpButton: miningTab.splinterHelpButton,
     autoSplinterHelpCheckbox: miningTab.autoSplinterHelpCheckbox,
-    mainChatLogCheckbox: miningTab.mainChatLogCheckbox,
     huntingControls: huntingTab.controls,
     exchangeMonitoring: exchangeMonitoringTab,
     startCraftingButton: craftingTab.startCraftingButton,
@@ -213,10 +210,6 @@ function createMiningTab(
     text: 'Автоматически просить о помощи',
     title: 'При обнаружении занозы автоматически запускать цикл просьб о помощи'
   });
-  const mainChatLogOption = createCheckboxOption({
-    text: 'Дублировать чат «Основной»',
-    title: 'Выводить текущие и новые сообщения чата в лог как текст их HTML-разметки'
-  });
 
   const resourcePicker = createResourcePicker(resources, {
     selectedResourceIds: options.selectedResourceIds,
@@ -231,8 +224,7 @@ function createMiningTab(
   selectorGroup.className = 'dwar-panel__selectors';
   selectorGroup.append(
     resourcePicker.root,
-    autoSplinterHelpOption.label,
-    mainChatLogOption.label
+    autoSplinterHelpOption.label
   );
   controls.append(actionGroup, selectorGroup);
 
@@ -247,7 +239,6 @@ function createMiningTab(
     miningAction,
     splinterHelpButton,
     autoSplinterHelpCheckbox: autoSplinterHelpOption.checkbox,
-    mainChatLogCheckbox: mainChatLogOption.checkbox,
     resourcePicker,
     logSection,
     processBar
