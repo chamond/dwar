@@ -28,7 +28,9 @@ export function selectHuntMobForAttack(
     throw new Error('Hunt danger radius must be greater than zero.');
   }
 
-  const targetCandidates = mobs.filter((mob) => mob.getArticleId() === targetArticleId);
+  const targetCandidates = mobs.filter((mob) => {
+    return mob.getArticleId() === targetArticleId && mob.isAvailableForAttack();
+  });
   const safeCandidates = targetCandidates.flatMap((mob): readonly SafeHuntMobCandidate[] => {
     if (hasBlockingMob(mob, mobs, targetArticleId, options.dangerRadius)) {
       return [];

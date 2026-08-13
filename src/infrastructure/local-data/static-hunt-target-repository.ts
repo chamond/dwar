@@ -16,7 +16,7 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     id: 'krets',
     name: 'Крэтс',
     level: 1,
-    articleId: 19294
+    articleId: 268
   }
 ] as const satisfies readonly BotHuntTargetProps[];
 

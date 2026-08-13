@@ -98,6 +98,10 @@ export class HuntMob {
     return this.props.articleId;
   }
 
+  isAvailableForAttack(): boolean {
+    return this.props.fightId === 0;
+  }
+
   toSnapshot(): HuntMobSnapshot {
     return {
       ...this.props,
