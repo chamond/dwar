@@ -1,6 +1,6 @@
 import { CURRENT_PLAYER_NICKNAME } from '../current-player';
 import type { LocationPlayerSnapshot } from '../entities/location-player';
-import { PRIVATE_MESSAGE_EXCLUDED_CLAN_ID } from '../private-message-rules';
+import { isPrivateMessageClanExcluded } from '../private-message-rules';
 
 const MINIMUM_HELPER_LEVEL = 3;
 const MAXIMUM_RECIPIENTS_PER_ROUND = 3;
@@ -130,7 +130,7 @@ export class SplinterHelpSession {
 
   private canContact(player: LocationPlayerSnapshot, nickKey: string): boolean {
     return player.level >= MINIMUM_HELPER_LEVEL
-      && player.clanId !== PRIVATE_MESSAGE_EXCLUDED_CLAN_ID
+      && !isPrivateMessageClanExcluded(player.clanId)
       && nickKey !== CURRENT_PLAYER_NICK_KEY
       && !this.contactedNickKeys.has(nickKey);
   }
