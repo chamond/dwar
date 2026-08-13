@@ -73,7 +73,7 @@ function createTargetSelect(
   for (const target of targets) {
     const option = document.createElement('option');
     option.value = target.id;
-    option.textContent = target.name;
+    option.textContent = `${target.name}[${target.level}]`;
     select.append(option);
   }
 
