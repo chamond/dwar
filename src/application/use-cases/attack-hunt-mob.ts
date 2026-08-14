@@ -76,10 +76,11 @@ export class AttackHuntMobUseCase {
 
           return this.attacker.attack(selectedMob).pipe(
             take(1),
-            switchMap(() => concat(
+            switchMap((response) => concat(
               of<HuntAttackEvent>({
                 type: 'attack-request-sent',
-                mob: mobInfo
+                mob: mobInfo,
+                responseBody: response.body
               }),
               this.fightFinishedReader.observe().pipe(
                 take(1),

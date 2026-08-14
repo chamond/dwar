@@ -33,6 +33,7 @@ export function presentHuntAttackEvent(
           tone: 'success'
         }
       );
+      addLog(`Ответ на запрос нападения: ${formatResponseBody(event.responseBody)}`);
       return;
 
     case 'fight-finished':
@@ -49,6 +50,10 @@ export function presentHuntAttackEvent(
       );
       return;
   }
+}
+
+function formatResponseBody(responseBody: string): string {
+  return responseBody.length > 0 ? responseBody : '(пустой ответ)';
 }
 
 function formatMobLabel(mob: HuntAttackMobInfo): string {
