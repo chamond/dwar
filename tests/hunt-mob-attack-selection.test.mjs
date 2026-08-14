@@ -25,7 +25,10 @@ const loadTypeScriptModule = async (relativePath) => {
 const { selectHuntMobForAttack } = await loadTypeScriptModule(
   'src/domain/services/hunt-mob-attack-selection.ts'
 );
-const { isSuccessfulDwarHuntMobAttackResponse } = await loadTypeScriptModule(
+const {
+  isDwarHuntAttackMinigameResponse,
+  isSuccessfulDwarHuntMobAttackResponse
+} = await loadTypeScriptModule(
   'src/infrastructure/browser/dwar-hunt-mob-attack-response.ts'
 );
 
@@ -63,6 +66,18 @@ test('принимает ответ нападения только с redirect_
     false
   );
   assert.equal(isSuccessfulDwarHuntMobAttackResponse('not json'), false);
+});
+
+test('отдельно распознаёт мини-игру в ответе нападения', () => {
+  assert.equal(
+    isDwarHuntAttackMinigameResponse('{"farm|minigame":{"time_left":10}}'),
+    true
+  );
+  assert.equal(
+    isDwarHuntAttackMinigameResponse('{"common|action":{"redirect_error":false}}'),
+    false
+  );
+  assert.equal(isDwarHuntAttackMinigameResponse('not json'), false);
 });
 
 function createMob(id, x) {

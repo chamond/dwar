@@ -1,5 +1,8 @@
-import { defer, of, repeat, tap, type Observable } from 'rxjs';
-import type { HuntAttackEvent } from '../events/hunt-attack-event';
+import { concat, defer, of, repeat, tap, type Observable } from 'rxjs';
+import type {
+  HuntAttackEvent,
+  HuntAttackMobInfo
+} from '../events/hunt-attack-event';
 import type { BotHuntTargetId } from '../../domain/entities/bot-hunt-target';
 import type { Delay } from '../ports/delay';
 import type { AttackHuntMobUseCase } from './attack-hunt-mob';
@@ -9,6 +12,7 @@ const DEFAULT_NO_TARGET_RETRY_DELAY_MS = 5_000;
 export interface RunHuntMobAttacksInput {
   targetId: BotHuntTargetId;
   preferCrowdedTarget: boolean;
+  activeFight?: HuntAttackMobInfo;
 }
 
 export interface RunHuntMobAttacksConfig {
@@ -41,7 +45,8 @@ export class RunHuntMobAttacksUseCase {
         noTargetFound = false;
 
         return this.attackHuntMob.execute({
-          ...input,
+          targetId: input.targetId,
+          preferCrowdedTarget: input.preferCrowdedTarget,
           excludedMobIds: this.lastAttackedMobId === null
             ? new Set<string>()
             : new Set([this.lastAttackedMobId])
@@ -59,13 +64,20 @@ export class RunHuntMobAttacksUseCase {
         );
       });
 
-      return iteration.pipe(
+      const attackLoop = iteration.pipe(
         repeat({
           delay: () => noTargetFound
             ? this.delay.wait(this.config.noTargetRetryDelayMs)
             : of(undefined)
         })
       );
+
+      return input.activeFight
+        ? concat(
+            this.attackHuntMob.observeFightFinished(input.activeFight),
+            attackLoop
+          )
+        : attackLoop;
     });
   }
 }

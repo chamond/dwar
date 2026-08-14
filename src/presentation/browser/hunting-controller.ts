@@ -1,4 +1,6 @@
 import { EMPTY, catchError, finalize, tap, type Subscription } from 'rxjs';
+import { isHuntAttackMinigameRequiredError } from '../../application/errors/hunt-attack-minigame-required-error';
+import type { HuntAttackMobInfo } from '../../application/events/hunt-attack-event';
 import type { RunHuntMobAttacksUseCase } from '../../application/use-cases/run-hunt-mob-attacks';
 import type { AddBotLog } from './bot-log-appender';
 import { presentHuntAttackEvent } from './hunt-attack-event-presenter';
@@ -7,6 +9,7 @@ import type { ProcessErrorReporter } from './process-error-reporter';
 
 export interface HuntingController {
   toggle(): void;
+  restart(): void;
   destroy(): void;
 }
 
@@ -22,6 +25,7 @@ export function createHuntingController(
 ): HuntingController {
   let executionSubscription: Subscription | null = null;
   let fightInProgress = false;
+  let activeFightMob: HuntAttackMobInfo | null = null;
   let stopRequested = false;
   let stoppedByUser = false;
 
@@ -30,6 +34,7 @@ export function createHuntingController(
       || (!isRunning && options.controls.getSelectedTargetId() === null);
     options.controls.targetSelect.disabled = isRunning;
     options.controls.preferCrowdedTargetCheckbox.disabled = isRunning;
+    options.controls.restartButton.disabled = !isRunning;
     options.controls.actionButton.classList.toggle('is-active', isRunning && !isStopping);
     options.controls.actionButton.classList.toggle('is-busy', isStopping);
 
@@ -46,7 +51,10 @@ export function createHuntingController(
     options.controls.actionButton.textContent = 'Начать';
   };
 
-  const start = (): void => {
+  const start = (
+    isRestart = false,
+    fightToResume: HuntAttackMobInfo | null = null
+  ): void => {
     if (executionSubscription && !executionSubscription.closed) {
       return;
     }
@@ -60,25 +68,33 @@ export function createHuntingController(
       return;
     }
 
-    fightInProgress = false;
+    fightInProgress = fightToResume !== null;
+    activeFightMob = fightToResume;
     stopRequested = false;
     stoppedByUser = false;
     setRunning(true);
-    options.addLog('Автоматическая охота начата.');
+    options.addLog(
+      isRestart
+        ? 'Автоматическая охота полностью перезапущена.'
+        : 'Автоматическая охота начата.'
+    );
 
     const subscription = options.runHuntMobAttacks.execute({
       targetId,
-      preferCrowdedTarget: options.controls.preferCrowdedTargetCheckbox.checked
+      preferCrowdedTarget: options.controls.preferCrowdedTargetCheckbox.checked,
+      ...(fightToResume ? { activeFight: fightToResume } : {})
     }).pipe(
       tap((event) => {
         presentHuntAttackEvent(event, options.addLog);
 
         if (event.type === 'attack-request-sent') {
           fightInProgress = true;
+          activeFightMob = event.mob;
         }
 
         if (event.type === 'fight-finished') {
           fightInProgress = false;
+          activeFightMob = null;
 
           if (stopRequested) {
             stoppedByUser = true;
@@ -87,12 +103,20 @@ export function createHuntingController(
         }
       }),
       catchError((error: unknown) => {
+        if (isHuntAttackMinigameRequiredError(error)) {
+          options.addLog('Обнаружена мини-игра охоты.', {
+            tone: 'failure'
+          });
+          return EMPTY;
+        }
+
         options.reportError(error);
         return EMPTY;
       }),
       finalize(() => {
         executionSubscription = null;
         fightInProgress = false;
+        activeFightMob = null;
         stopRequested = false;
         setRunning(false);
 
@@ -124,6 +148,17 @@ export function createHuntingController(
     executionSubscription.unsubscribe();
   };
 
+  const restart = (): void => {
+    if (!executionSubscription || executionSubscription.closed) {
+      return;
+    }
+
+    const fightToResume = activeFightMob;
+    stoppedByUser = false;
+    executionSubscription.unsubscribe();
+    start(true, fightToResume);
+  };
+
   return {
     toggle(): void {
       if (executionSubscription && !executionSubscription.closed) {
@@ -133,10 +168,12 @@ export function createHuntingController(
 
       start();
     },
+    restart,
     destroy(): void {
       executionSubscription?.unsubscribe();
       executionSubscription = null;
       fightInProgress = false;
+      activeFightMob = null;
       stopRequested = false;
       stoppedByUser = false;
       setRunning(false);

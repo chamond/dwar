@@ -268,6 +268,10 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     huntingController.toggle();
   });
 
+  botPanel.huntingControls.restartButton.addEventListener('click', () => {
+    huntingController.restart();
+  });
+
   attachDraggablePanel({
     panel: botPanel.panel,
     handle: botPanel.header,

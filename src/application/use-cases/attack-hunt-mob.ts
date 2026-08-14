@@ -92,17 +92,21 @@ export class AttackHuntMobUseCase {
 
           return concat(
             of(event),
-            this.fightFinishedReader.observe().pipe(
-              take(1),
-              map((): HuntAttackEvent => ({
-                type: 'fight-finished',
-                mob: event.mob
-              }))
-            )
+            this.observeFightFinished(event.mob)
           );
         })
       );
     });
+  }
+
+  observeFightFinished(mob: HuntAttackMobInfo): Observable<HuntAttackEvent> {
+    return this.fightFinishedReader.observe().pipe(
+      take(1),
+      map((): HuntAttackEvent => ({
+        type: 'fight-finished',
+        mob
+      }))
+    );
   }
 }
 

@@ -1,5 +1,6 @@
 import { from, map, switchMap, take, type Observable } from 'rxjs';
 import { fromFetch } from 'rxjs/fetch';
+import { HuntAttackMinigameRequiredError } from '../../application/errors/hunt-attack-minigame-required-error';
 import { UnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
 import type { HuntMobAttacker } from '../../application/ports/hunt-mob-attacker';
 import type { HuntMob } from '../../domain/entities/hunt-mob';
@@ -7,7 +8,10 @@ import {
   buildHuntMobAttackUrl,
   HUNT_MOB_ATTACK_REQUEST
 } from './hunt-mob-attack-request';
-import { isSuccessfulDwarHuntMobAttackResponse } from './dwar-hunt-mob-attack-response';
+import {
+  isDwarHuntAttackMinigameResponse,
+  isSuccessfulDwarHuntMobAttackResponse
+} from './dwar-hunt-mob-attack-response';
 
 export class BrowserHuntMobAttacker implements HuntMobAttacker {
   attack(mob: HuntMob): Observable<void> {
@@ -23,6 +27,10 @@ export class BrowserHuntMobAttacker implements HuntMobAttacker {
         }))
       )),
       map(({ body, isSuccessfulHttpStatus, status }): void => {
+        if (isDwarHuntAttackMinigameResponse(body)) {
+          throw new HuntAttackMinigameRequiredError();
+        }
+
         if (!isSuccessfulHttpStatus) {
           throw new UnexpectedServerResponseError(
             `Запрос нападения завершился с HTTP ${status}. Ответ: ${formatResponseBody(body)}`

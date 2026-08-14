@@ -7,6 +7,7 @@ import { createCheckboxOption } from './checkbox-option';
 export interface HuntingControlsElements {
   root: HTMLElement;
   actionButton: HTMLButtonElement;
+  restartButton: HTMLButtonElement;
   targetSelect: HTMLSelectElement;
   preferCrowdedTargetCheckbox: HTMLInputElement;
   getSelectedTargetId(): BotHuntTargetId | null;
@@ -24,9 +25,20 @@ export function createHuntingControls(
   actionButton.setAttribute('aria-label', 'Начать автоматическую охоту');
   actionButton.textContent = 'Начать';
 
+  const restartButton = document.createElement('button');
+  restartButton.type = 'button';
+  restartButton.className = 'dwar-action-button dwar-hunting-button dwar-hunting-restart-button';
+  restartButton.disabled = true;
+  restartButton.setAttribute(
+    'aria-label',
+    'Полностью перезапустить автоматическую охоту'
+  );
+  restartButton.title = 'Сбросить текущий цикл и запустить охоту заново';
+  restartButton.textContent = 'Перезапустить';
+
   const actionGroup = document.createElement('div');
   actionGroup.className = 'dwar-panel__action-buttons';
-  actionGroup.append(actionButton);
+  actionGroup.append(actionButton, restartButton);
 
   const targetSelect = createTargetSelect(targets);
   const crowdingOption = createCheckboxOption({
@@ -43,6 +55,7 @@ export function createHuntingControls(
   return {
     root,
     actionButton,
+    restartButton,
     targetSelect,
     preferCrowdedTargetCheckbox: crowdingOption.checkbox,
     getSelectedTargetId(): BotHuntTargetId | null {
