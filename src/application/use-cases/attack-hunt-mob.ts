@@ -1,9 +1,10 @@
-import { defer, map, of, switchMap, take, tap, type Observable } from 'rxjs';
+import { concat, defer, map, of, switchMap, take, tap, type Observable } from 'rxjs';
 import type { HuntAttackEvent, HuntAttackMobInfo } from '../events/hunt-attack-event';
 import type { BotHuntTargetId } from '../../domain/entities/bot-hunt-target';
 import type { HuntMob } from '../../domain/entities/hunt-mob';
 import { getMobAggressionProfile } from '../../domain/services/mob-aggression';
 import { selectHuntMobForAttack } from '../../domain/services/hunt-mob-attack-selection';
+import type { FightFinishedReader } from '../ports/fight-finished-reader';
 import type { GetAreaId } from '../ports/get-area-id';
 import type { HuntMobAttacker } from '../ports/hunt-mob-attacker';
 import type { HuntTargetRepository } from '../ports/hunt-target-repository';
@@ -29,6 +30,7 @@ export class AttackHuntMobUseCase {
     private readonly scanStore: HuntZoneScanStore,
     private readonly huntTargetRepository: HuntTargetRepository,
     private readonly attacker: HuntMobAttacker,
+    private readonly fightFinishedReader: FightFinishedReader,
     private readonly getAreaId: GetAreaId,
     config: Partial<AttackHuntMobConfig> = {}
   ) {
@@ -70,15 +72,25 @@ export class AttackHuntMobUseCase {
 
           const selectedMob = selection.selectedMob;
 
+          const mobInfo = createMobInfo(selectedMob);
+
           return this.attacker.attack(selectedMob).pipe(
-            map((): HuntAttackEvent => ({
-              type: 'attack-request-sent',
-              mob: createMobInfo(selectedMob)
-            })),
-            take(1)
+            take(1),
+            switchMap(() => concat(
+              of<HuntAttackEvent>({
+                type: 'attack-request-sent',
+                mob: mobInfo
+              }),
+              this.fightFinishedReader.observe().pipe(
+                take(1),
+                map((): HuntAttackEvent => ({
+                  type: 'fight-finished',
+                  mob: mobInfo
+                }))
+              )
+            ))
           );
-        }),
-        take(1)
+        })
       );
     });
   }

@@ -7,6 +7,18 @@ export function findInAccessibleWindowTree<T>(
   return findValue(rootWindow, readValue, new Set<Window>());
 }
 
+export function listAccessibleWindows(startWindow: Window): readonly Window[] {
+  const windows: Window[] = [];
+
+  collectAccessibleWindows(
+    findHighestAccessibleWindow(startWindow),
+    new Set<Window>(),
+    windows
+  );
+
+  return windows;
+}
+
 function findHighestAccessibleWindow(startWindow: Window): Window {
   let currentWindow = startWindow;
 
@@ -75,4 +87,40 @@ function findValue<T>(
   }
 
   return null;
+}
+
+function collectAccessibleWindows(
+  candidate: Window,
+  visited: Set<Window>,
+  result: Window[]
+): void {
+  if (visited.has(candidate)) {
+    return;
+  }
+
+  visited.add(candidate);
+  result.push(candidate);
+
+  let frameCount = 0;
+
+  try {
+    frameCount = candidate.frames.length;
+  } catch {
+    return;
+  }
+
+  for (let index = 0; index < frameCount; index += 1) {
+    try {
+      const candidateFrame = candidate.frames[index];
+
+      if (!candidateFrame) {
+        continue;
+      }
+
+      void candidateFrame.document;
+      collectAccessibleWindows(candidateFrame, visited, result);
+    } catch {
+      continue;
+    }
+  }
 }

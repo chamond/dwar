@@ -61,6 +61,10 @@ export function createHuntingController(
     }).pipe(
       tap((event) => {
         presentHuntAttackEvent(event, options.addLog);
+
+        if (event.type === 'attack-request-sent') {
+          options.controls.attackButton.textContent = 'В бою…';
+        }
       }),
       catchError((error: unknown) => {
         options.reportError(error);

@@ -310,6 +310,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   window.addEventListener('pagehide', () => {
     detachActiveTabListener();
     exchangeMonitoringController.destroy();
+    huntingController.destroy();
     splinterHelpController?.destroy();
   }, { once: true });
 

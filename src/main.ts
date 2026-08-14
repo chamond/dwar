@@ -16,6 +16,7 @@ import { BrowserBackpackItemQuantityReader } from './infrastructure/browser/brow
 import { BrowserExchangeOfferReader } from './infrastructure/browser/browser-exchange-offer-reader';
 import { BrowserEquipmentItemEquipper } from './infrastructure/browser/browser-equipment-item-equipper';
 import { BrowserCurrentLocationPlayerReader } from './infrastructure/browser/browser-current-location-player-reader';
+import { BrowserFightFinishedReader } from './infrastructure/browser/browser-fight-finished-reader';
 import { BrowserHuntResourceFarmer } from './infrastructure/browser/browser-hunt-resource-farmer';
 import { BrowserHuntMinigameImageDownloader } from './infrastructure/browser/browser-hunt-minigame-image-downloader';
 import { BrowserHuntMinigameRecognizer } from './infrastructure/browser/browser-hunt-minigame-recognizer';
@@ -107,6 +108,7 @@ function bootstrap(): void {
     huntZoneScanStore,
     huntTargetRepository,
     new BrowserHuntMobAttacker(),
+    new BrowserFightFinishedReader(),
     getAreaId
   );
   const huntResourceFarmer = new BrowserHuntResourceFarmer();

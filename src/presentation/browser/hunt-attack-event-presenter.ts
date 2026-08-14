@@ -34,6 +34,20 @@ export function presentHuntAttackEvent(
         }
       );
       return;
+
+    case 'fight-finished':
+      addLog(
+        `Бой после нападения на ${formatMobLabel(event.mob)} завершён.`,
+        {
+          parts: [
+            'Бой после нападения на ',
+            createMobLogPart(event.mob),
+            ' завершён.'
+          ],
+          tone: 'success'
+        }
+      );
+      return;
   }
 }
 

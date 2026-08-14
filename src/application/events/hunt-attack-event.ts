@@ -14,4 +14,8 @@ export type HuntAttackEvent =
   | {
       type: 'attack-request-sent';
       mob: HuntAttackMobInfo;
+    }
+  | {
+      type: 'fight-finished';
+      mob: HuntAttackMobInfo;
     };
