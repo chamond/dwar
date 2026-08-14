@@ -8,7 +8,7 @@ import type { ProfessionRecipeSelectionStore } from '../../application/ports/pro
 import type { ResourceSelectionStore } from '../../application/ports/resource-selection-store';
 import type { SoundVolumeStore } from '../../application/ports/sound-volume-store';
 import type { CreateBotLogEntryUseCase } from '../../application/use-cases/create-bot-log-entry';
-import type { AttackHuntMobUseCase } from '../../application/use-cases/attack-hunt-mob';
+import type { RunHuntMobAttacksUseCase } from '../../application/use-cases/run-hunt-mob-attacks';
 import type { ForceStopResourceMiningUseCase } from '../../application/use-cases/force-stop-resource-mining';
 import type { ListHuntTargetsUseCase } from '../../application/use-cases/list-hunt-targets';
 import type { ListProfessionRecipesUseCase } from '../../application/use-cases/list-profession-recipes';
@@ -42,7 +42,6 @@ import { createSplinterHelpController } from './splinter-help-controller';
 import type { SplinterHelpController } from './splinter-help-controller';
 
 export interface BotWidgetDependencies {
-  attackHuntMob: AttackHuntMobUseCase;
   createLogEntry: CreateBotLogEntryUseCase;
   exchangeMonitoringSettingsStore: ExchangeMonitoringSettingsStore;
   forceStopResourceMining: ForceStopResourceMiningUseCase;
@@ -58,6 +57,7 @@ export interface BotWidgetDependencies {
   professionRecipeSelectionStore: ProfessionRecipeSelectionStore;
   resourceSelectionStore: ResourceSelectionStore;
   requestSplinterHelp: RequestSplinterHelpUseCase;
+  runHuntMobAttacks: RunHuntMobAttacksUseCase;
   runProfessionCrafting: RunProfessionCraftingUseCase;
   runResourceMining: RunResourceMiningUseCase;
   solveHuntMinigame: SolveHuntMinigameUseCase;
@@ -193,7 +193,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   });
   const huntingController = createHuntingController({
     controls: botPanel.huntingControls,
-    attackHuntMob: dependencies.attackHuntMob,
+    runHuntMobAttacks: dependencies.runHuntMobAttacks,
     addLog: addHuntingLog,
     reportError: createProcessErrorReporter({
       stoppedLabel: 'Охота остановлена',
@@ -264,8 +264,8 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     craftingController.toggle();
   });
 
-  botPanel.huntingControls.attackButton.addEventListener('click', () => {
-    huntingController.attack();
+  botPanel.huntingControls.actionButton.addEventListener('click', () => {
+    huntingController.toggle();
   });
 
   attachDraggablePanel({

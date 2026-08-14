@@ -10,17 +10,21 @@ import type { HuntMobAttacker } from '../ports/hunt-mob-attacker';
 import type { HuntTargetRepository } from '../ports/hunt-target-repository';
 import type { HuntZoneScanner } from '../ports/hunt-zone-scanner';
 import type { HuntZoneScanStore } from '../ports/hunt-zone-scan-store';
+import type { TaskScheduler } from '../ports/task-scheduler';
 
 const DEFAULT_DANGER_RADIUS = 100;
 
 export interface AttackHuntMobInput {
   targetId: BotHuntTargetId;
   preferCrowdedTarget: boolean;
+  excludedMobIds: ReadonlySet<string>;
 }
 
 export interface AttackHuntMobConfig {
   dangerRadius: number;
 }
+
+type HuntAttackRequestEvent = Exclude<HuntAttackEvent, { type: 'fight-finished' }>;
 
 export class AttackHuntMobUseCase {
   private readonly config: AttackHuntMobConfig;
@@ -32,6 +36,7 @@ export class AttackHuntMobUseCase {
     private readonly attacker: HuntMobAttacker,
     private readonly fightFinishedReader: FightFinishedReader,
     private readonly getAreaId: GetAreaId,
+    private readonly taskScheduler: TaskScheduler,
     config: Partial<AttackHuntMobConfig> = {}
   ) {
     this.config = {
@@ -47,21 +52,18 @@ export class AttackHuntMobUseCase {
         throw new Error('Selected hunt target is not known by the bot.');
       }
 
-      return this.getAreaId().pipe(
+      return this.taskScheduler.schedule(() => this.getAreaId().pipe(
         take(1),
         switchMap((areaId) => this.scanner.scan({ areaId }).pipe(take(1))),
         tap((scan) => {
           this.scanStore.save(scan);
         }),
-        switchMap((scan): Observable<HuntAttackEvent> => {
-          const selection = selectHuntMobForAttack(
-            scan.getMobs(),
-            target.getArticleId(),
-            {
-              dangerRadius: this.config.dangerRadius,
-              preferCrowdedTarget: input.preferCrowdedTarget
-            }
-          );
+        switchMap((scan): Observable<HuntAttackRequestEvent> => {
+          const selection = selectHuntMobForAttack(scan.getMobs(), target.getArticleId(), {
+            dangerRadius: this.config.dangerRadius,
+            preferCrowdedTarget: input.preferCrowdedTarget,
+            excludedMobIds: input.excludedMobIds
+          });
 
           if (!selection.selectedMob) {
             return of({
@@ -71,25 +73,32 @@ export class AttackHuntMobUseCase {
           }
 
           const selectedMob = selection.selectedMob;
-
           const mobInfo = createMobInfo(selectedMob);
 
           return this.attacker.attack(selectedMob).pipe(
-            take(1),
-            switchMap((response) => concat(
-              of<HuntAttackEvent>({
-                type: 'attack-request-sent',
-                mob: mobInfo,
-                responseBody: response.body
-              }),
-              this.fightFinishedReader.observe().pipe(
-                take(1),
-                map((): HuntAttackEvent => ({
-                  type: 'fight-finished',
-                  mob: mobInfo
-                }))
-              )
-            ))
+            map((): HuntAttackRequestEvent => ({
+              type: 'attack-request-sent',
+              mob: mobInfo
+            })),
+            take(1)
+          );
+        }),
+        take(1)
+      )).pipe(
+        switchMap((event): Observable<HuntAttackEvent> => {
+          if (event.type === 'no-safe-target') {
+            return of(event);
+          }
+
+          return concat(
+            of(event),
+            this.fightFinishedReader.observe().pipe(
+              take(1),
+              map((): HuntAttackEvent => ({
+                type: 'fight-finished',
+                mob: event.mob
+              }))
+            )
           );
         })
       );

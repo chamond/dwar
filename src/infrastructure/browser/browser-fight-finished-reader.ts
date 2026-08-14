@@ -61,9 +61,9 @@ function installHook(
 
   const wrapper: FightFinishedFunction = function (...args: unknown[]): unknown {
     try {
-      onFightFinished();
-    } finally {
       return Reflect.apply(currentFunction, this, args);
+    } finally {
+      onFightFinished();
     }
   };
   const hook = {

@@ -3,6 +3,7 @@ import type { HuntMob } from '../entities/hunt-mob';
 export interface HuntMobAttackSelectionOptions {
   dangerRadius: number;
   preferCrowdedTarget: boolean;
+  excludedMobIds: ReadonlySet<string>;
 }
 
 export interface HuntMobAttackSelection {
@@ -29,7 +30,9 @@ export function selectHuntMobForAttack(
   }
 
   const targetCandidates = mobs.filter((mob) => {
-    return mob.getArticleId() === targetArticleId && mob.isAvailableForAttack();
+    return mob.getArticleId() === targetArticleId
+      && mob.isAvailableForAttack()
+      && !options.excludedMobIds.has(mob.getId());
   });
   const safeCandidates = targetCandidates.flatMap((mob): readonly SafeHuntMobCandidate[] => {
     if (hasBlockingMob(mob, mobs, targetArticleId, options.dangerRadius)) {
@@ -38,7 +41,12 @@ export function selectHuntMobForAttack(
 
     return [{
       mob,
-      nearestSameTypeMobDistance: getNearestSameTypeMobDistance(mob, mobs, targetArticleId)
+      nearestSameTypeMobDistance: getNearestSameTypeMobDistance(
+        mob,
+        mobs,
+        targetArticleId,
+        options.excludedMobIds
+      )
     }];
   });
   const selectedCandidate = safeCandidates.reduce<SafeHuntMobCandidate | null>((best, current) => {
@@ -73,10 +81,15 @@ function hasBlockingMob(
 function getNearestSameTypeMobDistance(
   target: HuntMob,
   mobs: readonly HuntMob[],
-  targetArticleId: number
+  targetArticleId: number,
+  excludedMobIds: ReadonlySet<string>
 ): number {
   return mobs.reduce((nearestDistance, mob) => {
-    if (mob.getArticleId() !== targetArticleId || mob.getId() === target.getId()) {
+    if (
+      mob.getArticleId() !== targetArticleId
+      || mob.getId() === target.getId()
+      || excludedMobIds.has(mob.getId())
+    ) {
       return nearestDistance;
     }
 

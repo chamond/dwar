@@ -6,7 +6,7 @@ import { createCheckboxOption } from './checkbox-option';
 
 export interface HuntingControlsElements {
   root: HTMLElement;
-  attackButton: HTMLButtonElement;
+  actionButton: HTMLButtonElement;
   targetSelect: HTMLSelectElement;
   preferCrowdedTargetCheckbox: HTMLInputElement;
   getSelectedTargetId(): BotHuntTargetId | null;
@@ -18,15 +18,15 @@ export function createHuntingControls(
   const root = document.createElement('div');
   root.className = 'dwar-panel__controls dwar-hunting-controls';
 
-  const attackButton = document.createElement('button');
-  attackButton.type = 'button';
-  attackButton.className = 'dwar-action-button dwar-hunting-button';
-  attackButton.setAttribute('aria-label', 'Напасть на выбранного моба');
-  attackButton.textContent = 'Напасть';
+  const actionButton = document.createElement('button');
+  actionButton.type = 'button';
+  actionButton.className = 'dwar-action-button dwar-hunting-button';
+  actionButton.setAttribute('aria-label', 'Начать автоматическую охоту');
+  actionButton.textContent = 'Начать';
 
   const actionGroup = document.createElement('div');
   actionGroup.className = 'dwar-panel__action-buttons';
-  actionGroup.append(attackButton);
+  actionGroup.append(actionButton);
 
   const targetSelect = createTargetSelect(targets);
   const crowdingOption = createCheckboxOption({
@@ -38,11 +38,11 @@ export function createHuntingControls(
   selectorGroup.append(targetSelect, crowdingOption.label);
   root.append(actionGroup, selectorGroup);
 
-  attackButton.disabled = targets.length === 0;
+  actionButton.disabled = targets.length === 0;
 
   return {
     root,
-    attackButton,
+    actionButton,
     targetSelect,
     preferCrowdedTargetCheckbox: crowdingOption.checkbox,
     getSelectedTargetId(): BotHuntTargetId | null {

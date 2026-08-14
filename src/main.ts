@@ -9,6 +9,7 @@ import { ListResourcesUseCase } from './application/use-cases/list-resources';
 import { MonitorExchangeRuleUseCase } from './application/use-cases/monitor-exchange-rule';
 import { RequestSplinterHelpUseCase } from './application/use-cases/request-splinter-help';
 import { RunProfessionCraftingUseCase } from './application/use-cases/run-profession-crafting';
+import { RunHuntMobAttacksUseCase } from './application/use-cases/run-hunt-mob-attacks';
 import { RunResourceMiningUseCase } from './application/use-cases/run-resource-mining';
 import { SolveHuntMinigameUseCase } from './application/use-cases/solve-hunt-minigame';
 import { ThankSplinterHealerUseCase } from './application/use-cases/thank-splinter-healer';
@@ -109,8 +110,10 @@ function bootstrap(): void {
     huntTargetRepository,
     new BrowserHuntMobAttacker(),
     new BrowserFightFinishedReader(),
-    getAreaId
+    getAreaId,
+    gameActionScheduler
   );
+  const runHuntMobAttacks = new RunHuntMobAttacksUseCase(attackHuntMob, delay);
   const huntResourceFarmer = new BrowserHuntResourceFarmer();
   const huntMinigameImageDownloader = new BrowserHuntMinigameImageDownloader();
   const huntMinigameRecognizer = new BrowserHuntMinigameRecognizer();
@@ -150,7 +153,6 @@ function bootstrap(): void {
     gameActionScheduler
   );
   mountBotWidget({
-    attackHuntMob,
     createLogEntry,
     exchangeMonitoringSettingsStore,
     forceStopResourceMining,
@@ -166,6 +168,7 @@ function bootstrap(): void {
     professionRecipeSelectionStore,
     resourceSelectionStore,
     requestSplinterHelp,
+    runHuntMobAttacks,
     runProfessionCrafting,
     runResourceMining,
     solveHuntMinigame,

@@ -1,18 +1,18 @@
 import { EMPTY, catchError, finalize, tap, type Subscription } from 'rxjs';
-import type { AttackHuntMobUseCase } from '../../application/use-cases/attack-hunt-mob';
+import type { RunHuntMobAttacksUseCase } from '../../application/use-cases/run-hunt-mob-attacks';
 import type { AddBotLog } from './bot-log-appender';
 import { presentHuntAttackEvent } from './hunt-attack-event-presenter';
 import type { HuntingControlsElements } from './hunting-controls';
 import type { ProcessErrorReporter } from './process-error-reporter';
 
 export interface HuntingController {
-  attack(): void;
+  toggle(): void;
   destroy(): void;
 }
 
 export interface HuntingControllerOptions {
   controls: HuntingControlsElements;
-  attackHuntMob: AttackHuntMobUseCase;
+  runHuntMobAttacks: RunHuntMobAttacksUseCase;
   addLog: AddBotLog;
   reportError: ProcessErrorReporter;
 }
@@ -21,25 +21,32 @@ export function createHuntingController(
   options: HuntingControllerOptions
 ): HuntingController {
   let executionSubscription: Subscription | null = null;
+  let fightInProgress = false;
+  let stopRequested = false;
+  let stoppedByUser = false;
 
-  const setBusy = (isBusy: boolean): void => {
-    options.controls.attackButton.disabled = isBusy
-      || options.controls.getSelectedTargetId() === null;
-    options.controls.targetSelect.disabled = isBusy;
-    options.controls.preferCrowdedTargetCheckbox.disabled = isBusy;
-    options.controls.attackButton.classList.toggle('is-busy', isBusy);
+  const setRunning = (isRunning: boolean, isStopping = false): void => {
+    options.controls.actionButton.disabled = isStopping
+      || (!isRunning && options.controls.getSelectedTargetId() === null);
+    options.controls.targetSelect.disabled = isRunning;
+    options.controls.preferCrowdedTargetCheckbox.disabled = isRunning;
+    options.controls.actionButton.classList.toggle('is-active', isRunning && !isStopping);
+    options.controls.actionButton.classList.toggle('is-busy', isStopping);
 
-    if (isBusy) {
-      options.controls.attackButton.setAttribute('aria-busy', 'true');
-      options.controls.attackButton.textContent = 'Поиск…';
+    if (isRunning) {
+      options.controls.actionButton.setAttribute(
+        'aria-label',
+        isStopping ? 'Автоматическая охота завершается' : 'Завершить автоматическую охоту'
+      );
+      options.controls.actionButton.textContent = 'Завершить';
       return;
     }
 
-    options.controls.attackButton.removeAttribute('aria-busy');
-    options.controls.attackButton.textContent = 'Напасть';
+    options.controls.actionButton.setAttribute('aria-label', 'Начать автоматическую охоту');
+    options.controls.actionButton.textContent = 'Начать';
   };
 
-  const attack = (): void => {
+  const start = (): void => {
     if (executionSubscription && !executionSubscription.closed) {
       return;
     }
@@ -53,9 +60,13 @@ export function createHuntingController(
       return;
     }
 
-    setBusy(true);
+    fightInProgress = false;
+    stopRequested = false;
+    stoppedByUser = false;
+    setRunning(true);
+    options.addLog('Автоматическая охота начата.');
 
-    const subscription = options.attackHuntMob.execute({
+    const subscription = options.runHuntMobAttacks.execute({
       targetId,
       preferCrowdedTarget: options.controls.preferCrowdedTargetCheckbox.checked
     }).pipe(
@@ -63,7 +74,16 @@ export function createHuntingController(
         presentHuntAttackEvent(event, options.addLog);
 
         if (event.type === 'attack-request-sent') {
-          options.controls.attackButton.textContent = 'В бою…';
+          fightInProgress = true;
+        }
+
+        if (event.type === 'fight-finished') {
+          fightInProgress = false;
+
+          if (stopRequested) {
+            stoppedByUser = true;
+            executionSubscription?.unsubscribe();
+          }
         }
       }),
       catchError((error: unknown) => {
@@ -72,19 +92,54 @@ export function createHuntingController(
       }),
       finalize(() => {
         executionSubscription = null;
-        setBusy(false);
+        fightInProgress = false;
+        stopRequested = false;
+        setRunning(false);
+
+        if (stoppedByUser) {
+          options.addLog('Автоматическая охота завершена.');
+        }
+
+        stoppedByUser = false;
       })
     ).subscribe();
 
     executionSubscription = subscription.closed ? null : subscription;
   };
 
+  const stop = (): void => {
+    if (!executionSubscription || executionSubscription.closed || stopRequested) {
+      return;
+    }
+
+    stopRequested = true;
+    setRunning(true, fightInProgress);
+
+    if (fightInProgress) {
+      options.addLog('Автоматическая охота завершится после текущего боя.');
+      return;
+    }
+
+    stoppedByUser = true;
+    executionSubscription.unsubscribe();
+  };
+
   return {
-    attack,
+    toggle(): void {
+      if (executionSubscription && !executionSubscription.closed) {
+        stop();
+        return;
+      }
+
+      start();
+    },
     destroy(): void {
       executionSubscription?.unsubscribe();
       executionSubscription = null;
-      setBusy(false);
+      fightInProgress = false;
+      stopRequested = false;
+      stoppedByUser = false;
+      setRunning(false);
     }
   };
 }

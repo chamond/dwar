@@ -1,33 +1,53 @@
 import { from, map, switchMap, take, type Observable } from 'rxjs';
 import { fromFetch } from 'rxjs/fetch';
 import { UnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
-import type {
-  HuntMobAttacker,
-  HuntMobAttackResponse
-} from '../../application/ports/hunt-mob-attacker';
+import type { HuntMobAttacker } from '../../application/ports/hunt-mob-attacker';
 import type { HuntMob } from '../../domain/entities/hunt-mob';
 import {
   buildHuntMobAttackUrl,
   HUNT_MOB_ATTACK_REQUEST
 } from './hunt-mob-attack-request';
+import { isSuccessfulDwarHuntMobAttackResponse } from './dwar-hunt-mob-attack-response';
 
 export class BrowserHuntMobAttacker implements HuntMobAttacker {
-  attack(mob: HuntMob): Observable<HuntMobAttackResponse> {
+  attack(mob: HuntMob): Observable<void> {
     return fromFetch(buildHuntMobAttackUrl(mob.getId()), {
       method: HUNT_MOB_ATTACK_REQUEST.method,
       credentials: 'same-origin'
     }).pipe(
-      switchMap((response) => {
-        if (!response.ok) {
+      switchMap((response) => from(response.text()).pipe(
+        map((body) => ({
+          body,
+          isSuccessfulHttpStatus: response.ok,
+          status: response.status
+        }))
+      )),
+      map(({ body, isSuccessfulHttpStatus, status }): void => {
+        if (!isSuccessfulHttpStatus) {
           throw new UnexpectedServerResponseError(
-            `Hunt mob attack failed with HTTP ${response.status}.`
+            `Запрос нападения завершился с HTTP ${status}. Ответ: ${formatResponseBody(body)}`
           );
         }
 
-        return from(response.text());
+        assertSuccessfulAttackResponse(body);
       }),
-      map((body): HuntMobAttackResponse => ({ body })),
       take(1)
     );
   }
+}
+
+function assertSuccessfulAttackResponse(body: string): void {
+  if (!isSuccessfulDwarHuntMobAttackResponse(body)) {
+    throw createUnexpectedAttackResponseError(body);
+  }
+}
+
+function createUnexpectedAttackResponseError(body: string): UnexpectedServerResponseError {
+  return new UnexpectedServerResponseError(
+    `Ответ запроса нападения: ${formatResponseBody(body)}`
+  );
+}
+
+function formatResponseBody(body: string): string {
+  return body.length > 0 ? body : '(пустой ответ)';
 }
