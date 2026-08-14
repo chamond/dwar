@@ -1,4 +1,4 @@
-export type BotHuntTargetId = 'mad-dog' | 'krets';
+export type BotHuntTargetId = 'mad-dog' | 'krets' | 'krets-digger';
 
 export interface BotHuntTargetProps {
   id: BotHuntTargetId;
