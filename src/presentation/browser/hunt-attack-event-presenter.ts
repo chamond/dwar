@@ -23,12 +23,12 @@ export function presentHuntAttackEvent(
 
     case 'attack-request-sent':
       addLog(
-        `Отправлен запрос нападения на ${formatMobLabel(event.mob)}.`,
+        `Отправлен запрос нападения на ${formatMobLabel(event.mob)} (id: ${event.mob.id}).`,
         {
           parts: [
             'Отправлен запрос нападения на ',
             createMobLogPart(event.mob),
-            '.'
+            ` (id: ${event.mob.id}).`
           ],
           tone: 'success'
         }
