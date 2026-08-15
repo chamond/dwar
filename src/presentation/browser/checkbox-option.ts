@@ -6,6 +6,7 @@ export interface CheckboxOptionElements {
 export interface CheckboxOptionOptions {
   text: string;
   title?: string | undefined;
+  initialChecked?: boolean | undefined;
 }
 
 export function createCheckboxOption(
@@ -21,6 +22,7 @@ export function createCheckboxOption(
   const checkbox = document.createElement('input');
   checkbox.type = 'checkbox';
   checkbox.className = 'dwar-option-checkbox__input';
+  checkbox.checked = options.initialChecked ?? false;
 
   const text = document.createElement('span');
   text.className = 'dwar-option-checkbox__label';

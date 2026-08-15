@@ -208,7 +208,8 @@ function createMiningTab(
   const splinterHelpButton = createSplinterHelpButton();
   const autoSplinterHelpOption = createCheckboxOption({
     text: 'Автоматически просить о помощи',
-    title: 'При обнаружении занозы автоматически запускать цикл просьб о помощи'
+    title: 'При обнаружении занозы автоматически запускать цикл просьб о помощи',
+    initialChecked: true
   });
 
   const resourcePicker = createResourcePicker(resources, {
