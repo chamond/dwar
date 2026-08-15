@@ -1,5 +1,7 @@
 import type { BotLogEntrySnapshot } from '../../domain/entities/bot-log-entry';
 
+const MAX_LOG_ENTRY_COUNT = 500;
+
 export interface BotLogTagPart {
   text: string;
   color: string;
@@ -20,8 +22,7 @@ export function appendLogLine(
   options: BotLogLineOptions = {}
 ): void {
   const parts = options.parts ?? [entry.message];
-  logList.append(createLogLine(entry, parts, options.tone));
-  logList.scrollTop = logList.scrollHeight;
+  appendLogEntry(logList, createLogLine(entry, parts, options.tone));
 }
 
 export function appendLogContent(
@@ -31,7 +32,16 @@ export function appendLogContent(
 ): void {
   const line = createLogLine(entry, []);
   line.append(content);
+  appendLogEntry(logList, line);
+}
+
+function appendLogEntry(logList: HTMLElement, line: HTMLElement): void {
   logList.append(line);
+
+  while (logList.childElementCount > MAX_LOG_ENTRY_COUNT) {
+    logList.firstElementChild?.remove();
+  }
+
   logList.scrollTop = logList.scrollHeight;
 }
 
