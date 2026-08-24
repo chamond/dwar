@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import test from 'node:test';
 import { transformSync } from '@swc/core';
+import { Observable, Subject } from 'rxjs';
+
+const runtimeRequire = createRequire(import.meta.url);
 
 const loadTypeScriptModule = async (relativePath) => {
   const source = readFileSync(path.resolve(relativePath), 'utf8');
@@ -20,6 +24,30 @@ const loadTypeScriptModule = async (relativePath) => {
   const moduleUrl = `data:text/javascript;base64,${Buffer.from(compiledSource).toString('base64')}`;
 
   return import(moduleUrl);
+};
+
+const loadCommonJsTypeScriptModule = (relativePath) => {
+  const source = readFileSync(path.resolve(relativePath), 'utf8');
+  const compiledSource = transformSync(source, {
+    jsc: {
+      parser: {
+        syntax: 'typescript'
+      },
+      target: 'es2022'
+    },
+    module: {
+      type: 'commonjs'
+    }
+  }).code;
+  const loadedModule = { exports: {} };
+
+  Function('require', 'module', 'exports', compiledSource)(
+    runtimeRequire,
+    loadedModule,
+    loadedModule.exports
+  );
+
+  return loadedModule.exports;
 };
 
 const { selectHuntMobForAttack } = await loadTypeScriptModule(
@@ -46,6 +74,9 @@ const { readDwarHuntFightAngerInput } = await loadTypeScriptModule(
 );
 const { selectDwarHuntFightAngerTarget } = await loadTypeScriptModule(
   'src/infrastructure/browser/dwar-hunt-fight-anger-target-selector.ts'
+);
+const { createHuntFightLifecycle } = loadCommonJsTypeScriptModule(
+  'src/application/services/hunt-fight-lifecycle.ts'
 );
 
 test('не выбирает предыдущего моба и не учитывает его в кучности', () => {
@@ -214,6 +245,48 @@ test('штатным событием выбирает доступного дл
 
   assert.equal(selectDwarHuntFightAngerTarget(canvas), '2011666154');
   assert.equal(dispatchedEvents.length, 1);
+});
+
+test('завершение боя отменяет незавершённую злобу без ошибки', () => {
+  const fightFinishedSignal = new Subject();
+  let fightFinishedSubscriptions = 0;
+  let fightFinishedTeardowns = 0;
+  let angerTeardowns = 0;
+  let angerCompleted = false;
+  let angerError = null;
+  const fightFinishedSource = new Observable((subscriber) => {
+    fightFinishedSubscriptions += 1;
+    const subscription = fightFinishedSignal.subscribe(subscriber);
+
+    return () => {
+      fightFinishedTeardowns += 1;
+      subscription.unsubscribe();
+    };
+  });
+  const anger = new Observable(() => () => {
+    angerTeardowns += 1;
+  });
+  const lifecycle = createHuntFightLifecycle(fightFinishedSource);
+  const fightFinishedSubscription = lifecycle.fightFinished.subscribe();
+  const angerSubscription = lifecycle.cancelAngerWhenFightFinishes(anger).subscribe({
+    complete: () => {
+      angerCompleted = true;
+    },
+    error: (error) => {
+      angerError = error;
+    }
+  });
+
+  assert.equal(fightFinishedSubscriptions, 1);
+
+  fightFinishedSignal.next();
+
+  assert.equal(angerCompleted, true);
+  assert.equal(angerError, null);
+  assert.equal(angerTeardowns, 1);
+  assert.equal(fightFinishedTeardowns, 1);
+  assert.equal(fightFinishedSubscription.closed, true);
+  assert.equal(angerSubscription.closed, true);
 });
 
 function createMob(id, x) {

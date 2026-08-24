@@ -2,7 +2,6 @@ import {
   EMPTY,
   concat,
   defer,
-  ignoreElements,
   map,
   of,
   switchMap,
@@ -11,6 +10,7 @@ import {
   type Observable
 } from 'rxjs';
 import type { HuntAttackEvent, HuntAttackMobInfo } from '../events/hunt-attack-event';
+import { createHuntFightLifecycle } from '../services/hunt-fight-lifecycle';
 import type { BotHuntTargetId } from '../../domain/entities/bot-hunt-target';
 import type { HuntMob } from '../../domain/entities/hunt-mob';
 import { getMobAggressionProfile } from '../../domain/services/mob-aggression';
@@ -37,7 +37,17 @@ export interface AttackHuntMobConfig {
   dangerRadius: number;
 }
 
-type HuntAttackRequestEvent = Exclude<HuntAttackEvent, { type: 'fight-finished' }>;
+type NoSafeTargetEvent = Extract<HuntAttackEvent, { type: 'no-safe-target' }>;
+type AttackRequestSentEvent = Extract<HuntAttackEvent, { type: 'attack-request-sent' }>;
+
+type HuntAttackTaskResult =
+  | {
+      event: NoSafeTargetEvent;
+    }
+  | {
+      event: AttackRequestSentEvent;
+      fightFinished: Observable<void>;
+    };
 
 export class AttackHuntMobUseCase {
   private readonly config: AttackHuntMobConfig;
@@ -72,7 +82,7 @@ export class AttackHuntMobUseCase {
         tap((scan) => {
           this.scanStore.save(scan);
         }),
-        switchMap((scan): Observable<HuntAttackRequestEvent> => {
+        switchMap((scan): Observable<HuntAttackTaskResult> => {
           const selection = selectHuntMobForAttack(scan.getMobs(), target.getArticleId(), {
             dangerRadius: this.config.dangerRadius,
             preferCrowdedTarget: input.preferCrowdedTarget,
@@ -81,8 +91,10 @@ export class AttackHuntMobUseCase {
 
           if (!selection.selectedMob) {
             return of({
-              type: 'no-safe-target',
-              targetCandidateCount: selection.targetCandidateCount
+              event: {
+                type: 'no-safe-target',
+                targetCandidateCount: selection.targetCandidateCount
+              }
             });
           }
 
@@ -91,24 +103,37 @@ export class AttackHuntMobUseCase {
 
           return this.attacker.attack(selectedMob).pipe(
             take(1),
-            switchMap(() => concat(
-              of<HuntAttackRequestEvent>({
-                type: 'attack-request-sent',
-                mob: mobInfo
-              }),
-              input.angerMob ? this.angerMob() : EMPTY
-            ))
+            switchMap(() => {
+              const fightLifecycle = createHuntFightLifecycle(
+                this.fightFinishedReader.observe()
+              );
+
+              return concat(
+                of<HuntAttackTaskResult>({
+                  event: {
+                    type: 'attack-request-sent',
+                    mob: mobInfo
+                  },
+                  fightFinished: fightLifecycle.fightFinished
+                }),
+                input.angerMob
+                  ? fightLifecycle.cancelAngerWhenFightFinishes(
+                      this.angerSender.send()
+                    )
+                  : EMPTY
+              );
+            })
           );
         })
       )).pipe(
-        switchMap((event): Observable<HuntAttackEvent> => {
-          if (event.type === 'no-safe-target') {
-            return of(event);
+        switchMap((result): Observable<HuntAttackEvent> => {
+          if (!('fightFinished' in result)) {
+            return of(result.event);
           }
 
           return concat(
-            of(event),
-            this.observeFightFinished(event.mob)
+            of(result.event),
+            this.mapFightFinished(result.fightFinished, result.event.mob)
           );
         })
       );
@@ -116,19 +141,19 @@ export class AttackHuntMobUseCase {
   }
 
   observeFightFinished(mob: HuntAttackMobInfo): Observable<HuntAttackEvent> {
-    return this.fightFinishedReader.observe().pipe(
+    return this.mapFightFinished(this.fightFinishedReader.observe(), mob);
+  }
+
+  private mapFightFinished(
+    fightFinished: Observable<void>,
+    mob: HuntAttackMobInfo
+  ): Observable<HuntAttackEvent> {
+    return fightFinished.pipe(
       take(1),
       map((): HuntAttackEvent => ({
         type: 'fight-finished',
         mob
       }))
-    );
-  }
-
-  private angerMob(): Observable<never> {
-    return this.angerSender.send().pipe(
-      take(1),
-      ignoreElements()
     );
   }
 }
