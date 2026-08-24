@@ -9,6 +9,7 @@ import {
   type Observable
 } from 'rxjs';
 import { readDwarHuntFightAngerInput } from './dwar-hunt-fight-anger-input';
+import { selectDwarHuntFightAngerTarget } from './dwar-hunt-fight-anger-target-selector';
 import type { HuntMobAngerRequestInput } from './hunt-mob-anger-request';
 import { findInAccessibleWindowTree } from './accessible-window-tree';
 
@@ -31,9 +32,11 @@ export function readCurrentHuntFightAngerInput(): Observable<HuntMobAngerRequest
 
 function readFightAngerInput(candidate: Window): HuntMobAngerRequestInput | null {
   try {
-    return readDwarHuntFightAngerInput(
-      (candidate as unknown as Record<string, unknown>).canvas
-    );
+    const canvas = (candidate as unknown as Record<string, unknown>).canvas;
+
+    selectDwarHuntFightAngerTarget(canvas);
+
+    return readDwarHuntFightAngerInput(canvas);
   } catch {
     return null;
   }

@@ -44,6 +44,9 @@ const { isSuccessfulDwarHuntMobAngerResponse } = await loadTypeScriptModule(
 const { readDwarHuntFightAngerInput } = await loadTypeScriptModule(
   'src/infrastructure/browser/dwar-hunt-fight-anger-input.ts'
 );
+const { selectDwarHuntFightAngerTarget } = await loadTypeScriptModule(
+  'src/infrastructure/browser/dwar-hunt-fight-anger-target-selector.ts'
+);
 
 test('не выбирает предыдущего моба и не учитывает его в кучности', () => {
   const previousMob = createMob('10', 9);
@@ -158,6 +161,59 @@ test('считает Canvas боя готовым только после поя
     persId: '2011666150',
     botArtikulId: '2011666154'
   });
+});
+
+test('штатным событием выбирает доступного для злости моба из команды противника', () => {
+  const dispatchedEvents = [];
+  const canvas = {
+    EventManager: {
+      dispatchEvent(eventName, source, participantId) {
+        dispatchedEvents.push({ eventName, source, participantId });
+        canvas.app.mem.model.selectedPers = participantId;
+      }
+    },
+    app: {
+      battle: {
+        model: {
+          angers: {
+            bots: {
+              2011666152: 1,
+              2011666153: 1,
+              2011666154: 1
+            }
+          }
+        }
+      },
+      mem: {
+        Event: {
+          PERS_SELECT: 'Mem.PERS_SELECT'
+        },
+        model: {
+          myTeam: 1,
+          selectedPers: 0,
+          persList: [
+            [{ id: 2011666150, isBot: false, status: 4, flags: 0 }],
+            [
+              { id: 2011666152, isBot: true, status: 2, flags: 0 },
+              { id: 2011666153, isBot: true, status: 4, flags: 65_536 },
+              { id: 2011666154, isBot: true, status: 4, flags: 0 }
+            ]
+          ]
+        }
+      }
+    }
+  };
+
+  assert.equal(selectDwarHuntFightAngerTarget(canvas), '2011666154');
+  assert.equal(canvas.app.mem.model.selectedPers, 2011666154);
+  assert.deepEqual(dispatchedEvents, [{
+    eventName: 'Mem.PERS_SELECT',
+    source: null,
+    participantId: 2011666154
+  }]);
+
+  assert.equal(selectDwarHuntFightAngerTarget(canvas), '2011666154');
+  assert.equal(dispatchedEvents.length, 1);
 });
 
 function createMob(id, x) {
