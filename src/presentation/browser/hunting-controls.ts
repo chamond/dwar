@@ -10,6 +10,7 @@ export interface HuntingControlsElements {
   restartButton: HTMLButtonElement;
   targetSelect: HTMLSelectElement;
   preferCrowdedTargetCheckbox: HTMLInputElement;
+  angerMobCheckbox: HTMLInputElement;
   getSelectedTargetId(): BotHuntTargetId | null;
 }
 
@@ -45,9 +46,13 @@ export function createHuntingControls(
     text: 'Выбирать кучного моба',
     title: 'Выбирать цель с минимальным расстоянием до ближайшего моба того же вида'
   });
+  const angerOption = createCheckboxOption({
+    text: 'Злить моба',
+    title: 'После нападения автоматически злить выбранного моба в текущем бою'
+  });
   const selectorGroup = document.createElement('div');
   selectorGroup.className = 'dwar-panel__selectors dwar-hunting-controls__settings';
-  selectorGroup.append(targetSelect, crowdingOption.label);
+  selectorGroup.append(targetSelect, crowdingOption.label, angerOption.label);
   root.append(actionGroup, selectorGroup);
 
   actionButton.disabled = targets.length === 0;
@@ -58,6 +63,7 @@ export function createHuntingControls(
     restartButton,
     targetSelect,
     preferCrowdedTargetCheckbox: crowdingOption.checkbox,
+    angerMobCheckbox: angerOption.checkbox,
     getSelectedTargetId(): BotHuntTargetId | null {
       return targets.some((target) => target.id === targetSelect.value)
         ? targetSelect.value as BotHuntTargetId

@@ -12,6 +12,7 @@ const DEFAULT_NO_TARGET_RETRY_DELAY_MS = 5_000;
 export interface RunHuntMobAttacksInput {
   targetId: BotHuntTargetId;
   preferCrowdedTarget: boolean;
+  angerMob: boolean;
   activeFight?: HuntAttackMobInfo;
 }
 
@@ -47,6 +48,7 @@ export class RunHuntMobAttacksUseCase {
         return this.attackHuntMob.execute({
           targetId: input.targetId,
           preferCrowdedTarget: input.preferCrowdedTarget,
+          angerMob: input.angerMob,
           excludedMobIds: this.lastAttackedMobId === null
             ? new Set<string>()
             : new Set([this.lastAttackedMobId])

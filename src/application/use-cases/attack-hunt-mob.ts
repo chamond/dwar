@@ -1,4 +1,15 @@
-import { concat, defer, map, of, switchMap, take, tap, type Observable } from 'rxjs';
+import {
+  EMPTY,
+  concat,
+  defer,
+  ignoreElements,
+  map,
+  of,
+  switchMap,
+  take,
+  tap,
+  type Observable
+} from 'rxjs';
 import type { HuntAttackEvent, HuntAttackMobInfo } from '../events/hunt-attack-event';
 import type { BotHuntTargetId } from '../../domain/entities/bot-hunt-target';
 import type { HuntMob } from '../../domain/entities/hunt-mob';
@@ -6,6 +17,8 @@ import { getMobAggressionProfile } from '../../domain/services/mob-aggression';
 import { selectHuntMobForAttack } from '../../domain/services/hunt-mob-attack-selection';
 import type { FightFinishedReader } from '../ports/fight-finished-reader';
 import type { GetAreaId } from '../ports/get-area-id';
+import type { Delay } from '../ports/delay';
+import type { HuntMobAngerSender } from '../ports/hunt-mob-anger-sender';
 import type { HuntMobAttacker } from '../ports/hunt-mob-attacker';
 import type { HuntTargetRepository } from '../ports/hunt-target-repository';
 import type { HuntZoneScanner } from '../ports/hunt-zone-scanner';
@@ -13,15 +26,21 @@ import type { HuntZoneScanStore } from '../ports/hunt-zone-scan-store';
 import type { TaskScheduler } from '../ports/task-scheduler';
 
 const DEFAULT_DANGER_RADIUS = 100;
+const DEFAULT_MINIMUM_MOB_ANGER_DELAY_MS = 500;
+const DEFAULT_MAXIMUM_MOB_ANGER_DELAY_MS = 1_000;
 
 export interface AttackHuntMobInput {
   targetId: BotHuntTargetId;
   preferCrowdedTarget: boolean;
+  angerMob: boolean;
   excludedMobIds: ReadonlySet<string>;
 }
 
 export interface AttackHuntMobConfig {
   dangerRadius: number;
+  minimumMobAngerDelayMs: number;
+  maximumMobAngerDelayMs: number;
+  random: () => number;
 }
 
 type HuntAttackRequestEvent = Exclude<HuntAttackEvent, { type: 'fight-finished' }>;
@@ -34,14 +53,30 @@ export class AttackHuntMobUseCase {
     private readonly scanStore: HuntZoneScanStore,
     private readonly huntTargetRepository: HuntTargetRepository,
     private readonly attacker: HuntMobAttacker,
+    private readonly angerSender: HuntMobAngerSender,
     private readonly fightFinishedReader: FightFinishedReader,
+    private readonly delay: Delay,
     private readonly getAreaId: GetAreaId,
     private readonly taskScheduler: TaskScheduler,
     config: Partial<AttackHuntMobConfig> = {}
   ) {
     this.config = {
-      dangerRadius: config.dangerRadius ?? DEFAULT_DANGER_RADIUS
+      dangerRadius: config.dangerRadius ?? DEFAULT_DANGER_RADIUS,
+      minimumMobAngerDelayMs:
+        config.minimumMobAngerDelayMs ?? DEFAULT_MINIMUM_MOB_ANGER_DELAY_MS,
+      maximumMobAngerDelayMs:
+        config.maximumMobAngerDelayMs ?? DEFAULT_MAXIMUM_MOB_ANGER_DELAY_MS,
+      random: config.random ?? Math.random
     };
+
+    if (
+      !Number.isSafeInteger(this.config.minimumMobAngerDelayMs)
+      || this.config.minimumMobAngerDelayMs < 0
+      || !Number.isSafeInteger(this.config.maximumMobAngerDelayMs)
+      || this.config.maximumMobAngerDelayMs < this.config.minimumMobAngerDelayMs
+    ) {
+      throw new Error('Hunt mob anger delay range is invalid.');
+    }
   }
 
   execute(input: AttackHuntMobInput): Observable<HuntAttackEvent> {
@@ -76,14 +111,16 @@ export class AttackHuntMobUseCase {
           const mobInfo = createMobInfo(selectedMob);
 
           return this.attacker.attack(selectedMob).pipe(
-            map((): HuntAttackRequestEvent => ({
-              type: 'attack-request-sent',
-              mob: mobInfo
-            })),
-            take(1)
+            take(1),
+            switchMap(() => concat(
+              of<HuntAttackRequestEvent>({
+                type: 'attack-request-sent',
+                mob: mobInfo
+              }),
+              input.angerMob ? this.waitAndAngerMob() : EMPTY
+            ))
           );
-        }),
-        take(1)
+        })
       )).pipe(
         switchMap((event): Observable<HuntAttackEvent> => {
           if (event.type === 'no-safe-target') {
@@ -107,6 +144,22 @@ export class AttackHuntMobUseCase {
         mob
       }))
     );
+  }
+
+  private waitAndAngerMob(): Observable<never> {
+    return this.delay.wait(this.createMobAngerDelayMs()).pipe(
+      take(1),
+      switchMap(() => this.angerSender.send().pipe(take(1))),
+      ignoreElements()
+    );
+  }
+
+  private createMobAngerDelayMs(): number {
+    const random = Math.min(1, Math.max(0, this.config.random()));
+    const range = this.config.maximumMobAngerDelayMs
+      - this.config.minimumMobAngerDelayMs;
+
+    return this.config.minimumMobAngerDelayMs + Math.round(range * random);
   }
 }
 

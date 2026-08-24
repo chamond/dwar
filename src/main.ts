@@ -23,6 +23,7 @@ import { BrowserHuntMinigameImageDownloader } from './infrastructure/browser/bro
 import { BrowserHuntMinigameRecognizer } from './infrastructure/browser/browser-hunt-minigame-recognizer';
 import { BrowserHuntMinigameSolutionSubmitter } from './infrastructure/browser/browser-hunt-minigame-solution-submitter';
 import { BrowserHuntMobAttacker } from './infrastructure/browser/browser-hunt-mob-attacker';
+import { BrowserHuntMobAngerSender } from './infrastructure/browser/browser-hunt-mob-anger-sender';
 import { BrowserHuntResourceFarmCancellationSender } from './infrastructure/browser/browser-hunt-resource-farm-cancellation-sender';
 import { BrowserHuntResourceFarmInterrupter } from './infrastructure/browser/browser-hunt-resource-farm-interrupter';
 import { BrowserHuntZoneScanner } from './infrastructure/browser/browser-hunt-zone-scanner';
@@ -109,7 +110,9 @@ function bootstrap(): void {
     huntZoneScanStore,
     huntTargetRepository,
     new BrowserHuntMobAttacker(),
+    new BrowserHuntMobAngerSender(),
     new BrowserFightFinishedReader(),
+    delay,
     getAreaId,
     gameActionScheduler
   );

@@ -31,6 +31,15 @@ const {
 } = await loadTypeScriptModule(
   'src/infrastructure/browser/dwar-hunt-mob-attack-response.ts'
 );
+const {
+  buildHuntMobAngerRequestBody,
+  HUNT_MOB_ANGER_REQUEST
+} = await loadTypeScriptModule(
+  'src/infrastructure/browser/hunt-mob-anger-request.ts'
+);
+const { isSuccessfulDwarHuntMobAngerResponse } = await loadTypeScriptModule(
+  'src/infrastructure/browser/dwar-hunt-mob-anger-response.ts'
+);
 
 test('не выбирает предыдущего моба и не учитывает его в кучности', () => {
   const previousMob = createMob('10', 9);
@@ -78,6 +87,34 @@ test('отдельно распознаёт мини-игру в ответе н
     false
   );
   assert.equal(isDwarHuntAttackMinigameResponse('not json'), false);
+});
+
+test('формирует POST-запрос злости только из идентификаторов текущего боя', () => {
+  assert.deepEqual(HUNT_MOB_ANGER_REQUEST, {
+    method: 'POST',
+    url: 'https://w1.dwar.ru/entry_point.php?object=bot&action=anger&json_mode_on=1'
+  });
+  assert.equal(
+    buildHuntMobAngerRequestBody({
+      fightId: '87457906001232',
+      persId: '2011666150',
+      botArtikulId: '2011666154'
+    }).toString(),
+    'json_mode_on=1&object=bot&action=anger&fight_id=87457906001232&pers_id=2011666150&bot_artikul_id=2011666154'
+  );
+});
+
+test('принимает ответ злости только со status=100', () => {
+  assert.equal(
+    isSuccessfulDwarHuntMobAngerResponse('{"bot|anger":{"status":100}}'),
+    true
+  );
+  assert.equal(isSuccessfulDwarHuntMobAngerResponse('{"status":"100"}'), true);
+  assert.equal(
+    isSuccessfulDwarHuntMobAngerResponse('{"bot|anger":{"status":99}}'),
+    false
+  );
+  assert.equal(isSuccessfulDwarHuntMobAngerResponse('not json'), false);
 });
 
 function createMob(id, x) {
