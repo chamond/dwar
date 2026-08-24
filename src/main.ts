@@ -112,7 +112,6 @@ function bootstrap(): void {
     new BrowserHuntMobAttacker(),
     new BrowserHuntMobAngerSender(),
     new BrowserFightFinishedReader(),
-    delay,
     getAreaId,
     gameActionScheduler
   );

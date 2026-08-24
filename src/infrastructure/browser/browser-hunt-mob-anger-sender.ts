@@ -1,4 +1,4 @@
-import { defer, from, map, switchMap, take, type Observable } from 'rxjs';
+import { from, map, switchMap, take, type Observable } from 'rxjs';
 import { fromFetch } from 'rxjs/fetch';
 import { UnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
 import type { HuntMobAngerSender } from '../../application/ports/hunt-mob-anger-sender';
@@ -11,15 +11,12 @@ import { readCurrentHuntFightAngerInput } from './read-current-hunt-fight-anger-
 
 export class BrowserHuntMobAngerSender implements HuntMobAngerSender {
   send(): Observable<void> {
-    return defer(() => {
-      const input = readCurrentHuntFightAngerInput();
-
-      return fromFetch(HUNT_MOB_ANGER_REQUEST.url, {
+    return readCurrentHuntFightAngerInput().pipe(
+      switchMap((input) => fromFetch(HUNT_MOB_ANGER_REQUEST.url, {
         method: HUNT_MOB_ANGER_REQUEST.method,
         credentials: 'same-origin',
         body: buildHuntMobAngerRequestBody(input)
-      });
-    }).pipe(
+      })),
       switchMap((response) => from(response.text()).pipe(
         map((body) => ({
           body,

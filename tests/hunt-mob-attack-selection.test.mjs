@@ -40,6 +40,9 @@ const {
 const { isSuccessfulDwarHuntMobAngerResponse } = await loadTypeScriptModule(
   'src/infrastructure/browser/dwar-hunt-mob-anger-response.ts'
 );
+const { readDwarHuntFightAngerInput } = await loadTypeScriptModule(
+  'src/infrastructure/browser/dwar-hunt-fight-anger-input.ts'
+);
 
 test('не выбирает предыдущего моба и не учитывает его в кучности', () => {
   const previousMob = createMob('10', 9);
@@ -115,6 +118,34 @@ test('принимает ответ злости только со status=100', 
     false
   );
   assert.equal(isSuccessfulDwarHuntMobAngerResponse('not json'), false);
+});
+
+test('считает Canvas боя готовым только после появления всех идентификаторов', () => {
+  const canvas = {
+    app: {
+      battle: {
+        model: {
+          fightId: 87457906001232
+        }
+      },
+      mem: {
+        model: {
+          myId: '2011666150',
+          selectedPers: 0
+        }
+      }
+    }
+  };
+
+  assert.equal(readDwarHuntFightAngerInput(canvas), null);
+
+  canvas.app.mem.model.selectedPers = 2011666154;
+
+  assert.deepEqual(readDwarHuntFightAngerInput(canvas), {
+    fightId: '87457906001232',
+    persId: '2011666150',
+    botArtikulId: '2011666154'
+  });
 });
 
 function createMob(id, x) {
