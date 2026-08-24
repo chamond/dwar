@@ -27,7 +27,8 @@ const { selectHuntMobForAttack } = await loadTypeScriptModule(
 );
 const {
   isDwarHuntAttackMinigameResponse,
-  isSuccessfulDwarHuntMobAttackResponse
+  isSuccessfulDwarHuntMobAttackResponse,
+  readDwarHuntAttackFightId
 } = await loadTypeScriptModule(
   'src/infrastructure/browser/dwar-hunt-mob-attack-response.ts'
 );
@@ -90,6 +91,17 @@ test('отдельно распознаёт мини-игру в ответе н
     false
   );
   assert.equal(isDwarHuntAttackMinigameResponse('not json'), false);
+});
+
+test('читает идентификатор начавшегося боя из состояния ответа нападения', () => {
+  assert.equal(
+    readDwarHuntAttackFightId(
+      '{"common|action":{"redirect_error":false},"state":{"fight_id":87457906001232}}'
+    ),
+    '87457906001232'
+  );
+  assert.equal(readDwarHuntAttackFightId('{"state":{"fight_id":"0"}}'), null);
+  assert.equal(readDwarHuntAttackFightId('not json'), null);
 });
 
 test('формирует POST-запрос злости только из идентификаторов текущего боя', () => {

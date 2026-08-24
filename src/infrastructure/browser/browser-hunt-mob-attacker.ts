@@ -10,8 +10,10 @@ import {
 } from './hunt-mob-attack-request';
 import {
   isDwarHuntAttackMinigameResponse,
-  isSuccessfulDwarHuntMobAttackResponse
+  isSuccessfulDwarHuntMobAttackResponse,
+  readDwarHuntAttackFightId
 } from './dwar-hunt-mob-attack-response';
+import { openDwarHuntFight } from './dwar-hunt-fight-opener';
 
 export class BrowserHuntMobAttacker implements HuntMobAttacker {
   attack(mob: HuntMob): Observable<void> {
@@ -38,6 +40,7 @@ export class BrowserHuntMobAttacker implements HuntMobAttacker {
         }
 
         assertSuccessfulAttackResponse(body);
+        openDwarHuntFight(readDwarHuntAttackFightId(body));
       }),
       take(1)
     );
