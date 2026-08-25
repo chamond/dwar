@@ -1,4 +1,11 @@
-export type BotHuntTargetId = 'mad-dog' | 'krets' | 'krets-digger';
+export type BotHuntTargetId =
+  | 'mad-dog'
+  | 'krets'
+  | 'krets-digger'
+  | 'orc-conqueror-skeleton'
+  | 'young-beron-tiger'
+  | 'experienced-beron-tiger'
+  | 'brown-hakurt';
 
 export interface BotHuntTargetProps {
   id: BotHuntTargetId;

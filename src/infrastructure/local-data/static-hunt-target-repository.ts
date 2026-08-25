@@ -23,6 +23,30 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     name: 'Крэтс-землерой',
     level: 2,
     articleId: 2717
+  },
+  {
+    id: 'orc-conqueror-skeleton',
+    name: 'Скелет орка-завоевателя',
+    level: 5,
+    articleId: 352
+  },
+  {
+    id: 'young-beron-tiger',
+    name: 'Молодой беронский тигр',
+    level: 4,
+    articleId: 355
+  },
+  {
+    id: 'experienced-beron-tiger',
+    name: 'Опытный беронский тигр',
+    level: 4,
+    articleId: 354
+  },
+  {
+    id: 'brown-hakurt',
+    name: 'Хакурт бурый',
+    level: 4,
+    articleId: 356
   }
 ] as const satisfies readonly BotHuntTargetProps[];
 
