@@ -25,6 +25,24 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     articleId: 2717
   },
   {
+    id: 'zigred',
+    name: 'Зигред',
+    level: 2,
+    articleId: 36
+  },
+  {
+    id: 'zigred-warrior',
+    name: 'Зигред-воин',
+    level: 3,
+    articleId: 35
+  },
+  {
+    id: 'purple-zigred',
+    name: 'Пурпурный зигред',
+    level: 4,
+    articleId: 40
+  },
+  {
     id: 'orc-conqueror-skeleton',
     name: 'Скелет орка-завоевателя',
     level: 5,
