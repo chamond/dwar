@@ -29,6 +29,7 @@ const DEFAULT_DANGER_RADIUS = 100;
 export interface AttackHuntMobInput {
   targetId: BotHuntTargetId;
   preferCrowdedTarget: boolean;
+  aggressiveHunting: boolean;
   angerMob: boolean;
   excludedMobIds: ReadonlySet<string>;
 }
@@ -86,6 +87,7 @@ export class AttackHuntMobUseCase {
           const selection = selectHuntMobForAttack(scan.getMobs(), target.getArticleId(), {
             dangerRadius: this.config.dangerRadius,
             preferCrowdedTarget: input.preferCrowdedTarget,
+            aggressiveHunting: input.aggressiveHunting,
             excludedMobIds: input.excludedMobIds
           });
 

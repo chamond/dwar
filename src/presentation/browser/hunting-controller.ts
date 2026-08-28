@@ -34,6 +34,7 @@ export function createHuntingController(
       || (!isRunning && options.controls.getSelectedTargetId() === null);
     options.controls.targetSelect.disabled = isRunning;
     options.controls.preferCrowdedTargetCheckbox.disabled = isRunning;
+    options.controls.aggressiveHuntingCheckbox.disabled = isRunning;
     options.controls.angerMobCheckbox.disabled = isRunning;
     options.controls.restartButton.disabled = !isRunning;
     options.controls.actionButton.classList.toggle('is-active', isRunning && !isStopping);
@@ -83,6 +84,7 @@ export function createHuntingController(
     const subscription = options.runHuntMobAttacks.execute({
       targetId,
       preferCrowdedTarget: options.controls.preferCrowdedTargetCheckbox.checked,
+      aggressiveHunting: options.controls.aggressiveHuntingCheckbox.checked,
       angerMob: options.controls.angerMobCheckbox.checked,
       ...(fightToResume ? { activeFight: fightToResume } : {})
     }).pipe(

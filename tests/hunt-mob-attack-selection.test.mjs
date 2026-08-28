@@ -91,12 +91,51 @@ test('не выбирает предыдущего моба и не учитыв
     {
       dangerRadius: 100,
       preferCrowdedTarget: true,
+      aggressiveHunting: false,
       excludedMobIds: new Set(['10'])
     }
   );
 
   assert.equal(selection.targetCandidateCount, 3);
   assert.equal(selection.selectedMob?.getId(), '30');
+});
+
+test('без агрессивной охоты не выбирает цель рядом с мобом другого вида', () => {
+  const target = createMob('10', 10);
+  const blockingMob = createMob('20', 50, 19);
+
+  const selection = selectHuntMobForAttack(
+    [target, blockingMob],
+    268,
+    {
+      dangerRadius: 100,
+      preferCrowdedTarget: false,
+      aggressiveHunting: false,
+      excludedMobIds: new Set()
+    }
+  );
+
+  assert.equal(selection.targetCandidateCount, 1);
+  assert.equal(selection.selectedMob, null);
+});
+
+test('агрессивная охота игнорирует безопасное расстояние до соседних мобов', () => {
+  const target = createMob('10', 10);
+  const blockingMob = createMob('20', 50, 19);
+
+  const selection = selectHuntMobForAttack(
+    [target, blockingMob],
+    268,
+    {
+      dangerRadius: 100,
+      preferCrowdedTarget: false,
+      aggressiveHunting: true,
+      excludedMobIds: new Set()
+    }
+  );
+
+  assert.equal(selection.targetCandidateCount, 1);
+  assert.equal(selection.selectedMob?.getId(), '10');
 });
 
 test('принимает ответ нападения только с redirect_error=false', () => {
@@ -289,7 +328,7 @@ test('завершение боя отменяет незавершённую з
   assert.equal(angerSubscription.closed, true);
 });
 
-function createMob(id, x) {
+function createMob(id, x, articleId = 268) {
   const position = {
     x,
     distanceTo(other) {
@@ -298,7 +337,7 @@ function createMob(id, x) {
   };
 
   return {
-    getArticleId: () => 268,
+    getArticleId: () => articleId,
     getId: () => id,
     getPosition: () => position,
     isAvailableForAttack: () => true,

@@ -3,6 +3,7 @@ import type { HuntMob } from '../entities/hunt-mob';
 export interface HuntMobAttackSelectionOptions {
   dangerRadius: number;
   preferCrowdedTarget: boolean;
+  aggressiveHunting: boolean;
   excludedMobIds: ReadonlySet<string>;
 }
 
@@ -35,7 +36,10 @@ export function selectHuntMobForAttack(
       && !options.excludedMobIds.has(mob.getId());
   });
   const safeCandidates = targetCandidates.flatMap((mob): readonly SafeHuntMobCandidate[] => {
-    if (hasBlockingMob(mob, mobs, targetArticleId, options.dangerRadius)) {
+    if (
+      !options.aggressiveHunting
+      && hasBlockingMob(mob, mobs, targetArticleId, options.dangerRadius)
+    ) {
       return [];
     }
 
