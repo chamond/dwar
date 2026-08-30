@@ -25,6 +25,12 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     articleId: 2717
   },
   {
+    id: 'rabid-dog',
+    name: 'Бешеный пёс',
+    level: 2,
+    articleId: 20
+  },
+  {
     id: 'zigred',
     name: 'Зигред',
     level: 2,
@@ -37,10 +43,34 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     articleId: 35
   },
   {
+    id: 'warrior-skeleton',
+    name: 'Скелет-воин',
+    level: 3,
+    articleId: 158
+  },
+  {
+    id: 'demon-dog',
+    name: 'Пёс-демон',
+    level: 3,
+    articleId: 23
+  },
+  {
+    id: 'mature-demon-dog',
+    name: 'Матёрый пёс-демон',
+    level: 4,
+    articleId: 24
+  },
+  {
     id: 'purple-zigred',
     name: 'Пурпурный зигред',
     level: 4,
     articleId: 40
+  },
+  {
+    id: 'young-treant',
+    name: 'Древень молодой',
+    level: 4,
+    articleId: 349
   },
   {
     id: 'orc-conqueror-skeleton',
