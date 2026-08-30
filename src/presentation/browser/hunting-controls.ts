@@ -100,12 +100,37 @@ function createTargetSelect(
     return select;
   }
 
-  for (const target of targets) {
-    const option = document.createElement('option');
-    option.value = target.id;
-    option.textContent = `${target.name}[${target.level}]`;
-    select.append(option);
+  const targetsByLevel = groupTargetsByLevel(targets);
+
+  for (const [level, levelTargets] of targetsByLevel) {
+    const group = document.createElement('optgroup');
+    group.label = `Уровень ${level}`;
+
+    for (const target of levelTargets) {
+      const option = document.createElement('option');
+      option.value = target.id;
+      option.textContent = `${target.name}[${target.level}]`;
+      group.append(option);
+    }
+
+    select.append(group);
   }
 
   return select;
+}
+
+function groupTargetsByLevel(
+  targets: readonly BotHuntTargetSnapshot[]
+): readonly [number, readonly BotHuntTargetSnapshot[]][] {
+  const targetsByLevel = new Map<number, BotHuntTargetSnapshot[]>();
+
+  for (const target of targets) {
+    const levelTargets = targetsByLevel.get(target.level) ?? [];
+    levelTargets.push(target);
+    targetsByLevel.set(target.level, levelTargets);
+  }
+
+  return [...targetsByLevel.entries()].sort(([leftLevel], [rightLevel]) => {
+    return leftLevel - rightLevel;
+  });
 }

@@ -603,6 +603,17 @@ export const BOT_WIDGET_STYLES = `
     border-color: rgba(120, 217, 194, .42);
   }
 
+  .dwar-hunt-target-select optgroup {
+    color: #78d9c2;
+    background: #0b1118;
+    font-weight: 800;
+  }
+
+  .dwar-hunt-target-select option {
+    color: #dbe3f1;
+    font-weight: 600;
+  }
+
   .dwar-option-checkbox {
     display: grid;
     grid-template-columns: 16px minmax(0, 1fr);

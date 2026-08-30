@@ -25,10 +25,28 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     articleId: 2717
   },
   {
+    id: 'krets-leader',
+    name: 'Крэтс-лидер',
+    level: 2,
+    articleId: 280
+  },
+  {
     id: 'rabid-dog',
     name: 'Бешеный пёс',
     level: 2,
     articleId: 20
+  },
+  {
+    id: 'frail-skeleton',
+    name: 'Дряхлый скелет',
+    level: 2,
+    articleId: 157
+  },
+  {
+    id: 'fire-spider',
+    name: 'Огненный паук',
+    level: 2,
+    articleId: 284
   },
   {
     id: 'zigred',
@@ -43,6 +61,12 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     articleId: 35
   },
   {
+    id: 'krets-chief',
+    name: 'Крэтс-вожак',
+    level: 3,
+    articleId: 269
+  },
+  {
     id: 'warrior-skeleton',
     name: 'Скелет-воин',
     level: 3,
@@ -53,6 +77,18 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     name: 'Пёс-демон',
     level: 3,
     articleId: 23
+  },
+  {
+    id: 'fire-spideress',
+    name: 'Огненная паучиха',
+    level: 3,
+    articleId: 285
+  },
+  {
+    id: 'ash-spider',
+    name: 'Пепельный паук',
+    level: 3,
+    articleId: 350
   },
   {
     id: 'mature-demon-dog',
