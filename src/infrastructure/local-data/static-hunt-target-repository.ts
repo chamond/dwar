@@ -109,6 +109,18 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     articleId: 349
   },
   {
+    id: 'krogan',
+    name: 'Кроган',
+    level: 4,
+    articleId: 509
+  },
+  {
+    id: 'agile-ficilia',
+    name: 'Ловкая фицилия',
+    level: 4,
+    articleId: 508
+  },
+  {
     id: 'orc-conqueror-skeleton',
     name: 'Скелет орка-завоевателя',
     level: 5,

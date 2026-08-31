@@ -16,6 +16,8 @@ export type BotHuntTargetId =
   | 'mature-demon-dog'
   | 'purple-zigred'
   | 'young-treant'
+  | 'krogan'
+  | 'agile-ficilia'
   | 'orc-conqueror-skeleton'
   | 'young-beron-tiger'
   | 'experienced-beron-tiger'
