@@ -1,6 +1,6 @@
 import type { BotLogEntrySnapshot } from '../../domain/entities/bot-log-entry';
 
-const MAX_LOG_ENTRY_COUNT = 500;
+const MAX_LOG_ENTRY_COUNT = 100;
 
 export interface BotLogTagPart {
   text: string;
