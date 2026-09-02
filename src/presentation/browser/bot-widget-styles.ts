@@ -59,7 +59,6 @@ export const BOT_WIDGET_STYLES = `
   .dwar-mining-action__menu-toggle:focus-visible,
   .dwar-mining-action__force-stop:focus-visible,
   .dwar-resource-picker__toggle:focus-visible,
-  .dwar-hunt-target-select:focus-visible,
   .dwar-option-checkbox__input:focus-visible,
   .dwar-exchange-monitoring__input:focus-visible,
   .dwar-exchange-rule__remove:focus-visible {
@@ -396,7 +395,6 @@ export const BOT_WIDGET_STYLES = `
 
   .dwar-action-button,
   .dwar-resource-picker__toggle,
-  .dwar-hunt-target-select,
   .dwar-option-checkbox {
     height: 38px;
     border: 1px solid rgba(255, 255, 255, .11);
@@ -587,33 +585,6 @@ export const BOT_WIDGET_STYLES = `
     gap: 8px;
   }
 
-  .dwar-hunt-target-select {
-    display: block;
-    width: 100%;
-    padding: 0 34px 0 10px;
-    color: #dbe3f1;
-    appearance: auto;
-    background: #0b1118;
-  }
-
-  .dwar-hunt-target-select:hover,
-  .dwar-hunt-target-select:focus-visible {
-    color: #ffffff;
-    background-color: #111a24;
-    border-color: rgba(120, 217, 194, .42);
-  }
-
-  .dwar-hunt-target-select optgroup {
-    color: #78d9c2;
-    background: #0b1118;
-    font-weight: 800;
-  }
-
-  .dwar-hunt-target-select option {
-    color: #dbe3f1;
-    font-weight: 600;
-  }
-
   .dwar-option-checkbox {
     display: grid;
     grid-template-columns: 16px minmax(0, 1fr);
@@ -645,7 +616,7 @@ export const BOT_WIDGET_STYLES = `
     line-height: 1.2;
   }
 
-  .dwar-hunt-target-select:disabled,
+  .dwar-resource-picker__toggle:disabled,
   .dwar-option-checkbox:has(.dwar-option-checkbox__input:disabled) {
     color: #7f8ca1;
     cursor: wait;
@@ -724,6 +695,52 @@ export const BOT_WIDGET_STYLES = `
 
   .dwar-resource-picker__menu[hidden] {
     display: none;
+  }
+
+  .dwar-hunt-target-picker__menu {
+    max-height: 290px;
+    overflow-y: auto;
+    scrollbar-color: #394353 #090d13;
+  }
+
+  .dwar-hunt-target-picker__group + .dwar-hunt-target-picker__group {
+    margin-top: 5px;
+  }
+
+  .dwar-hunt-target-picker__group-title {
+    padding: 6px 7px 4px;
+    color: #78d9c2;
+    font: 800 11px/1 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .dwar-hunt-target-option__order {
+    display: grid;
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+    place-items: center;
+    color: #07110f;
+    background: #78d9c2;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 900;
+  }
+
+  .dwar-hunt-target-option__order[hidden] {
+    display: none;
+  }
+
+  .dwar-hunt-target-option__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dwar-hunt-target-picker__empty {
+    padding: 9px 7px;
+    color: #7f8ca1;
+    font-size: 12px;
   }
 
   .dwar-resource-option {

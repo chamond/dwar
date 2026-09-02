@@ -27,7 +27,7 @@ import type { TaskScheduler } from '../ports/task-scheduler';
 const DEFAULT_DANGER_RADIUS = 100;
 
 export interface AttackHuntMobInput {
-  targetId: BotHuntTargetId;
+  targetIds: readonly BotHuntTargetId[];
   preferCrowdedTarget: boolean;
   aggressiveHunting: boolean;
   angerMob: boolean;
@@ -71,11 +71,19 @@ export class AttackHuntMobUseCase {
 
   execute(input: AttackHuntMobInput): Observable<HuntAttackEvent> {
     return defer(() => {
-      const target = this.huntTargetRepository.findById(input.targetId);
-
-      if (!target) {
-        throw new Error('Selected hunt target is not known by the bot.');
+      if (input.targetIds.length === 0) {
+        throw new Error('Selected hunt targets are not known by the bot.');
       }
+
+      const targetArticleIds = input.targetIds.map((targetId) => {
+        const target = this.huntTargetRepository.findById(targetId);
+
+        if (!target) {
+          throw new Error('Selected hunt targets are not known by the bot.');
+        }
+
+        return target.getArticleId();
+      });
 
       return this.taskScheduler.schedule(() => this.getAreaId().pipe(
         take(1),
@@ -84,7 +92,7 @@ export class AttackHuntMobUseCase {
           this.scanStore.save(scan);
         }),
         switchMap((scan): Observable<HuntAttackTaskResult> => {
-          const selection = selectHuntMobForAttack(scan.getMobs(), target.getArticleId(), {
+          const selection = selectHuntMobForAttack(scan.getMobs(), targetArticleIds, {
             dangerRadius: this.config.dangerRadius,
             preferCrowdedTarget: input.preferCrowdedTarget,
             aggressiveHunting: input.aggressiveHunting,

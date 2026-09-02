@@ -294,6 +294,7 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
       && (
         botPanel.resourcePicker.root.contains(event.target)
         || botPanel.recipePicker.root.contains(event.target)
+        || botPanel.huntingControls.targetPicker.root.contains(event.target)
         || botPanel.miningAction.root.contains(event.target)
       )
     ) {
@@ -350,6 +351,7 @@ function attachMutuallyExclusivePickers(botPanel: BotPanelElements): void {
   botPanel.resourcePicker.toggleButton.addEventListener('click', () => {
     if (!botPanel.resourcePicker.menu.hidden) {
       botPanel.recipePicker.close();
+      botPanel.huntingControls.targetPicker.close();
       botPanel.miningAction.closeMenu();
     }
   });
@@ -357,6 +359,15 @@ function attachMutuallyExclusivePickers(botPanel: BotPanelElements): void {
   botPanel.recipePicker.toggleButton.addEventListener('click', () => {
     if (!botPanel.recipePicker.menu.hidden) {
       botPanel.resourcePicker.close();
+      botPanel.huntingControls.targetPicker.close();
+      botPanel.miningAction.closeMenu();
+    }
+  });
+
+  botPanel.huntingControls.targetPicker.toggleButton.addEventListener('click', () => {
+    if (!botPanel.huntingControls.targetPicker.menu.hidden) {
+      botPanel.resourcePicker.close();
+      botPanel.recipePicker.close();
       botPanel.miningAction.closeMenu();
     }
   });
@@ -364,12 +375,14 @@ function attachMutuallyExclusivePickers(botPanel: BotPanelElements): void {
   botPanel.miningAction.menuToggleButton.addEventListener('click', () => {
     botPanel.resourcePicker.close();
     botPanel.recipePicker.close();
+    botPanel.huntingControls.targetPicker.close();
   });
 }
 
 function closePickers(botPanel: BotPanelElements): void {
   botPanel.resourcePicker.close();
   botPanel.recipePicker.close();
+  botPanel.huntingControls.targetPicker.close();
   botPanel.miningAction.closeMenu();
 }
 

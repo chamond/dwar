@@ -53,6 +53,9 @@ const loadCommonJsTypeScriptModule = (relativePath) => {
 const { selectHuntMobForAttack } = await loadTypeScriptModule(
   'src/domain/services/hunt-mob-attack-selection.ts'
 );
+const { updateOrderedSelection } = await loadTypeScriptModule(
+  'src/presentation/browser/hunt-target-picker.ts'
+);
 const {
   isDwarHuntAttackMinigameResponse,
   isSuccessfulDwarHuntMobAttackResponse,
@@ -87,7 +90,7 @@ test('не выбирает предыдущего моба и не учитыв
 
   const selection = selectHuntMobForAttack(
     [previousMob, isolatedMob, crowdedMob, crowdedNeighbour],
-    268,
+    [268],
     {
       dangerRadius: 100,
       preferCrowdedTarget: true,
@@ -106,7 +109,7 @@ test('без агрессивной охоты не выбирает цель р
 
   const selection = selectHuntMobForAttack(
     [target, blockingMob],
-    268,
+    [268],
     {
       dangerRadius: 100,
       preferCrowdedTarget: false,
@@ -125,7 +128,7 @@ test('агрессивная охота игнорирует безопасно�
 
   const selection = selectHuntMobForAttack(
     [target, blockingMob],
-    268,
+    [268],
     {
       dangerRadius: 100,
       preferCrowdedTarget: false,
@@ -136,6 +139,77 @@ test('агрессивная охота игнорирует безопасно�
 
   assert.equal(selection.targetCandidateCount, 1);
   assert.equal(selection.selectedMob?.getId(), '10');
+});
+
+test('среди выбранных разновидностей выбирает моба максимального уровня', () => {
+  const lowerLevelMob = createMob('10', 10, 19, 2);
+  const higherLevelMob = createMob('20', 300, 268, 3);
+
+  const selection = selectHuntMobForAttack(
+    [lowerLevelMob, higherLevelMob],
+    [19, 268],
+    {
+      dangerRadius: 100,
+      preferCrowdedTarget: false,
+      aggressiveHunting: false,
+      excludedMobIds: new Set()
+    }
+  );
+
+  assert.equal(selection.targetCandidateCount, 2);
+  assert.equal(selection.selectedMob?.getId(), '20');
+});
+
+test('при равном уровне соблюдает порядок выбора разновидностей', () => {
+  const firstTypeMob = createMob('10', 10, 19, 3);
+  const secondTypeMob = createMob('20', 300, 268, 3);
+
+  assert.equal(
+    selectHuntMobForAttack(
+      [firstTypeMob, secondTypeMob],
+      [19, 268],
+      {
+        dangerRadius: 100,
+        preferCrowdedTarget: true,
+        aggressiveHunting: false,
+        excludedMobIds: new Set()
+      }
+    ).selectedMob?.getId(),
+    '10'
+  );
+  assert.equal(
+    selectHuntMobForAttack(
+      [firstTypeMob, secondTypeMob],
+      [268, 19],
+      {
+        dangerRadius: 100,
+        preferCrowdedTarget: true,
+        aggressiveHunting: false,
+        excludedMobIds: new Set()
+      }
+    ).selectedMob?.getId(),
+    '20'
+  );
+});
+
+test('последовательные снятия сохраняют порядок и убирают разрывы индексов', () => {
+  let selectedIds = updateOrderedSelection([], 'krets', true);
+  selectedIds = updateOrderedSelection(selectedIds, 'mad-dog', true);
+  selectedIds = updateOrderedSelection(selectedIds, 'zigred', true);
+  assert.deepEqual(selectedIds, ['krets', 'mad-dog', 'zigred']);
+
+  selectedIds = updateOrderedSelection(selectedIds, 'mad-dog', false);
+  assert.deepEqual(selectedIds, ['krets', 'zigred']);
+
+  selectedIds = updateOrderedSelection(selectedIds, 'krets', false);
+  assert.deepEqual(selectedIds, ['zigred']);
+
+  selectedIds = updateOrderedSelection(selectedIds, 'mad-dog', true);
+  assert.deepEqual(selectedIds, ['zigred', 'mad-dog']);
+
+  selectedIds = updateOrderedSelection(selectedIds, 'zigred', false);
+  selectedIds = updateOrderedSelection(selectedIds, 'mad-dog', false);
+  assert.deepEqual(selectedIds, []);
 });
 
 test('принимает ответ нападения только с redirect_error=false', () => {
@@ -328,7 +402,7 @@ test('завершение боя отменяет незавершённую з
   assert.equal(angerSubscription.closed, true);
 });
 
-function createMob(id, x, articleId = 268) {
+function createMob(id, x, articleId = 268, level = 1) {
   const position = {
     x,
     distanceTo(other) {
@@ -339,6 +413,7 @@ function createMob(id, x, articleId = 268) {
   return {
     getArticleId: () => articleId,
     getId: () => id,
+    getLevel: () => level,
     getPosition: () => position,
     isAvailableForAttack: () => true,
     isFriendly: () => false

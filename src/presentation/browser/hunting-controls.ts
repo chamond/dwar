@@ -3,16 +3,20 @@ import type {
   BotHuntTargetSnapshot
 } from '../../domain/entities/bot-hunt-target';
 import { createCheckboxOption } from './checkbox-option';
+import {
+  createHuntTargetPicker,
+  type HuntTargetPickerElements
+} from './hunt-target-picker';
 
 export interface HuntingControlsElements {
   root: HTMLElement;
   actionButton: HTMLButtonElement;
   restartButton: HTMLButtonElement;
-  targetSelect: HTMLSelectElement;
+  targetPicker: HuntTargetPickerElements;
   preferCrowdedTargetCheckbox: HTMLInputElement;
   aggressiveHuntingCheckbox: HTMLInputElement;
   angerMobCheckbox: HTMLInputElement;
-  getSelectedTargetId(): BotHuntTargetId | null;
+  getSelectedTargetIds(): readonly BotHuntTargetId[];
 }
 
 export function createHuntingControls(
@@ -42,7 +46,6 @@ export function createHuntingControls(
   actionGroup.className = 'dwar-panel__action-buttons';
   actionGroup.append(actionButton, restartButton);
 
-  const targetSelect = createTargetSelect(targets);
   const crowdingOption = createCheckboxOption({
     text: 'Выбирать кучного моба',
     title: 'Выбирать цель с минимальным расстоянием до ближайшего моба того же вида'
@@ -55,82 +58,46 @@ export function createHuntingControls(
     text: 'Злить моба',
     title: 'После нападения автоматически злить выбранного моба в текущем бою'
   });
+  const updateSelectionDependentControls = (
+    selectedTargetIds: readonly BotHuntTargetId[]
+  ): void => {
+    actionButton.disabled = selectedTargetIds.length === 0;
+
+    if (selectedTargetIds.length > 1) {
+      angerOption.checkbox.checked = false;
+      angerOption.checkbox.disabled = true;
+      angerOption.label.title = 'Злость недоступна при выборе нескольких мобов';
+      return;
+    }
+
+    angerOption.checkbox.disabled = false;
+    angerOption.label.title = 'После нападения автоматически злить выбранного моба в текущем бою';
+  };
+  const targetPicker = createHuntTargetPicker(targets, {
+    onSelectionChange: updateSelectionDependentControls
+  });
   const selectorGroup = document.createElement('div');
   selectorGroup.className = 'dwar-panel__selectors dwar-hunting-controls__settings';
   selectorGroup.append(
-    targetSelect,
+    targetPicker.root,
     crowdingOption.label,
     aggressiveHuntingOption.label,
     angerOption.label
   );
   root.append(actionGroup, selectorGroup);
 
-  actionButton.disabled = targets.length === 0;
+  updateSelectionDependentControls(targetPicker.getSelectedTargetIds());
 
   return {
     root,
     actionButton,
     restartButton,
-    targetSelect,
+    targetPicker,
     preferCrowdedTargetCheckbox: crowdingOption.checkbox,
     aggressiveHuntingCheckbox: aggressiveHuntingOption.checkbox,
     angerMobCheckbox: angerOption.checkbox,
-    getSelectedTargetId(): BotHuntTargetId | null {
-      return targets.some((target) => target.id === targetSelect.value)
-        ? targetSelect.value as BotHuntTargetId
-        : null;
+    getSelectedTargetIds(): readonly BotHuntTargetId[] {
+      return targetPicker.getSelectedTargetIds();
     }
   };
-}
-
-function createTargetSelect(
-  targets: readonly BotHuntTargetSnapshot[]
-): HTMLSelectElement {
-  const select = document.createElement('select');
-  select.className = 'dwar-hunt-target-select';
-  select.setAttribute('aria-label', 'Целевой моб');
-
-  if (targets.length === 0) {
-    const emptyOption = document.createElement('option');
-    emptyOption.textContent = 'Нет доступных целей';
-    emptyOption.value = '';
-    select.append(emptyOption);
-    select.disabled = true;
-
-    return select;
-  }
-
-  const targetsByLevel = groupTargetsByLevel(targets);
-
-  for (const [level, levelTargets] of targetsByLevel) {
-    const group = document.createElement('optgroup');
-    group.label = `Уровень ${level}`;
-
-    for (const target of levelTargets) {
-      const option = document.createElement('option');
-      option.value = target.id;
-      option.textContent = `${target.name}[${target.level}]`;
-      group.append(option);
-    }
-
-    select.append(group);
-  }
-
-  return select;
-}
-
-function groupTargetsByLevel(
-  targets: readonly BotHuntTargetSnapshot[]
-): readonly [number, readonly BotHuntTargetSnapshot[]][] {
-  const targetsByLevel = new Map<number, BotHuntTargetSnapshot[]>();
-
-  for (const target of targets) {
-    const levelTargets = targetsByLevel.get(target.level) ?? [];
-    levelTargets.push(target);
-    targetsByLevel.set(target.level, levelTargets);
-  }
-
-  return [...targetsByLevel.entries()].sort(([leftLevel], [rightLevel]) => {
-    return leftLevel - rightLevel;
-  });
 }

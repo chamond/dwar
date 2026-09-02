@@ -14,39 +14,57 @@ export interface HuntMobAttackSelection {
 
 interface SafeHuntMobCandidate {
   mob: HuntMob;
+  targetSelectionIndex: number;
   nearestSameTypeMobDistance: number;
 }
 
 export function selectHuntMobForAttack(
   mobs: readonly HuntMob[],
-  targetArticleId: number,
+  targetArticleIds: readonly number[],
   options: HuntMobAttackSelectionOptions
 ): HuntMobAttackSelection {
-  if (!Number.isInteger(targetArticleId) || targetArticleId <= 0) {
-    throw new Error('Hunt target article id must be a positive integer.');
+  if (
+    targetArticleIds.length === 0
+    || targetArticleIds.some((articleId) => !Number.isInteger(articleId) || articleId <= 0)
+    || new Set(targetArticleIds).size !== targetArticleIds.length
+  ) {
+    throw new Error('Hunt target article ids must be unique positive integers.');
   }
 
   if (!Number.isFinite(options.dangerRadius) || options.dangerRadius <= 0) {
     throw new Error('Hunt danger radius must be greater than zero.');
   }
 
-  const targetCandidates = mobs.filter((mob) => {
-    return mob.getArticleId() === targetArticleId
+  const targetSelectionIndexes = new Map(
+    targetArticleIds.map((articleId, index) => [articleId, index])
+  );
+  const targetCandidates = mobs.flatMap((mob): readonly SafeHuntMobCandidate[] => {
+    const targetSelectionIndex = targetSelectionIndexes.get(mob.getArticleId());
+
+    return targetSelectionIndex !== undefined
       && mob.isAvailableForAttack()
-      && !options.excludedMobIds.has(mob.getId());
+      && !options.excludedMobIds.has(mob.getId())
+      ? [{
+          mob,
+          targetSelectionIndex,
+          nearestSameTypeMobDistance: Number.POSITIVE_INFINITY
+        }]
+      : [];
   });
-  const safeCandidates = targetCandidates.flatMap((mob): readonly SafeHuntMobCandidate[] => {
+  const safeCandidates = targetCandidates.flatMap((candidate): readonly SafeHuntMobCandidate[] => {
+    const targetArticleId = candidate.mob.getArticleId();
+
     if (
       !options.aggressiveHunting
-      && hasBlockingMob(mob, mobs, targetArticleId, options.dangerRadius)
+      && hasBlockingMob(candidate.mob, mobs, targetArticleId, options.dangerRadius)
     ) {
       return [];
     }
 
     return [{
-      mob,
+      ...candidate,
       nearestSameTypeMobDistance: getNearestSameTypeMobDistance(
-        mob,
+        candidate.mob,
         mobs,
         targetArticleId,
         options.excludedMobIds
@@ -106,6 +124,14 @@ function compareCandidates(
   right: SafeHuntMobCandidate,
   preferCrowdedTarget: boolean
 ): number {
+  if (left.mob.getLevel() !== right.mob.getLevel()) {
+    return right.mob.getLevel() - left.mob.getLevel();
+  }
+
+  if (left.targetSelectionIndex !== right.targetSelectionIndex) {
+    return left.targetSelectionIndex - right.targetSelectionIndex;
+  }
+
   if (left.nearestSameTypeMobDistance !== right.nearestSameTypeMobDistance) {
     return preferCrowdedTarget
       ? left.nearestSameTypeMobDistance - right.nearestSameTypeMobDistance

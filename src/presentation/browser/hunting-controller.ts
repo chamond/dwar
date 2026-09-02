@@ -31,11 +31,12 @@ export function createHuntingController(
 
   const setRunning = (isRunning: boolean, isStopping = false): void => {
     options.controls.actionButton.disabled = isStopping
-      || (!isRunning && options.controls.getSelectedTargetId() === null);
-    options.controls.targetSelect.disabled = isRunning;
+      || (!isRunning && options.controls.getSelectedTargetIds().length === 0);
+    options.controls.targetPicker.setDisabled(isRunning);
     options.controls.preferCrowdedTargetCheckbox.disabled = isRunning;
     options.controls.aggressiveHuntingCheckbox.disabled = isRunning;
-    options.controls.angerMobCheckbox.disabled = isRunning;
+    options.controls.angerMobCheckbox.disabled = isRunning
+      || options.controls.getSelectedTargetIds().length > 1;
     options.controls.restartButton.disabled = !isRunning;
     options.controls.actionButton.classList.toggle('is-active', isRunning && !isStopping);
     options.controls.actionButton.classList.toggle('is-busy', isStopping);
@@ -61,10 +62,10 @@ export function createHuntingController(
       return;
     }
 
-    const targetId = options.controls.getSelectedTargetId();
+    const targetIds = options.controls.getSelectedTargetIds();
 
-    if (!targetId) {
-      options.addLog('Не выбран целевой моб.', {
+    if (targetIds.length === 0) {
+      options.addLog('Не выбраны целевые мобы.', {
         tone: 'failure'
       });
       return;
@@ -82,7 +83,7 @@ export function createHuntingController(
     );
 
     const subscription = options.runHuntMobAttacks.execute({
-      targetId,
+      targetIds,
       preferCrowdedTarget: options.controls.preferCrowdedTargetCheckbox.checked,
       aggressiveHunting: options.controls.aggressiveHuntingCheckbox.checked,
       angerMob: options.controls.angerMobCheckbox.checked,

@@ -10,7 +10,7 @@ import type { AttackHuntMobUseCase } from './attack-hunt-mob';
 const DEFAULT_NO_TARGET_RETRY_DELAY_MS = 5_000;
 
 export interface RunHuntMobAttacksInput {
-  targetId: BotHuntTargetId;
+  targetIds: readonly BotHuntTargetId[];
   preferCrowdedTarget: boolean;
   aggressiveHunting: boolean;
   angerMob: boolean;
@@ -47,10 +47,10 @@ export class RunHuntMobAttacksUseCase {
         noTargetFound = false;
 
         return this.attackHuntMob.execute({
-          targetId: input.targetId,
+          targetIds: input.targetIds,
           preferCrowdedTarget: input.preferCrowdedTarget,
           aggressiveHunting: input.aggressiveHunting,
-          angerMob: input.angerMob,
+          angerMob: input.targetIds.length === 1 && input.angerMob,
           excludedMobIds: this.lastAttackedMobId === null
             ? new Set<string>()
             : new Set([this.lastAttackedMobId])
