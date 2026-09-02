@@ -21,7 +21,8 @@ export type BotHuntTargetId =
   | 'orc-conqueror-skeleton'
   | 'young-beron-tiger'
   | 'experienced-beron-tiger'
-  | 'brown-hakurt';
+  | 'brown-hakurt'
+  | 'cerberus';
 
 export interface BotHuntTargetProps {
   id: BotHuntTargetId;

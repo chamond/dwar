@@ -143,6 +143,12 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     name: 'Хакурт бурый',
     level: 4,
     articleId: 356
+  },
+  {
+    id: 'cerberus',
+    name: 'Цербер',
+    level: 7,
+    articleId: 807
   }
 ] as const satisfies readonly BotHuntTargetProps[];
 
