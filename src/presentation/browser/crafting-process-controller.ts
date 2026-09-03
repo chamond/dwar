@@ -12,6 +12,7 @@ const EMPTY_SELECTION_FEEDBACK_DURATION_MS = 3_000;
 
 export interface CraftingProcessController {
   toggle(): void;
+  stopImmediately(): void;
 }
 
 export interface CraftingProcessControllerOptions {
@@ -112,6 +113,19 @@ export function createCraftingProcessController(
     );
   };
 
+  const stopImmediately = (): void => {
+    if (!executionSubscription || executionSubscription.closed) {
+      return;
+    }
+
+    stopRequested = true;
+    restartRequested = false;
+    options.addLog('Крафт полностью остановлен из-за критического прерывания добычи.', {
+      tone: 'failure'
+    });
+    executionSubscription.unsubscribe();
+  };
+
   return {
     toggle(): void {
       if (executionSubscription && !executionSubscription.closed) {
@@ -125,7 +139,8 @@ export function createCraftingProcessController(
       }
 
       start();
-    }
+    },
+    stopImmediately
   };
 }
 

@@ -137,6 +137,17 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
   });
   let splinterHelpController: SplinterHelpController | null = null;
 
+  const craftingController = createCraftingProcessController({
+    button: botPanel.startCraftingButton,
+    recipePicker: botPanel.recipePicker,
+    processBars: craftingProcessBars,
+    runProfessionCrafting: dependencies.runProfessionCrafting,
+    addLog: addCraftingLog,
+    reportError: createProcessErrorReporter({
+      stoppedLabel: 'Крафт остановлен',
+      addLog: addCraftingLog
+    })
+  });
   const miningController = createMiningProcessController({
     action: botPanel.miningAction,
     resourcePicker: botPanel.resourcePicker,
@@ -148,6 +159,9 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     solveHuntMinigame: dependencies.solveHuntMinigame,
     splinterAlertSound,
     addLog: addMiningLog,
+    onCriticalFailure: () => {
+      craftingController.stopImmediately();
+    },
     onSplinterDetected: () => {
       splinterHelpController?.confirmSplinter();
     },
@@ -179,17 +193,6 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     onSplinterRemoved: () => {
       miningController.restartAfterSplinter();
     }
-  });
-  const craftingController = createCraftingProcessController({
-    button: botPanel.startCraftingButton,
-    recipePicker: botPanel.recipePicker,
-    processBars: craftingProcessBars,
-    runProfessionCrafting: dependencies.runProfessionCrafting,
-    addLog: addCraftingLog,
-    reportError: createProcessErrorReporter({
-      stoppedLabel: 'Крафт остановлен',
-      addLog: addCraftingLog
-    })
   });
   const huntingController = createHuntingController({
     controls: botPanel.huntingControls,

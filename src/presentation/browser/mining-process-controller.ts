@@ -52,6 +52,7 @@ export interface MiningProcessControllerOptions {
   solveHuntMinigame: SolveHuntMinigameUseCase;
   splinterAlertSound: SplinterAlertSound;
   addLog: AddBotLog;
+  onCriticalFailure(): void;
   onSplinterDetected(): void;
   presentMinigameRecognition(recognition: HuntMinigameRecognition): void;
   reportError: ProcessErrorReporter;
@@ -68,6 +69,7 @@ export function createMiningProcessController(
 
   const recoverFromMiningError = (error: unknown): Observable<unknown> => {
     if (!isHuntMinigameRequiredError(error)) {
+      options.onCriticalFailure();
       options.reportError(error);
       return EMPTY;
     }
