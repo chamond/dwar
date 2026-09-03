@@ -21,6 +21,7 @@ export type ResourceMiningEvent =
       type: 'scan-completed';
       totalMobCount: number;
       dangerousMobCount: number;
+      serverResourceCount: number;
       selectedResourceCount: number;
       safeResourceCount: number;
     }

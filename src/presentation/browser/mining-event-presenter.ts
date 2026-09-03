@@ -111,7 +111,7 @@ function logMiningEvent(event: ResourceMiningEvent, addLog: AddBotLog): void {
 
     case 'scan-completed':
       addLog(
-        `Скан: мобов ${event.totalMobCount}, опасных ${event.dangerousMobCount}, ресурсов ${event.selectedResourceCount}, безопасных ${event.safeResourceCount}.`
+        `Скан: мобов ${event.totalMobCount}, опасных ${event.dangerousMobCount}, ресурсов на Canvas ${event.selectedResourceCount} из ${event.serverResourceCount}, безопасных ${event.safeResourceCount}.`
       );
       return;
 
