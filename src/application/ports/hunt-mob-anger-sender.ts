@@ -1,5 +1,9 @@
 import type { Observable } from 'rxjs';
 
+export interface HuntMobAngerInput {
+  expectedFightId: string | null;
+}
+
 export interface HuntMobAngerSender {
-  send(): Observable<void>;
+  send(input: HuntMobAngerInput): Observable<void>;
 }

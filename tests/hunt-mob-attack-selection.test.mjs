@@ -307,6 +307,41 @@ test('считает Canvas боя готовым только после поя
   });
 });
 
+test('не принимает идентификаторы старого боя или неподтверждённой цели', () => {
+  const canvas = {
+    app: {
+      battle: {
+        model: {
+          fightId: 87457906001232
+        }
+      },
+      mem: {
+        model: {
+          myId: '2011666150',
+          selectedPers: 2011666154
+        }
+      }
+    }
+  };
+
+  assert.equal(readDwarHuntFightAngerInput(canvas, {
+    expectedFightId: '87457906001233',
+    expectedBotArtikulId: '2011666154'
+  }), null);
+  assert.equal(readDwarHuntFightAngerInput(canvas, {
+    expectedFightId: '87457906001232',
+    expectedBotArtikulId: '2011666155'
+  }), null);
+  assert.deepEqual(readDwarHuntFightAngerInput(canvas, {
+    expectedFightId: '87457906001232',
+    expectedBotArtikulId: '2011666154'
+  }), {
+    fightId: '87457906001232',
+    persId: '2011666150',
+    botArtikulId: '2011666154'
+  });
+});
+
 test('штатным событием выбирает доступного для злости моба из команды противника', () => {
   const dispatchedEvents = [];
   const canvas = {
@@ -358,6 +393,68 @@ test('штатным событием выбирает доступного дл
 
   assert.equal(selectDwarHuntFightAngerTarget(canvas), '2011666154');
   assert.equal(dispatchedEvents.length, 1);
+});
+
+test('после события выбора ждёт подтверждения selectedPers', () => {
+  const dispatchedEvents = [];
+  const canvas = {
+    EventManager: {
+      dispatchEvent(eventName, source, participantId) {
+        dispatchedEvents.push({ eventName, source, participantId });
+      }
+    },
+    app: {
+      battle: {
+        model: {
+          fightId: 87457906001232,
+          angers: {
+            bots: {
+              2011666154: 1
+            }
+          }
+        }
+      },
+      mem: {
+        Event: {
+          PERS_SELECT: 'Mem.PERS_SELECT'
+        },
+        model: {
+          myId: '2011666150',
+          myTeam: 1,
+          selectedPers: 2011666199,
+          persList: [
+            [{ id: 2011666150, isBot: false, status: 4, flags: 0 }],
+            [{ id: 2011666154, isBot: true, status: 4, flags: 0 }]
+          ]
+        }
+      }
+    }
+  };
+
+  const targetId = selectDwarHuntFightAngerTarget(canvas);
+
+  assert.equal(targetId, '2011666154');
+  assert.equal(canvas.app.mem.model.selectedPers, 2011666199);
+  assert.equal(readDwarHuntFightAngerInput(canvas, {
+    expectedFightId: '87457906001232',
+    expectedBotArtikulId: targetId
+  }), null);
+  assert.deepEqual(dispatchedEvents, [{
+    eventName: 'Mem.PERS_SELECT',
+    source: null,
+    participantId: 2011666154
+  }]);
+
+  canvas.app.mem.model.selectedPers = 2011666154;
+
+  assert.deepEqual(readDwarHuntFightAngerInput(canvas, {
+    expectedFightId: '87457906001232',
+    expectedBotArtikulId: targetId
+  }), {
+    fightId: '87457906001232',
+    persId: '2011666150',
+    botArtikulId: '2011666154'
+  });
 });
 
 test('завершение боя отменяет незавершённую злобу без ошибки', () => {

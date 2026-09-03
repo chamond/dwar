@@ -1,7 +1,10 @@
 import { from, map, switchMap, take, type Observable } from 'rxjs';
 import { fromFetch } from 'rxjs/fetch';
 import { UnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
-import type { HuntMobAngerSender } from '../../application/ports/hunt-mob-anger-sender';
+import type {
+  HuntMobAngerInput,
+  HuntMobAngerSender
+} from '../../application/ports/hunt-mob-anger-sender';
 import { isSuccessfulDwarHuntMobAngerResponse } from './dwar-hunt-mob-anger-response';
 import {
   buildHuntMobAngerRequestBody,
@@ -10,12 +13,12 @@ import {
 import { readCurrentHuntFightAngerInput } from './read-current-hunt-fight-anger-input';
 
 export class BrowserHuntMobAngerSender implements HuntMobAngerSender {
-  send(): Observable<void> {
-    return readCurrentHuntFightAngerInput().pipe(
-      switchMap((input) => fromFetch(HUNT_MOB_ANGER_REQUEST.url, {
+  send(input: HuntMobAngerInput): Observable<void> {
+    return readCurrentHuntFightAngerInput(input.expectedFightId).pipe(
+      switchMap((requestInput) => fromFetch(HUNT_MOB_ANGER_REQUEST.url, {
         method: HUNT_MOB_ANGER_REQUEST.method,
         credentials: 'same-origin',
-        body: buildHuntMobAngerRequestBody(input)
+        body: buildHuntMobAngerRequestBody(requestInput)
       })),
       switchMap((response) => from(response.text()).pipe(
         map((body) => ({

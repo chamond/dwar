@@ -2,7 +2,10 @@ import { from, map, switchMap, take, type Observable } from 'rxjs';
 import { fromFetch } from 'rxjs/fetch';
 import { HuntAttackMinigameRequiredError } from '../../application/errors/hunt-attack-minigame-required-error';
 import { UnexpectedServerResponseError } from '../../application/errors/unexpected-server-response-error';
-import type { HuntMobAttacker } from '../../application/ports/hunt-mob-attacker';
+import type {
+  HuntMobAttacker,
+  HuntMobAttackResult
+} from '../../application/ports/hunt-mob-attacker';
 import type { HuntMob } from '../../domain/entities/hunt-mob';
 import {
   buildHuntMobAttackUrl,
@@ -16,7 +19,7 @@ import {
 import { openDwarHuntFight } from './dwar-hunt-fight-opener';
 
 export class BrowserHuntMobAttacker implements HuntMobAttacker {
-  attack(mob: HuntMob): Observable<void> {
+  attack(mob: HuntMob): Observable<HuntMobAttackResult> {
     return fromFetch(buildHuntMobAttackUrl(mob.getId()), {
       method: HUNT_MOB_ATTACK_REQUEST.method,
       credentials: 'same-origin'
@@ -28,7 +31,7 @@ export class BrowserHuntMobAttacker implements HuntMobAttacker {
           status: response.status
         }))
       )),
-      map(({ body, isSuccessfulHttpStatus, status }): void => {
+      map(({ body, isSuccessfulHttpStatus, status }): HuntMobAttackResult => {
         if (isDwarHuntAttackMinigameResponse(body)) {
           throw new HuntAttackMinigameRequiredError();
         }
@@ -40,7 +43,11 @@ export class BrowserHuntMobAttacker implements HuntMobAttacker {
         }
 
         assertSuccessfulAttackResponse(body);
-        openDwarHuntFight(readDwarHuntAttackFightId(body));
+        const fightId = readDwarHuntAttackFightId(body);
+
+        openDwarHuntFight(fightId);
+
+        return { fightId };
       }),
       take(1)
     );

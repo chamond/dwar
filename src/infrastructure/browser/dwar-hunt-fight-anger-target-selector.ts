@@ -14,12 +14,11 @@ export function selectDwarHuntFightAngerTarget(canvasValue: unknown): string | n
   }
 
   const selectedPersId = readPositiveIntegerId(memModel.selectedPers);
+  const targetId = findAngerTargetId(battleModel, memModel, selectedPersId);
 
-  if (selectedPersId) {
-    return selectedPersId;
+  if (targetId === selectedPersId) {
+    return targetId;
   }
-
-  const targetId = findAngerTargetId(battleModel, memModel);
 
   if (!targetId || !dispatchPersSelect(canvas, mem, targetId)) {
     return null;
@@ -30,7 +29,8 @@ export function selectDwarHuntFightAngerTarget(canvasValue: unknown): string | n
 
 function findAngerTargetId(
   battleModel: Record<string, unknown>,
-  memModel: Record<string, unknown>
+  memModel: Record<string, unknown>,
+  preferredTargetId: string | null
 ): string | null {
   const angers = getRecord(battleModel, 'angers');
   const angerBots = getRecord(angers, 'bots');
@@ -47,6 +47,8 @@ function findAngerTargetId(
     return null;
   }
 
+  let firstTargetId: string | null = null;
+
   for (const participantValue of opponentTeam) {
     const participant = asRecord(participantValue);
     const participantId = participant
@@ -60,11 +62,15 @@ function findAngerTargetId(
       && !hasFlag(participant.flags, FLEE_FLAG)
       && readPositiveNumber(angerBots[participantId]) !== null
     ) {
-      return participantId;
+      if (participantId === preferredTargetId) {
+        return participantId;
+      }
+
+      firstTargetId ??= participantId;
     }
   }
 
-  return null;
+  return firstTargetId;
 }
 
 function dispatchPersSelect(

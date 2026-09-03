@@ -1,7 +1,13 @@
 import type { HuntMobAngerRequestInput } from './hunt-mob-anger-request';
 
+export interface DwarHuntFightAngerInputExpectation {
+  expectedFightId: string | null;
+  expectedBotArtikulId: string;
+}
+
 export function readDwarHuntFightAngerInput(
-  canvasValue: unknown
+  canvasValue: unknown,
+  expectation?: DwarHuntFightAngerInputExpectation
 ): HuntMobAngerRequestInput | null {
   const canvas = asRecord(canvasValue);
   const app = getRecord(canvas, 'app');
@@ -18,8 +24,26 @@ export function readDwarHuntFightAngerInput(
   const persId = readPositiveIntegerId(memModel.myId);
   const botArtikulId = readPositiveIntegerId(memModel.selectedPers);
 
+  if (
+    (expectation?.expectedFightId && fightId !== expectation.expectedFightId)
+    || (expectation && botArtikulId !== expectation.expectedBotArtikulId)
+  ) {
+    return null;
+  }
+
   return fightId && persId && botArtikulId
     ? { fightId, persId, botArtikulId }
+    : null;
+}
+
+export function readDwarHuntFightId(canvasValue: unknown): string | null {
+  const canvas = asRecord(canvasValue);
+  const app = getRecord(canvas, 'app');
+  const battle = getRecord(app, 'battle');
+  const battleModel = getRecord(battle, 'model');
+
+  return battleModel
+    ? readPositiveIntegerId(battleModel.fightId)
     : null;
 }
 

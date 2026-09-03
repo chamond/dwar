@@ -113,7 +113,7 @@ export class AttackHuntMobUseCase {
 
           return this.attacker.attack(selectedMob).pipe(
             take(1),
-            switchMap(() => {
+            switchMap((attackResult) => {
               const fightLifecycle = createHuntFightLifecycle(
                 this.fightFinishedReader.observe()
               );
@@ -128,7 +128,9 @@ export class AttackHuntMobUseCase {
                 }),
                 input.angerMob
                   ? fightLifecycle.cancelAngerWhenFightFinishes(
-                      this.angerSender.send()
+                      this.angerSender.send({
+                        expectedFightId: attackResult.fightId
+                      })
                     )
                   : EMPTY
               );
