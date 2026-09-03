@@ -31,6 +31,7 @@ import {
   selectSafestResourceForMining,
   type ResourceMiningSafety
 } from '../../domain/services/resource-mining-safety';
+import { HuntResourceFailureTracker } from '../../domain/services/hunt-resource-failure-tracker';
 import { isHuntMinigameRequiredError } from '../errors/hunt-minigame-required-error';
 import { isUnexpectedServerResponseError } from '../errors/unexpected-server-response-error';
 import type { Clock } from '../ports/clock';
@@ -39,7 +40,6 @@ import type { Delay } from '../ports/delay';
 import type { GetAreaId } from '../ports/get-area-id';
 import type { HuntResourceFarmer } from '../ports/hunt-resource-farmer';
 import type { HuntResourceFarmInterrupter } from '../ports/hunt-resource-farm-interrupter';
-import type { HuntResourceCandidateFilter } from '../ports/hunt-resource-candidate-filter';
 import type { HuntZoneScanner } from '../ports/hunt-zone-scanner';
 import type { HuntZoneScanStore } from '../ports/hunt-zone-scan-store';
 import type { ResourceRepository } from '../ports/resource-repository';
@@ -70,10 +70,10 @@ type FarmStartResult =
 
 export class RunResourceMiningUseCase {
   private readonly config: ResourceMiningConfig;
+  private readonly resourceFailureTracker = new HuntResourceFailureTracker();
 
   constructor(
     private readonly scanner: HuntZoneScanner,
-    private readonly resourceCandidateFilter: HuntResourceCandidateFilter,
     private readonly resourceRepository: ResourceRepository,
     private readonly scanStore: HuntZoneScanStore,
     private readonly farmer: HuntResourceFarmer,
@@ -139,17 +139,16 @@ export class RunResourceMiningUseCase {
       this.scanAndStore(areaId).pipe(
         switchMap((scan) => {
           const selectedResources = scan.getResourcesByArticleIds(selectedArticleIds);
-          const canvasResources = this.resourceCandidateFilter.filter(selectedResources);
-          const selection = selectSafestResourceForMining(canvasResources, scan.getMobs(), {
+          const collectableResources = selectedResources.filter((resource) => {
+            return !this.resourceFailureTracker.isBlocked(resource);
+          });
+          const selection = selectSafestResourceForMining(collectableResources, scan.getMobs(), {
             dangerRadius: this.config.dangerRadius
           });
           const scanCompletedEvent: ResourceMiningEvent = {
             type: 'scan-completed',
             totalMobCount: scan.getMobs().length,
             dangerousMobCount: scan.getMobs().filter(isMobDangerousForMining).length,
-            serverResourceCount: selectedResources.filter((resource) => {
-              return !resource.isBeingFarmed();
-            }).length,
             selectedResourceCount: selection.candidateCount,
             safeResourceCount: selection.safeCandidateCount
           };
@@ -303,6 +302,8 @@ export class RunResourceMiningUseCase {
                   }
 
                   if (!currentResource.isBeingFarmed()) {
+                    this.resourceFailureTracker.recordFailure(currentResource);
+
                     const scanCompletedEvent: ResourceMiningEvent = {
                       type: 'monitoring-scan-completed',
                       resource: createResourceInfo(resource),
@@ -383,6 +384,7 @@ export class RunResourceMiningUseCase {
     }).pipe(
       tap((scan) => {
         this.scanStore.save(scan);
+        this.resourceFailureTracker.synchronizeVisibleResources(scan.getResources());
       }),
       take(1)
     );

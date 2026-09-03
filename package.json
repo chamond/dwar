@@ -15,7 +15,7 @@
     "test:minigame-recognizer": "node --test tests/minigame-fragment-recognizer.test.mjs tests/minigame-image-recognition.test.mjs",
     "test:exchange-monitoring": "node --test tests/exchange-monitoring-domain.test.mjs",
     "test:hunting": "node --test tests/hunt-mob-attack-selection.test.mjs",
-    "test:mining": "node --test tests/hunt-resource-canvas-filter.test.mjs",
+    "test:mining": "node --test tests/hunt-resource-failure-tracker.test.mjs",
     "minigame:matrices": "node scripts/minigame-fragment-matrices.mjs",
     "minigame:recognize": "node scripts/minigame-fragment-recognizer.mjs"
   },

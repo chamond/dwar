@@ -26,7 +26,6 @@ import { BrowserHuntMobAttacker } from './infrastructure/browser/browser-hunt-mo
 import { BrowserHuntMobAngerSender } from './infrastructure/browser/browser-hunt-mob-anger-sender';
 import { BrowserHuntResourceFarmCancellationSender } from './infrastructure/browser/browser-hunt-resource-farm-cancellation-sender';
 import { BrowserHuntResourceFarmInterrupter } from './infrastructure/browser/browser-hunt-resource-farm-interrupter';
-import { BrowserHuntResourceCandidateFilter } from './infrastructure/browser/browser-hunt-resource-candidate-filter';
 import { BrowserHuntZoneScanner } from './infrastructure/browser/browser-hunt-zone-scanner';
 import { BrowserMainChatHtmlReader } from './infrastructure/browser/browser-main-chat-html-reader';
 import { BrowserDelay } from './infrastructure/browser/browser-delay';
@@ -138,7 +137,6 @@ function bootstrap(): void {
   );
   const runResourceMining = new RunResourceMiningUseCase(
     huntZoneScanner,
-    new BrowserHuntResourceCandidateFilter(),
     resourceRepository,
     huntZoneScanStore,
     huntResourceFarmer,
