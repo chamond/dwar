@@ -50,7 +50,7 @@ export class RunHuntMobAttacksUseCase {
           targetIds: input.targetIds,
           preferCrowdedTarget: input.preferCrowdedTarget,
           aggressiveHunting: input.aggressiveHunting,
-          angerMob: input.targetIds.length === 1 && input.angerMob,
+          angerMob: input.angerMob,
           excludedMobIds: this.lastAttackedMobId === null
             ? new Set<string>()
             : new Set([this.lastAttackedMobId])

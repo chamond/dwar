@@ -737,6 +737,22 @@ export const BOT_WIDGET_STYLES = `
     white-space: nowrap;
   }
 
+  .dwar-hunt-target-option__anger {
+    display: block;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    margin-left: auto;
+    color: #ff6e4a;
+    filter: drop-shadow(0 0 4px rgba(255, 110, 74, .42));
+  }
+
+  .dwar-hunt-target-option__anger svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
   .dwar-hunt-target-picker__empty {
     padding: 9px 7px;
     color: #7f8ca1;

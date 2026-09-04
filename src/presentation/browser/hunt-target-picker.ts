@@ -2,6 +2,11 @@ import type {
   BotHuntTargetId,
   BotHuntTargetSnapshot
 } from '../../domain/entities/bot-hunt-target';
+import {
+  normalizeHuntTargetSelection,
+  updateOrderedSelection
+} from '../../domain/services/hunt-target-selection';
+import { getAngerIcon } from './anger-icon';
 
 interface HuntTargetOptionElements {
   option: HTMLLabelElement;
@@ -19,6 +24,7 @@ export interface HuntTargetPickerElements {
 }
 
 export interface HuntTargetPickerOptions {
+  selectedTargetIds?: readonly BotHuntTargetId[] | null | undefined;
   onSelectionChange?: ((targetIds: readonly BotHuntTargetId[]) => void) | undefined;
 }
 
@@ -48,9 +54,10 @@ export function createHuntTargetPicker(
   menu.setAttribute('aria-multiselectable', 'true');
   menu.hidden = true;
 
-  let selectedTargetIds: readonly BotHuntTargetId[] = targets[0]
-    ? [targets[0].id]
-    : [];
+  let selectedTargetIds = normalizeHuntTargetSelection(
+    targets.map(({ id }) => id),
+    options.selectedTargetIds
+  );
   const targetOptions = new Map<BotHuntTargetId, HuntTargetOptionElements>();
 
   for (const [level, levelTargets] of groupTargetsByLevel(targets)) {
@@ -148,20 +155,6 @@ export function createHuntTargetPicker(
   };
 }
 
-export function updateOrderedSelection<TId extends string>(
-  selectedIds: readonly TId[],
-  changedId: TId,
-  isSelected: boolean
-): readonly TId[] {
-  if (isSelected) {
-    return selectedIds.includes(changedId)
-      ? [...selectedIds]
-      : [...selectedIds, changedId];
-  }
-
-  return selectedIds.filter((selectedId) => selectedId !== changedId);
-}
-
 function createToggleButton(): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
@@ -200,6 +193,16 @@ function createTargetOption(target: BotHuntTargetSnapshot): HuntTargetOptionElem
   name.textContent = `${target.name}[${target.level}]`;
 
   option.append(input, order, name);
+
+  if (target.canBeAngered) {
+    const angerIndicator = document.createElement('span');
+    angerIndicator.className = 'dwar-hunt-target-option__anger';
+    angerIndicator.title = 'Можно злить в бою';
+    angerIndicator.setAttribute('role', 'img');
+    angerIndicator.setAttribute('aria-label', 'Можно злить в бою');
+    angerIndicator.innerHTML = getAngerIcon();
+    option.append(angerIndicator);
+  }
 
   return {
     option,

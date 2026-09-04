@@ -14,6 +14,7 @@ import { createHuntFightLifecycle } from '../services/hunt-fight-lifecycle';
 import type { BotHuntTargetId } from '../../domain/entities/bot-hunt-target';
 import type { HuntMob } from '../../domain/entities/hunt-mob';
 import { getMobAggressionProfile } from '../../domain/services/mob-aggression';
+import { canAngerHuntMob } from '../../domain/services/hunt-mob-anger-availability';
 import { selectHuntMobForAttack } from '../../domain/services/hunt-mob-attack-selection';
 import type { FightFinishedReader } from '../ports/fight-finished-reader';
 import type { GetAreaId } from '../ports/get-area-id';
@@ -75,15 +76,16 @@ export class AttackHuntMobUseCase {
         throw new Error('Selected hunt targets are not known by the bot.');
       }
 
-      const targetArticleIds = input.targetIds.map((targetId) => {
+      const targets = input.targetIds.map((targetId) => {
         const target = this.huntTargetRepository.findById(targetId);
 
         if (!target) {
           throw new Error('Selected hunt targets are not known by the bot.');
         }
 
-        return target.getArticleId();
+        return target;
       });
+      const targetArticleIds = targets.map((target) => target.getArticleId());
 
       return this.taskScheduler.schedule(() => this.getAreaId().pipe(
         take(1),
@@ -126,7 +128,7 @@ export class AttackHuntMobUseCase {
                   },
                   fightFinished: fightLifecycle.fightFinished
                 }),
-                input.angerMob
+                input.angerMob && canAngerHuntMob(selectedMob, targets)
                   ? fightLifecycle.cancelAngerWhenFightFinishes(
                       this.angerSender.send({
                         expectedFightId: attackResult.fightId

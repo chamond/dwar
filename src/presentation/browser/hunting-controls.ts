@@ -2,6 +2,7 @@ import type {
   BotHuntTargetId,
   BotHuntTargetSnapshot
 } from '../../domain/entities/bot-hunt-target';
+import type { HuntingSettings } from '../../application/ports/hunting-settings-store';
 import { createCheckboxOption } from './checkbox-option';
 import {
   createHuntTargetPicker,
@@ -17,10 +18,17 @@ export interface HuntingControlsElements {
   aggressiveHuntingCheckbox: HTMLInputElement;
   angerMobCheckbox: HTMLInputElement;
   getSelectedTargetIds(): readonly BotHuntTargetId[];
+  getSettings(): HuntingSettings;
+}
+
+export interface HuntingControlsOptions {
+  initialSettings?: HuntingSettings | null | undefined;
+  onSettingsChange?: ((settings: HuntingSettings) => void) | undefined;
 }
 
 export function createHuntingControls(
-  targets: readonly BotHuntTargetSnapshot[]
+  targets: readonly BotHuntTargetSnapshot[],
+  options: HuntingControlsOptions = {}
 ): HuntingControlsElements {
   const root = document.createElement('div');
   root.className = 'dwar-panel__controls dwar-hunting-controls';
@@ -48,34 +56,45 @@ export function createHuntingControls(
 
   const crowdingOption = createCheckboxOption({
     text: 'Выбирать кучного моба',
-    title: 'Выбирать цель с минимальным расстоянием до ближайшего моба того же вида'
+    title: 'Выбирать цель с минимальным расстоянием до ближайшего моба того же вида',
+    initialChecked: options.initialSettings?.preferCrowdedTarget
   });
   const aggressiveHuntingOption = createCheckboxOption({
     text: 'Агрессивная охота',
-    title: 'Не учитывать расстояние до соседних мобов при проверке безопасности'
+    title: 'Не учитывать расстояние до соседних мобов при проверке безопасности',
+    initialChecked: options.initialSettings?.aggressiveHunting
   });
   const angerOption = createCheckboxOption({
     text: 'Злить моба',
-    title: 'После нападения автоматически злить выбранного моба в текущем бою'
+    title: 'После нападения автоматически злить моба, если это доступно для его разновидности',
+    initialChecked: options.initialSettings?.angerMob
   });
-  const updateSelectionDependentControls = (
+  const updateTargetSelectionState = (
     selectedTargetIds: readonly BotHuntTargetId[]
   ): void => {
     actionButton.disabled = selectedTargetIds.length === 0;
-
-    if (selectedTargetIds.length > 1) {
-      angerOption.checkbox.checked = false;
-      angerOption.checkbox.disabled = true;
-      angerOption.label.title = 'Злость недоступна при выборе нескольких мобов';
-      return;
-    }
-
-    angerOption.checkbox.disabled = false;
-    angerOption.label.title = 'После нападения автоматически злить выбранного моба в текущем бою';
+  };
+  const notifySettingsChange = (targetIds: readonly BotHuntTargetId[]): void => {
+    options.onSettingsChange?.({
+      targetIds,
+      preferCrowdedTarget: crowdingOption.checkbox.checked,
+      aggressiveHunting: aggressiveHuntingOption.checkbox.checked,
+      angerMob: angerOption.checkbox.checked
+    });
   };
   const targetPicker = createHuntTargetPicker(targets, {
-    onSelectionChange: updateSelectionDependentControls
+    selectedTargetIds: options.initialSettings?.targetIds,
+    onSelectionChange: (targetIds) => {
+      updateTargetSelectionState(targetIds);
+      notifySettingsChange(targetIds);
+    }
   });
+  const notifyCurrentSettingsChange = (): void => {
+    notifySettingsChange(targetPicker.getSelectedTargetIds());
+  };
+  crowdingOption.checkbox.addEventListener('change', notifyCurrentSettingsChange);
+  aggressiveHuntingOption.checkbox.addEventListener('change', notifyCurrentSettingsChange);
+  angerOption.checkbox.addEventListener('change', notifyCurrentSettingsChange);
   const selectorGroup = document.createElement('div');
   selectorGroup.className = 'dwar-panel__selectors dwar-hunting-controls__settings';
   selectorGroup.append(
@@ -86,7 +105,7 @@ export function createHuntingControls(
   );
   root.append(actionGroup, selectorGroup);
 
-  updateSelectionDependentControls(targetPicker.getSelectedTargetIds());
+  updateTargetSelectionState(targetPicker.getSelectedTargetIds());
 
   return {
     root,
@@ -98,6 +117,14 @@ export function createHuntingControls(
     angerMobCheckbox: angerOption.checkbox,
     getSelectedTargetIds(): readonly BotHuntTargetId[] {
       return targetPicker.getSelectedTargetIds();
+    },
+    getSettings(): HuntingSettings {
+      return {
+        targetIds: targetPicker.getSelectedTargetIds(),
+        preferCrowdedTarget: crowdingOption.checkbox.checked,
+        aggressiveHunting: aggressiveHuntingOption.checkbox.checked,
+        angerMob: angerOption.checkbox.checked
+      };
     }
   };
 }

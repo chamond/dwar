@@ -2,6 +2,7 @@ import type { HuntMinigameImageDownloader } from '../../application/ports/hunt-m
 import type { HuntMinigameRecognizer } from '../../application/ports/hunt-minigame-recognizer';
 import type { LauncherPositionStore } from '../../application/ports/launcher-position-store';
 import type { ExchangeMonitoringSettingsStore } from '../../application/ports/exchange-monitoring-settings-store';
+import type { HuntingSettingsStore } from '../../application/ports/hunting-settings-store';
 import type { PanelPositionStore } from '../../application/ports/panel-position-store';
 import type { PanelSizeStore } from '../../application/ports/panel-size-store';
 import type { ProfessionRecipeSelectionStore } from '../../application/ports/profession-recipe-selection-store';
@@ -50,6 +51,7 @@ export interface BotWidgetDependencies {
   listHuntTargets: ListHuntTargetsUseCase;
   huntMinigameImageDownloader: HuntMinigameImageDownloader;
   huntMinigameRecognizer: HuntMinigameRecognizer;
+  huntingSettingsStore: HuntingSettingsStore;
   launcherPositionStore: LauncherPositionStore;
   monitorExchangeRule: MonitorExchangeRuleUseCase;
   panelPositionStore: PanelPositionStore;
@@ -345,6 +347,10 @@ function createPanel(
     selectedRecipeIds: dependencies.professionRecipeSelectionStore.load(),
     onRecipeSelectionChange: (selectedRecipes) => {
       dependencies.professionRecipeSelectionStore.save(selectedRecipes.map(({ id }) => id));
+    },
+    huntingSettings: dependencies.huntingSettingsStore.load(),
+    onHuntingSettingsChange: (settings) => {
+      dependencies.huntingSettingsStore.save(settings);
     },
     onSoundVolumeChange
   });

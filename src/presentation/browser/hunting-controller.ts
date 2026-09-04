@@ -35,8 +35,7 @@ export function createHuntingController(
     options.controls.targetPicker.setDisabled(isRunning);
     options.controls.preferCrowdedTargetCheckbox.disabled = isRunning;
     options.controls.aggressiveHuntingCheckbox.disabled = isRunning;
-    options.controls.angerMobCheckbox.disabled = isRunning
-      || options.controls.getSelectedTargetIds().length > 1;
+    options.controls.angerMobCheckbox.disabled = isRunning;
     options.controls.restartButton.disabled = !isRunning;
     options.controls.actionButton.classList.toggle('is-active', isRunning && !isStopping);
     options.controls.actionButton.classList.toggle('is-busy', isStopping);
@@ -62,7 +61,8 @@ export function createHuntingController(
       return;
     }
 
-    const targetIds = options.controls.getSelectedTargetIds();
+    const settings = options.controls.getSettings();
+    const targetIds = settings.targetIds;
 
     if (targetIds.length === 0) {
       options.addLog('Не выбраны целевые мобы.', {
@@ -84,9 +84,9 @@ export function createHuntingController(
 
     const subscription = options.runHuntMobAttacks.execute({
       targetIds,
-      preferCrowdedTarget: options.controls.preferCrowdedTargetCheckbox.checked,
-      aggressiveHunting: options.controls.aggressiveHuntingCheckbox.checked,
-      angerMob: options.controls.angerMobCheckbox.checked,
+      preferCrowdedTarget: settings.preferCrowdedTarget,
+      aggressiveHunting: settings.aggressiveHunting,
+      angerMob: settings.angerMob,
       ...(fightToResume ? { activeFight: fightToResume } : {})
     }).pipe(
       tap((event) => {

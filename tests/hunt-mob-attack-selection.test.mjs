@@ -7,6 +7,7 @@ import { transformSync } from '@swc/core';
 import { Observable, Subject } from 'rxjs';
 
 const runtimeRequire = createRequire(import.meta.url);
+const commonJsModuleCache = new Map();
 
 const loadTypeScriptModule = async (relativePath) => {
   const source = readFileSync(path.resolve(relativePath), 'utf8');
@@ -27,7 +28,14 @@ const loadTypeScriptModule = async (relativePath) => {
 };
 
 const loadCommonJsTypeScriptModule = (relativePath) => {
-  const source = readFileSync(path.resolve(relativePath), 'utf8');
+  const absolutePath = path.resolve(relativePath);
+  const cachedModule = commonJsModuleCache.get(absolutePath);
+
+  if (cachedModule) {
+    return cachedModule.exports;
+  }
+
+  const source = readFileSync(absolutePath, 'utf8');
   const compiledSource = transformSync(source, {
     jsc: {
       parser: {
@@ -40,9 +48,24 @@ const loadCommonJsTypeScriptModule = (relativePath) => {
     }
   }).code;
   const loadedModule = { exports: {} };
+  commonJsModuleCache.set(absolutePath, loadedModule);
+  const localRequire = (specifier) => {
+    if (!specifier.startsWith('.')) {
+      return runtimeRequire(specifier);
+    }
+
+    const resolvedPath = path.resolve(path.dirname(absolutePath), specifier);
+    const typescriptPath = resolvedPath.endsWith('.js')
+      ? `${resolvedPath.slice(0, -3)}.ts`
+      : resolvedPath.endsWith('.ts')
+        ? resolvedPath
+        : `${resolvedPath}.ts`;
+
+    return loadCommonJsTypeScriptModule(typescriptPath);
+  };
 
   Function('require', 'module', 'exports', compiledSource)(
-    runtimeRequire,
+    localRequire,
     loadedModule,
     loadedModule.exports
   );
@@ -53,8 +76,14 @@ const loadCommonJsTypeScriptModule = (relativePath) => {
 const { selectHuntMobForAttack } = await loadTypeScriptModule(
   'src/domain/services/hunt-mob-attack-selection.ts'
 );
-const { updateOrderedSelection } = await loadTypeScriptModule(
-  'src/presentation/browser/hunt-target-picker.ts'
+const { canAngerHuntMob } = await loadTypeScriptModule(
+  'src/domain/services/hunt-mob-anger-availability.ts'
+);
+const {
+  normalizeHuntTargetSelection,
+  updateOrderedSelection
+} = await loadTypeScriptModule(
+  'src/domain/services/hunt-target-selection.ts'
 );
 const {
   isDwarHuntAttackMinigameResponse,
@@ -80,6 +109,12 @@ const { selectDwarHuntFightAngerTarget } = await loadTypeScriptModule(
 );
 const { createHuntFightLifecycle } = loadCommonJsTypeScriptModule(
   'src/application/services/hunt-fight-lifecycle.ts'
+);
+const { LocalStorageHuntingSettingsStore } = loadCommonJsTypeScriptModule(
+  'src/infrastructure/browser/local-storage-hunting-settings-store.ts'
+);
+const { StaticHuntTargetRepository } = loadCommonJsTypeScriptModule(
+  'src/infrastructure/local-data/static-hunt-target-repository.ts'
 );
 
 test('не выбирает предыдущего моба и не учитывает его в кучности', () => {
@@ -210,6 +245,70 @@ test('последовательные снятия сохраняют поря�
   selectedIds = updateOrderedSelection(selectedIds, 'zigred', false);
   selectedIds = updateOrderedSelection(selectedIds, 'mad-dog', false);
   assert.deepEqual(selectedIds, []);
+});
+
+test('восстанавливает сохранённый порядок целей и сохраняет пустой выбор', () => {
+  const availableIds = ['mad-dog', 'rabid-dog', 'warrior-skeleton'];
+
+  assert.deepEqual(
+    normalizeHuntTargetSelection(
+      availableIds,
+      ['warrior-skeleton', 'rabid-dog']
+    ),
+    ['warrior-skeleton', 'rabid-dog']
+  );
+  assert.deepEqual(normalizeHuntTargetSelection(availableIds, []), []);
+  assert.deepEqual(normalizeHuntTargetSelection(availableIds, null), ['mad-dog']);
+});
+
+test('разрешает злость только для отмеченной в справочнике разновидности', () => {
+  const targets = [
+    createTarget(268, false),
+    createTarget(20, true)
+  ];
+
+  assert.equal(canAngerHuntMob(createMob('10', 10, 20), targets), true);
+  assert.equal(canAngerHuntMob(createMob('20', 10, 268), targets), false);
+});
+
+test('в справочнике злость доступна только бешеному псу и скелету-воину', () => {
+  const angerableTargetIds = new StaticHuntTargetRepository()
+    .findAll()
+    .filter((target) => target.canBeAngered())
+    .map((target) => target.getId());
+
+  assert.deepEqual(angerableTargetIds, ['rabid-dog', 'warrior-skeleton']);
+});
+
+test('сохраняет порядок целей и все настройки охоты в localStorage', () => {
+  const values = new Map();
+  const originalWindow = globalThis.window;
+  globalThis.window = {
+    localStorage: {
+      getItem: (key) => values.get(key) ?? null,
+      setItem: (key, value) => values.set(key, value)
+    }
+  };
+
+  try {
+    const store = new LocalStorageHuntingSettingsStore();
+    const settings = {
+      targetIds: ['warrior-skeleton', 'rabid-dog'],
+      preferCrowdedTarget: true,
+      aggressiveHunting: true,
+      angerMob: true
+    };
+
+    store.save(settings);
+
+    assert.deepEqual(store.load(), settings);
+  } finally {
+    if (originalWindow === undefined) {
+      delete globalThis.window;
+    } else {
+      globalThis.window = originalWindow;
+    }
+  }
 });
 
 test('принимает ответ нападения только с redirect_error=false', () => {
@@ -514,5 +613,12 @@ function createMob(id, x, articleId = 268, level = 1) {
     getPosition: () => position,
     isAvailableForAttack: () => true,
     isFriendly: () => false
+  };
+}
+
+function createTarget(articleId, canBeAngered) {
+  return {
+    getArticleId: () => articleId,
+    canBeAngered: () => canBeAngered
   };
 }

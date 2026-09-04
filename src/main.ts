@@ -41,6 +41,7 @@ import { DwarSplinterHealerMessageParser } from './infrastructure/browser/dwar-s
 import { getAreaId } from './infrastructure/browser/get-area-id';
 import { LocalStorageLauncherPositionStore } from './infrastructure/browser/local-storage-launcher-position-store';
 import { LocalStorageExchangeMonitoringSettingsStore } from './infrastructure/browser/local-storage-exchange-monitoring-settings-store';
+import { LocalStorageHuntingSettingsStore } from './infrastructure/browser/local-storage-hunting-settings-store';
 import { LocalStoragePanelPositionStore } from './infrastructure/browser/local-storage-panel-position-store';
 import { LocalStoragePanelSizeStore } from './infrastructure/browser/local-storage-panel-size-store';
 import { LocalStorageProfessionRecipeSelectionStore } from './infrastructure/browser/local-storage-profession-recipe-selection-store';
@@ -91,6 +92,7 @@ function bootstrap(): void {
   const panelSizeStore = new LocalStoragePanelSizeStore();
   const resourceSelectionStore = new LocalStorageResourceSelectionStore();
   const professionRecipeSelectionStore = new LocalStorageProfessionRecipeSelectionStore();
+  const huntingSettingsStore = new LocalStorageHuntingSettingsStore();
   const exchangeMonitoringSettingsStore = new LocalStorageExchangeMonitoringSettingsStore();
   const mainChatHtmlReader = new BrowserMainChatHtmlReader();
   const thankSplinterHealer = new ThankSplinterHealerUseCase(
@@ -160,6 +162,7 @@ function bootstrap(): void {
     forceStopResourceMining,
     huntMinigameImageDownloader,
     huntMinigameRecognizer,
+    huntingSettingsStore,
     listProfessionRecipes,
     listResources,
     listHuntTargets,

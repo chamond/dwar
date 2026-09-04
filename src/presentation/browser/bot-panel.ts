@@ -1,6 +1,7 @@
 import type { BotResourceId, BotResourceSnapshot } from '../../domain/entities/bot-resource';
 import type { BotHuntTargetSnapshot } from '../../domain/entities/bot-hunt-target';
 import type { ProfessionRecipeId, ProfessionRecipeSnapshot } from '../../domain/entities/profession-recipe';
+import type { HuntingSettings } from '../../application/ports/hunting-settings-store';
 import { createCheckboxOption } from './checkbox-option';
 import {
   createExchangeMonitoringTab,
@@ -86,6 +87,8 @@ export interface BotPanelOptions {
   onResourceSelectionChange?: ((resources: readonly BotResourceSnapshot[]) => void) | undefined;
   selectedRecipeIds?: readonly ProfessionRecipeId[] | null | undefined;
   onRecipeSelectionChange?: ((recipes: readonly ProfessionRecipeSnapshot[]) => void) | undefined;
+  huntingSettings?: HuntingSettings | null | undefined;
+  onHuntingSettingsChange?: ((settings: HuntingSettings) => void) | undefined;
   onSoundVolumeChange?: ((volume: number) => void) | undefined;
 }
 
@@ -104,7 +107,7 @@ export function createBotPanel(
   });
   const headerElements = createPanelHeader(volumeControl.root);
   const miningTab = createMiningTab(resources, options);
-  const huntingTab = createHuntingTab(huntTargets);
+  const huntingTab = createHuntingTab(huntTargets, options);
   const craftingTab = createCraftingTab(recipes, options);
   const exchangeMonitoringTab = createExchangeMonitoringTab();
   const tabs = createTabs<BotPanelTabId>([
@@ -258,10 +261,14 @@ function createSplinterHelpButton(): HTMLButtonElement {
 }
 
 function createHuntingTab(
-  targets: readonly BotHuntTargetSnapshot[]
+  targets: readonly BotHuntTargetSnapshot[],
+  options: BotPanelOptions
 ): HuntingTabElements {
   const root = document.createElement('div');
-  const controls = createHuntingControls(targets);
+  const controls = createHuntingControls(targets, {
+    initialSettings: options.huntingSettings,
+    onSettingsChange: options.onHuntingSettingsChange
+  });
   const logSection = createLogSection('Лог охоты');
   root.append(controls.root, logSection.root);
 
