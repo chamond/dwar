@@ -271,13 +271,18 @@ test('разрешает злость только для отмеченной �
   assert.equal(canAngerHuntMob(createMob('20', 10, 268), targets), false);
 });
 
-test('в справочнике злость доступна только бешеному псу и скелету-воину', () => {
+test('в справочнике злость доступна только поддерживаемым разновидностям', () => {
   const angerableTargetIds = new StaticHuntTargetRepository()
     .findAll()
     .filter((target) => target.canBeAngered())
     .map((target) => target.getId());
 
-  assert.deepEqual(angerableTargetIds, ['rabid-dog', 'warrior-skeleton']);
+  assert.deepEqual(angerableTargetIds, [
+    'rabid-dog',
+    'warrior-skeleton',
+    'demon-dog',
+    'young-treant'
+  ]);
 });
 
 test('сохраняет порядок целей и все настройки охоты в localStorage', () => {

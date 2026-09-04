@@ -88,7 +88,7 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     name: 'Пёс-демон',
     level: 3,
     articleId: 23,
-    canBeAngered: false
+    canBeAngered: true
   },
   {
     id: 'fire-spideress',
@@ -123,7 +123,7 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     name: 'Древень молодой',
     level: 4,
     articleId: 349,
-    canBeAngered: false
+    canBeAngered: true
   },
   {
     id: 'krogan',
