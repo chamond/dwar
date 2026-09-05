@@ -16,6 +16,10 @@ export type HuntAttackEvent =
       mob: HuntAttackMobInfo;
     }
   | {
+      type: 'anger-applied';
+      mob: HuntAttackMobInfo;
+    }
+  | {
       type: 'fight-finished';
       mob: HuntAttackMobInfo;
     };

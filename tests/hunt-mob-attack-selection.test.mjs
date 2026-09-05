@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import test from 'node:test';
 import { transformSync } from '@swc/core';
-import { Observable, Subject } from 'rxjs';
+import { Observable, Subject, of } from 'rxjs';
 
 const runtimeRequire = createRequire(import.meta.url);
 const commonJsModuleCache = new Map();
@@ -109,6 +109,12 @@ const { selectDwarHuntFightAngerTarget } = await loadTypeScriptModule(
 );
 const { createHuntFightLifecycle } = loadCommonJsTypeScriptModule(
   'src/application/services/hunt-fight-lifecycle.ts'
+);
+const { AttackHuntMobUseCase } = loadCommonJsTypeScriptModule(
+  'src/application/use-cases/attack-hunt-mob.ts'
+);
+const { presentHuntAttackEvent } = loadCommonJsTypeScriptModule(
+  'src/presentation/browser/hunt-attack-event-presenter.ts'
 );
 const { LocalStorageHuntingSettingsStore } = loadCommonJsTypeScriptModule(
   'src/infrastructure/browser/local-storage-hunting-settings-store.ts'
@@ -603,6 +609,100 @@ test('завершение боя отменяет незавершённую з
   assert.equal(angerSubscription.closed, true);
 });
 
+test('после успешной злости публикует событие до завершения боя', () => {
+  const fightFinishedSignal = new Subject();
+  const mob = createMob('10', 20, 20, 2);
+  const events = [];
+  let completed = false;
+  const useCase = new AttackHuntMobUseCase(
+    {
+      scan: () => of({
+        getMobs: () => [mob]
+      })
+    },
+    {
+      save: () => undefined
+    },
+    {
+      findById: () => createTarget(20, true)
+    },
+    {
+      attack: () => of({ fightId: '87457906001232' })
+    },
+    {
+      send: () => of(undefined)
+    },
+    {
+      observe: () => fightFinishedSignal
+    },
+    () => of(1),
+    {
+      schedule: (task) => task()
+    }
+  );
+
+  useCase.execute({
+    targetIds: ['mad-dog'],
+    preferCrowdedTarget: false,
+    aggressiveHunting: false,
+    angerMob: true,
+    excludedMobIds: new Set()
+  }).subscribe({
+    next: (event) => events.push(event),
+    complete: () => {
+      completed = true;
+    }
+  });
+
+  assert.deepEqual(events.map((event) => event.type), [
+    'attack-request-sent',
+    'anger-applied'
+  ]);
+  assert.equal(completed, false);
+
+  fightFinishedSignal.next();
+
+  assert.deepEqual(events.map((event) => event.type), [
+    'attack-request-sent',
+    'anger-applied',
+    'fight-finished'
+  ]);
+  assert.equal(completed, true);
+});
+
+test('оформляет успешное применение злости в лог охоты', () => {
+  const calls = [];
+
+  presentHuntAttackEvent({
+    type: 'anger-applied',
+    mob: {
+      id: '10',
+      name: 'Бешеный пёс',
+      level: 2,
+      aggressionLevel: 1,
+      aggressionColor: '#abcdef'
+    }
+  }, (...args) => {
+    calls.push(args);
+  });
+
+  assert.deepEqual(calls, [[
+    'Злость успешно применена. Цель: Бешеный пёс[2].',
+    {
+      parts: [
+        'Злость успешно применена. Цель: ',
+        {
+          text: 'Бешеный пёс[2]',
+          color: '#abcdef',
+          title: 'Агрессия 1'
+        },
+        '.'
+      ],
+      tone: 'success'
+    }
+  ]]);
+});
+
 function createMob(id, x, articleId = 268, level = 1) {
   const position = {
     x,
@@ -615,6 +715,8 @@ function createMob(id, x, articleId = 268, level = 1) {
     getArticleId: () => articleId,
     getId: () => id,
     getLevel: () => level,
+    getName: () => 'Бешеный пёс',
+    getAggressionLevel: () => 1,
     getPosition: () => position,
     isAvailableForAttack: () => true,
     isFriendly: () => false

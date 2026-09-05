@@ -35,6 +35,20 @@ export function presentHuntAttackEvent(
       );
       return;
 
+    case 'anger-applied':
+      addLog(
+        `Злость успешно применена. Цель: ${formatMobLabel(event.mob)}.`,
+        {
+          parts: [
+            'Злость успешно применена. Цель: ',
+            createMobLogPart(event.mob),
+            '.'
+          ],
+          tone: 'success'
+        }
+      );
+      return;
+
     case 'fight-finished':
       addLog(
         `Бой после нападения на ${formatMobLabel(event.mob)} завершён.`,

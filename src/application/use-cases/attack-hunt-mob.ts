@@ -3,6 +3,7 @@ import {
   concat,
   defer,
   map,
+  mergeMap,
   of,
   switchMap,
   take,
@@ -41,10 +42,11 @@ export interface AttackHuntMobConfig {
 
 type NoSafeTargetEvent = Extract<HuntAttackEvent, { type: 'no-safe-target' }>;
 type AttackRequestSentEvent = Extract<HuntAttackEvent, { type: 'attack-request-sent' }>;
+type AngerAppliedEvent = Extract<HuntAttackEvent, { type: 'anger-applied' }>;
 
 type HuntAttackTaskResult =
   | {
-      event: NoSafeTargetEvent;
+      event: NoSafeTargetEvent | AngerAppliedEvent;
     }
   | {
       event: AttackRequestSentEvent;
@@ -133,6 +135,13 @@ export class AttackHuntMobUseCase {
                       this.angerSender.send({
                         expectedFightId: attackResult.fightId
                       })
+                    ).pipe(
+                      map((): HuntAttackTaskResult => ({
+                        event: {
+                          type: 'anger-applied',
+                          mob: mobInfo
+                        }
+                      }))
                     )
                   : EMPTY
               );
@@ -140,7 +149,7 @@ export class AttackHuntMobUseCase {
           );
         })
       )).pipe(
-        switchMap((result): Observable<HuntAttackEvent> => {
+        mergeMap((result): Observable<HuntAttackEvent> => {
           if (!('fightFinished' in result)) {
             return of(result.event);
           }

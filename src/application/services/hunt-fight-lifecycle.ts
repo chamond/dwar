@@ -1,5 +1,4 @@
 import {
-  ignoreElements,
   share,
   take,
   takeUntil,
@@ -8,7 +7,7 @@ import {
 
 export interface HuntFightLifecycle {
   fightFinished: Observable<void>;
-  cancelAngerWhenFightFinishes(anger: Observable<void>): Observable<never>;
+  cancelAngerWhenFightFinishes(anger: Observable<void>): Observable<void>;
 }
 
 export function createHuntFightLifecycle(
@@ -21,11 +20,10 @@ export function createHuntFightLifecycle(
 
   return {
     fightFinished,
-    cancelAngerWhenFightFinishes(anger: Observable<void>): Observable<never> {
+    cancelAngerWhenFightFinishes(anger: Observable<void>): Observable<void> {
       return anger.pipe(
         take(1),
-        takeUntil(fightFinished),
-        ignoreElements()
+        takeUntil(fightFinished)
       );
     }
   };
