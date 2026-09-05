@@ -67,7 +67,7 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     name: 'Зигред-воин',
     level: 3,
     articleId: 35,
-    canBeAngered: false
+    canBeAngered: true
   },
   {
     id: 'krets-chief',
