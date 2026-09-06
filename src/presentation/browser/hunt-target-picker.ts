@@ -190,7 +190,7 @@ function createTargetOption(target: BotHuntTargetSnapshot): HuntTargetOptionElem
 
   const name = document.createElement('span');
   name.className = 'dwar-hunt-target-option__name';
-  name.textContent = `${target.name}[${target.level}]`;
+  name.textContent = `${target.name}[${target.level ?? '?'}]`;
 
   option.append(input, order, name);
 
