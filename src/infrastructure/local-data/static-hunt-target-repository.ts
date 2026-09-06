@@ -73,7 +73,7 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     id: 'sleeping-warrior',
     name: 'Спящий воин',
     level: null,
-    articleId: [2645, 2646],
+    articleId: [2645, 2646, 2647],
     canBeAngered: false
   },
   {
