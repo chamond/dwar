@@ -741,6 +741,7 @@ function createMob(id, x, articleId = 268, level = 1) {
 function createTarget(articleId, canBeAngered) {
   return {
     getArticleId: () => articleId,
+    getArticleIds: () => [articleId],
     canBeAngered: () => canBeAngered
   };
 }

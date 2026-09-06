@@ -87,7 +87,7 @@ export class AttackHuntMobUseCase {
 
         return target;
       });
-      const targetArticleIds = targets.map((target) => target.getArticleId());
+      const targetArticleIds = targets.flatMap((target) => target.getArticleIds());
 
       return this.taskScheduler.schedule(() => this.getAreaId().pipe(
         take(1),

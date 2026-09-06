@@ -45,7 +45,7 @@ export interface BotHuntTargetProps {
   id: BotHuntTargetId;
   name: string;
   level: number | null;
-  articleId: number;
+  articleId: number | readonly number[];
   canBeAngered: boolean;
 }
 
@@ -53,7 +53,7 @@ export interface BotHuntTargetSnapshot {
   id: BotHuntTargetId;
   name: string;
   level: number | null;
-  articleId: number;
+  articleId: number | readonly number[];
   canBeAngered: boolean;
 }
 
@@ -62,7 +62,7 @@ export class BotHuntTarget {
     private readonly id: BotHuntTargetId,
     private readonly name: string,
     private readonly level: number | null,
-    private readonly articleId: number,
+    private readonly articleIds: readonly number[],
     private readonly angerAvailable: boolean
   ) {}
 
@@ -77,8 +77,14 @@ export class BotHuntTarget {
       throw new Error('Hunt target level must be a positive integer.');
     }
 
-    if (!Number.isInteger(props.articleId) || props.articleId <= 0) {
-      throw new Error('Hunt target article id must be a positive integer.');
+    const articleIds = Array.isArray(props.articleId) ? [...props.articleId] : [props.articleId];
+
+    if (
+      articleIds.length === 0
+      || articleIds.some((articleId) => !Number.isInteger(articleId) || articleId <= 0)
+      || new Set(articleIds).size !== articleIds.length
+    ) {
+      throw new Error('Hunt target article ids must be unique positive integers.');
     }
 
     if (typeof props.canBeAngered !== 'boolean') {
@@ -89,7 +95,7 @@ export class BotHuntTarget {
       props.id,
       name,
       props.level,
-      props.articleId,
+      articleIds,
       props.canBeAngered
     );
   }
@@ -107,7 +113,11 @@ export class BotHuntTarget {
   }
 
   getArticleId(): number {
-    return this.articleId;
+    return this.articleIds[0]!;
+  }
+
+  getArticleIds(): readonly number[] {
+    return [...this.articleIds];
   }
 
   canBeAngered(): boolean {
@@ -119,7 +129,7 @@ export class BotHuntTarget {
       id: this.id,
       name: this.name,
       level: this.level,
-      articleId: this.articleId,
+      articleId: this.articleIds.length === 1 ? this.articleIds[0]! : [...this.articleIds],
       canBeAngered: this.angerAvailable
     };
   }
