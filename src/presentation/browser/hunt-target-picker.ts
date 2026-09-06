@@ -64,11 +64,11 @@ export function createHuntTargetPicker(
     const group = document.createElement('div');
     group.className = 'dwar-hunt-target-picker__group';
     group.setAttribute('role', 'group');
-    group.setAttribute('aria-label', `Уровень ${level}`);
+    group.setAttribute('aria-label', `Уровень ${level ?? '?'}`);
 
     const heading = document.createElement('div');
     heading.className = 'dwar-hunt-target-picker__group-title';
-    heading.textContent = `Уровень ${level}`;
+    heading.textContent = `Уровень ${level ?? '?'}`;
     group.append(heading);
 
     for (const target of levelTargets) {
@@ -213,8 +213,8 @@ function createTargetOption(target: BotHuntTargetSnapshot): HuntTargetOptionElem
 
 function groupTargetsByLevel(
   targets: readonly BotHuntTargetSnapshot[]
-): readonly [number, readonly BotHuntTargetSnapshot[]][] {
-  const targetsByLevel = new Map<number, BotHuntTargetSnapshot[]>();
+): readonly [number | null, readonly BotHuntTargetSnapshot[]][] {
+  const targetsByLevel = new Map<number | null, BotHuntTargetSnapshot[]>();
 
   for (const target of targets) {
     const levelTargets = targetsByLevel.get(target.level) ?? [];
@@ -223,6 +223,14 @@ function groupTargetsByLevel(
   }
 
   return [...targetsByLevel.entries()].sort(([leftLevel], [rightLevel]) => {
+    if (leftLevel === null) {
+      return rightLevel === null ? 0 : 1;
+    }
+
+    if (rightLevel === null) {
+      return -1;
+    }
+
     return leftLevel - rightLevel;
   });
 }

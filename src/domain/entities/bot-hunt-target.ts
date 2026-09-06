@@ -8,6 +8,7 @@ export const BOT_HUNT_TARGET_IDS = [
   'ghoul',
   'dead-man',
   'zombie',
+  'sleeping-warrior',
   'forest-iguraon',
   'krets',
   'krets-digger',
@@ -43,7 +44,7 @@ export type BotHuntTargetId = typeof BOT_HUNT_TARGET_IDS[number];
 export interface BotHuntTargetProps {
   id: BotHuntTargetId;
   name: string;
-  level: number;
+  level: number | null;
   articleId: number;
   canBeAngered: boolean;
 }
@@ -51,7 +52,7 @@ export interface BotHuntTargetProps {
 export interface BotHuntTargetSnapshot {
   id: BotHuntTargetId;
   name: string;
-  level: number;
+  level: number | null;
   articleId: number;
   canBeAngered: boolean;
 }
@@ -60,7 +61,7 @@ export class BotHuntTarget {
   private constructor(
     private readonly id: BotHuntTargetId,
     private readonly name: string,
-    private readonly level: number,
+    private readonly level: number | null,
     private readonly articleId: number,
     private readonly angerAvailable: boolean
   ) {}
@@ -72,7 +73,7 @@ export class BotHuntTarget {
       throw new Error('Hunt target name is required.');
     }
 
-    if (!Number.isInteger(props.level) || props.level <= 0) {
+    if (props.level !== null && (!Number.isInteger(props.level) || props.level <= 0)) {
       throw new Error('Hunt target level must be a positive integer.');
     }
 
@@ -101,7 +102,7 @@ export class BotHuntTarget {
     return this.name;
   }
 
-  getLevel(): number {
+  getLevel(): number | null {
     return this.level;
   }
 

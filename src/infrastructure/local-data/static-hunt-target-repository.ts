@@ -70,6 +70,13 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     canBeAngered: true
   },
   {
+    id: 'sleeping-warrior',
+    name: 'Спящий воин',
+    level: null,
+    articleId: 2645,
+    canBeAngered: false
+  },
+  {
     id: 'forest-iguraon',
     name: 'Лесной игураон',
     level: 5,
