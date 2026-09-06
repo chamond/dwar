@@ -284,10 +284,25 @@ test('в справочнике злость доступна только по�
     .map((target) => target.getId());
 
   assert.deepEqual(angerableTargetIds, [
+    'phadd-bear',
+    'old-phadd-bear',
+    'kodrag',
+    'valdagor-wolf',
+    'young-valdagor-wolf',
+    'dead-man',
+    'zombie',
     'rabid-dog',
+    'zigred',
+    'zigred-warrior',
+    'furious-dog',
     'warrior-skeleton',
     'demon-dog',
-    'young-treant'
+    'mature-demon-dog',
+    'purple-zigred',
+    'giant-zigred',
+    'young-treant',
+    'treant',
+    'bloody-zigred'
   ]);
 });
 

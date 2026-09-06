@@ -14,6 +14,69 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     canBeAngered: false
   },
   {
+    id: 'phadd-bear',
+    name: 'Медведь Пхадд',
+    level: 5,
+    articleId: 15,
+    canBeAngered: true
+  },
+  {
+    id: 'old-phadd-bear',
+    name: 'Старый медведь Пхадд',
+    level: 6,
+    articleId: 26,
+    canBeAngered: true
+  },
+  {
+    id: 'kodrag',
+    name: 'Кодраг',
+    level: 6,
+    articleId: 50,
+    canBeAngered: true
+  },
+  {
+    id: 'valdagor-wolf',
+    name: 'Волк Валдагор',
+    level: 7,
+    articleId: 46,
+    canBeAngered: true
+  },
+  {
+    id: 'young-valdagor-wolf',
+    name: 'Молодой волк Валдагор',
+    level: 7,
+    articleId: 53,
+    canBeAngered: true
+  },
+  {
+    id: 'ghoul',
+    name: 'Упырь',
+    level: 5,
+    articleId: 172,
+    canBeAngered: false
+  },
+  {
+    id: 'dead-man',
+    name: 'Мертвец',
+    level: 5,
+    articleId: 173,
+    canBeAngered: true
+  },
+  {
+    id: 'zombie',
+    name: 'Зомби',
+    level: 4,
+    articleId: 159,
+    canBeAngered: true
+  },
+  {
+    id: 'forest-iguraon',
+    name: 'Лесной игураон',
+    level: 5,
+    articleId: 100,
+    canBeAngered: false
+  },
+  {
     id: 'krets',
     name: 'Крэтс',
     level: 1,
@@ -70,6 +133,13 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     canBeAngered: true
   },
   {
+    id: 'furious-dog',
+    name: 'Неистовый пёс',
+    level: 3,
+    articleId: 21,
+    canBeAngered: true
+  },
+  {
     id: 'krets-chief',
     name: 'Крэтс-вожак',
     level: 3,
@@ -109,20 +179,34 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     name: 'Матёрый пёс-демон',
     level: 4,
     articleId: 24,
-    canBeAngered: false
+    canBeAngered: true
   },
   {
     id: 'purple-zigred',
     name: 'Пурпурный зигред',
     level: 4,
     articleId: 40,
-    canBeAngered: false
+    canBeAngered: true
+  },
+  {
+    id: 'giant-zigred',
+    name: 'Гигантский зигред',
+    level: 4,
+    articleId: 44,
+    canBeAngered: true
   },
   {
     id: 'young-treant',
     name: 'Древень молодой',
     level: 4,
     articleId: 349,
+    canBeAngered: true
+  },
+  {
+    id: 'treant',
+    name: 'Древень',
+    level: 4,
+    articleId: 351,
     canBeAngered: true
   },
   {
@@ -145,6 +229,13 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     level: 5,
     articleId: 352,
     canBeAngered: false
+  },
+  {
+    id: 'bloody-zigred',
+    name: 'Кровавый зигред',
+    level: 5,
+    articleId: 55,
+    canBeAngered: true
   },
   {
     id: 'young-beron-tiger',
