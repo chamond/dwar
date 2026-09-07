@@ -238,6 +238,13 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     canBeAngered: false
   },
   {
+    id: 'gungl-loner',
+    name: 'Гунгл-одиночка',
+    level: 5,
+    articleId: 29,
+    canBeAngered: true
+  },
+  {
     id: 'bloody-zigred',
     name: 'Кровавый зигред',
     level: 5,

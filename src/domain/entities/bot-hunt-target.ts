@@ -32,6 +32,7 @@ export const BOT_HUNT_TARGET_IDS = [
   'krogan',
   'agile-ficilia',
   'orc-conqueror-skeleton',
+  'gungl-loner',
   'bloody-zigred',
   'young-beron-tiger',
   'experienced-beron-tiger',
