@@ -713,6 +713,12 @@ export const BOT_WIDGET_STYLES = `
     font: 800 11px/1 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
 
+  .dwar-hunt-target-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
   .dwar-hunt-target-option__order {
     display: grid;
     width: 22px;
@@ -822,7 +828,7 @@ export const BOT_WIDGET_STYLES = `
     text-shadow: 0 0 7px rgba(243, 201, 107, .62);
   }
 
-  .dwar-resource-option__slider {
+  .dwar-resource-option input.dwar-resource-option__slider {
     display: block;
     width: calc(100% - 24px);
     height: 10px;
