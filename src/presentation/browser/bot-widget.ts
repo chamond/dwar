@@ -7,6 +7,7 @@ import type { PanelPositionStore } from '../../application/ports/panel-position-
 import type { PanelSizeStore } from '../../application/ports/panel-size-store';
 import type { ProfessionRecipeSelectionStore } from '../../application/ports/profession-recipe-selection-store';
 import type { ResourceSelectionStore } from '../../application/ports/resource-selection-store';
+import type { ResourceProbabilityStore } from '../../application/ports/resource-probability-store';
 import type { SoundVolumeStore } from '../../application/ports/sound-volume-store';
 import type { CreateBotLogEntryUseCase } from '../../application/use-cases/create-bot-log-entry';
 import type { RunHuntMobAttacksUseCase } from '../../application/use-cases/run-hunt-mob-attacks';
@@ -58,6 +59,7 @@ export interface BotWidgetDependencies {
   panelSizeStore: PanelSizeStore;
   professionRecipeSelectionStore: ProfessionRecipeSelectionStore;
   resourceSelectionStore: ResourceSelectionStore;
+  resourceProbabilityStore: ResourceProbabilityStore;
   requestSplinterHelp: RequestSplinterHelpUseCase;
   runHuntMobAttacks: RunHuntMobAttacksUseCase;
   runProfessionCrafting: RunProfessionCraftingUseCase;
@@ -341,8 +343,12 @@ function createPanel(
   return createBotPanel(resources, recipes, huntTargets, {
     initialSoundVolume,
     selectedResourceIds: dependencies.resourceSelectionStore.load(),
+    resourceProbabilities: dependencies.resourceProbabilityStore.load(),
     onResourceSelectionChange: (selectedResources) => {
       dependencies.resourceSelectionStore.save(selectedResources.map(({ id }) => id));
+    },
+    onResourceProbabilitiesChange: (probabilities) => {
+      dependencies.resourceProbabilityStore.save(probabilities);
     },
     selectedRecipeIds: dependencies.professionRecipeSelectionStore.load(),
     onRecipeSelectionChange: (selectedRecipes) => {

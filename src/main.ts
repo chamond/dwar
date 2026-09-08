@@ -46,6 +46,7 @@ import { LocalStoragePanelPositionStore } from './infrastructure/browser/local-s
 import { LocalStoragePanelSizeStore } from './infrastructure/browser/local-storage-panel-size-store';
 import { LocalStorageProfessionRecipeSelectionStore } from './infrastructure/browser/local-storage-profession-recipe-selection-store';
 import { LocalStorageResourceSelectionStore } from './infrastructure/browser/local-storage-resource-selection-store';
+import { LocalStorageResourceProbabilityStore } from './infrastructure/browser/local-storage-resource-probability-store';
 import { LocalStorageSoundVolumeStore } from './infrastructure/browser/local-storage-sound-volume-store';
 import { StaticProfessionRecipeRepository } from './infrastructure/local-data/static-profession-recipe-repository';
 import { StaticHuntTargetRepository } from './infrastructure/local-data/static-hunt-target-repository';
@@ -91,6 +92,7 @@ function bootstrap(): void {
   const panelPositionStore = new LocalStoragePanelPositionStore();
   const panelSizeStore = new LocalStoragePanelSizeStore();
   const resourceSelectionStore = new LocalStorageResourceSelectionStore();
+  const resourceProbabilityStore = new LocalStorageResourceProbabilityStore();
   const professionRecipeSelectionStore = new LocalStorageProfessionRecipeSelectionStore();
   const huntingSettingsStore = new LocalStorageHuntingSettingsStore();
   const exchangeMonitoringSettingsStore = new LocalStorageExchangeMonitoringSettingsStore();
@@ -172,6 +174,7 @@ function bootstrap(): void {
     panelSizeStore,
     professionRecipeSelectionStore,
     resourceSelectionStore,
+    resourceProbabilityStore,
     requestSplinterHelp,
     runHuntMobAttacks,
     runProfessionCrafting,

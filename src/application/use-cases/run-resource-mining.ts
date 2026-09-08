@@ -28,9 +28,9 @@ import { getMobAggressionProfile } from '../../domain/services/mob-aggression';
 import {
   assessResourceMiningSafety,
   isMobDangerousForMining,
-  selectSafestResourceForMining,
   type ResourceMiningSafety
 } from '../../domain/services/resource-mining-safety';
+import { selectResourceForMining } from '../../domain/services/resource-mining-selection';
 import { HuntResourceFailureTracker } from '../../domain/services/hunt-resource-failure-tracker';
 import { isHuntMinigameRequiredError } from '../errors/hunt-minigame-required-error';
 import { isUnexpectedServerResponseError } from '../errors/unexpected-server-response-error';
@@ -57,6 +57,7 @@ export interface ResourceMiningConfig {
 
 export interface RunResourceMiningInput {
   getSelectedResourceIds(): readonly BotResourceId[];
+  getResourceProbabilities(): Readonly<Partial<Record<BotResourceId, number>>>;
 }
 
 type FarmStartResult =
@@ -142,8 +143,9 @@ export class RunResourceMiningUseCase {
           const collectableResources = selectedResources.filter((resource) => {
             return !this.resourceFailureTracker.isBlocked(resource);
           });
-          const selection = selectSafestResourceForMining(collectableResources, scan.getMobs(), {
-            dangerRadius: this.config.dangerRadius
+          const selection = selectResourceForMining(collectableResources, scan.getMobs(), {
+            dangerRadius: this.config.dangerRadius,
+            probabilities: input.getResourceProbabilities()
           });
           const scanCompletedEvent: ResourceMiningEvent = {
             type: 'scan-completed',

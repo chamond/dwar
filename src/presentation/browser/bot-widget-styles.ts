@@ -760,10 +760,8 @@ export const BOT_WIDGET_STYLES = `
   }
 
   .dwar-resource-option {
-    display: flex;
-    align-items: center;
+    display: block;
     min-height: 34px;
-    gap: 8px;
     padding: 6px;
     color: #dbe3f1;
     border-radius: 6px;
@@ -775,6 +773,13 @@ export const BOT_WIDGET_STYLES = `
     background: rgba(255, 255, 255, .06);
   }
 
+  .dwar-resource-option__row {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    gap: 8px;
+  }
+
   .dwar-resource-option input {
     width: 16px;
     height: 16px;
@@ -784,8 +789,9 @@ export const BOT_WIDGET_STYLES = `
   }
 
   .dwar-resource-option__badge {
-    display: inline-flex;
+    display: flex;
     align-items: center;
+    flex: 1 1 auto;
     min-width: 0;
     gap: 7px;
     padding: 4px 8px;
@@ -806,8 +812,27 @@ export const BOT_WIDGET_STYLES = `
   .dwar-resource-option__name {
     min-width: 0;
     overflow: hidden;
+    flex: 1 1 auto;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .dwar-resource-option__percentage {
+    flex: 0 0 auto;
+    color: #f3c96b;
+    font-size: 11px;
+    font-weight: 800;
+    text-shadow: 0 0 7px rgba(243, 201, 107, .62);
+  }
+
+  .dwar-resource-option__slider {
+    display: block;
+    width: calc(100% - 24px);
+    height: 12px;
+    margin: 3px 0 0 24px;
+    padding: 0;
+    accent-color: #78d9c2;
+    cursor: pointer;
   }
 
   .dwar-panel__log-section {

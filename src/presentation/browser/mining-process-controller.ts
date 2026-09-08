@@ -165,7 +165,8 @@ export function createMiningProcessController(
     options.addLog(`${actionLabel}: ${selectedResources.map(formatResourceLabel).join(', ')}.`);
 
     const miningEvents: Observable<ResourceMiningEvent> = options.runResourceMining.execute({
-      getSelectedResourceIds: () => options.resourcePicker.getSelectedResources().map(({ id }) => id)
+      getSelectedResourceIds: () => options.resourcePicker.getSelectedResources().map(({ id }) => id),
+      getResourceProbabilities: () => options.resourcePicker.getResourceProbabilities()
     }).pipe(
       retry({
         delay: recoverFromMiningError

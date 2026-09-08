@@ -2,6 +2,7 @@ import type { BotResourceId, BotResourceSnapshot } from '../../domain/entities/b
 import type { BotHuntTargetSnapshot } from '../../domain/entities/bot-hunt-target';
 import type { ProfessionRecipeId, ProfessionRecipeSnapshot } from '../../domain/entities/profession-recipe';
 import type { HuntingSettings } from '../../application/ports/hunting-settings-store';
+import type { ResourceProbabilities } from '../../application/ports/resource-probability-store';
 import { createCheckboxOption } from './checkbox-option';
 import {
   createExchangeMonitoringTab,
@@ -84,7 +85,9 @@ interface LogSectionElements {
 export interface BotPanelOptions {
   initialSoundVolume?: number | null | undefined;
   selectedResourceIds?: readonly BotResourceId[] | null | undefined;
+  resourceProbabilities?: ResourceProbabilities | null | undefined;
   onResourceSelectionChange?: ((resources: readonly BotResourceSnapshot[]) => void) | undefined;
+  onResourceProbabilitiesChange?: ((probabilities: ResourceProbabilities) => void) | undefined;
   selectedRecipeIds?: readonly ProfessionRecipeId[] | null | undefined;
   onRecipeSelectionChange?: ((recipes: readonly ProfessionRecipeSnapshot[]) => void) | undefined;
   huntingSettings?: HuntingSettings | null | undefined;
@@ -217,7 +220,9 @@ function createMiningTab(
 
   const resourcePicker = createResourcePicker(resources, {
     selectedResourceIds: options.selectedResourceIds,
-    onSelectionChange: options.onResourceSelectionChange
+    resourceProbabilities: options.resourceProbabilities,
+    onSelectionChange: options.onResourceSelectionChange,
+    onProbabilitiesChange: options.onResourceProbabilitiesChange
   });
 
   const actionGroup = document.createElement('div');
