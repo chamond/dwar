@@ -794,10 +794,7 @@ export const BOT_WIDGET_STYLES = `
     flex: 1 1 auto;
     min-width: 0;
     gap: 7px;
-    padding: 4px 8px;
-    border: 1px solid var(--dwar-resource-color);
-    border-radius: 999px;
-    background: rgba(255, 255, 255, .04);
+    padding: 4px 0;
   }
 
   .dwar-resource-option__swatch {
@@ -828,11 +825,52 @@ export const BOT_WIDGET_STYLES = `
   .dwar-resource-option__slider {
     display: block;
     width: calc(100% - 24px);
-    height: 12px;
+    height: 10px;
     margin: 3px 0 0 24px;
     padding: 0;
-    accent-color: #78d9c2;
+    appearance: none;
+    background: transparent;
     cursor: pointer;
+  }
+
+  .dwar-resource-option__slider::-webkit-slider-runnable-track {
+    height: 3px;
+    background: #4b5868;
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+  }
+
+  .dwar-resource-option__slider::-webkit-slider-thumb {
+    width: 9px;
+    height: 9px;
+    margin-top: -3px;
+    appearance: none;
+    background: #78d9c2;
+    border: 1px solid #c5fff1;
+    border-radius: 50%;
+    box-shadow: 0 0 7px rgba(120, 217, 194, .72);
+  }
+
+  .dwar-resource-option__slider::-moz-range-track {
+    height: 3px;
+    background: #4b5868;
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+  }
+
+  .dwar-resource-option__slider::-moz-range-progress {
+    height: 3px;
+    background: #78d9c2;
+    border-radius: 999px;
+  }
+
+  .dwar-resource-option__slider::-moz-range-thumb {
+    width: 9px;
+    height: 9px;
+    background: #78d9c2;
+    border: 1px solid #c5fff1;
+    border-radius: 50%;
+    box-shadow: 0 0 7px rgba(120, 217, 194, .72);
   }
 
   .dwar-panel__log-section {

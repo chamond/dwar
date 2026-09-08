@@ -5,7 +5,7 @@ export interface MultiSelectPickerItem<TId extends string = string> {
 
 interface MultiSelectOptionElements<TItem extends MultiSelectPickerItem> {
   item: TItem;
-  option: HTMLLabelElement;
+  option: HTMLElement;
   input: HTMLInputElement;
   percentage: HTMLSpanElement | undefined;
   slider: HTMLInputElement | undefined;
@@ -212,18 +212,18 @@ function createItemOption<TItem extends MultiSelectPickerItem>(
   formatItemLabel: (item: TItem) => string,
   initialPercentage?: number
 ): MultiSelectOptionElements<TItem> {
-  const option = document.createElement('label');
+  const option = document.createElement('div');
   option.className = 'dwar-resource-option';
   option.setAttribute('role', 'option');
   option.setAttribute('aria-selected', String(isSelected));
+
+  const row = document.createElement('label');
+  row.className = 'dwar-resource-option__row';
 
   const input = document.createElement('input');
   input.type = 'checkbox';
   input.checked = isSelected;
   input.value = item.id;
-
-  const row = document.createElement('span');
-  row.className = 'dwar-resource-option__row';
 
   const badge = document.createElement('span');
   badge.className = 'dwar-resource-option__badge';
