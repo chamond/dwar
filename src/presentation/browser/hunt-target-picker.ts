@@ -35,21 +35,21 @@ export function createHuntTargetPicker(
   options: HuntTargetPickerOptions = {}
 ): HuntTargetPickerElements {
   const root = document.createElement('div');
-  root.className = 'dwar-resource-picker dwar-hunt-target-picker';
+  root.className = 'dwar-multi-select dwar-hunt-target-picker';
 
   const toggleButton = createToggleButton();
   toggleButton.disabled = targets.length === 0;
   const selectedCount = document.createElement('span');
-  selectedCount.className = 'dwar-resource-picker__count';
+  selectedCount.className = 'dwar-multi-select__count';
   const chevron = document.createElement('span');
-  chevron.className = 'dwar-resource-picker__chevron';
+  chevron.className = 'dwar-multi-select__chevron';
   chevron.textContent = '▾';
   chevron.setAttribute('aria-hidden', 'true');
   toggleButton.append(createToggleLabel(), selectedCount, chevron);
 
   const menu = document.createElement('div');
   menu.id = MENU_ID;
-  menu.className = 'dwar-resource-picker__menu dwar-hunt-target-picker__menu';
+  menu.className = 'dwar-multi-select__menu dwar-hunt-target-picker__menu';
   menu.setAttribute('role', 'listbox');
   menu.setAttribute('aria-multiselectable', 'true');
   menu.hidden = true;
@@ -158,7 +158,7 @@ export function createHuntTargetPicker(
 function createToggleButton(): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = 'dwar-resource-picker__toggle';
+  button.className = 'dwar-multi-select__toggle';
   button.setAttribute('aria-label', 'Выбрать мобов для охоты');
   button.setAttribute('aria-haspopup', 'listbox');
   button.setAttribute('aria-expanded', 'false');
@@ -169,7 +169,7 @@ function createToggleButton(): HTMLButtonElement {
 
 function createToggleLabel(): HTMLElement {
   const label = document.createElement('span');
-  label.className = 'dwar-resource-picker__toggle-label';
+  label.className = 'dwar-multi-select__toggle-label';
   label.textContent = 'Мобы для охоты';
 
   return label;
@@ -177,7 +177,7 @@ function createToggleLabel(): HTMLElement {
 
 function createTargetOption(target: BotHuntTargetSnapshot): HuntTargetOptionElements {
   const option = document.createElement('label');
-  option.className = 'dwar-resource-option dwar-hunt-target-option';
+  option.className = 'dwar-multi-select-option dwar-hunt-target-option';
   option.setAttribute('role', 'option');
 
   const input = document.createElement('input');

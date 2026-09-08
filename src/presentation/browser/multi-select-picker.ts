@@ -7,8 +7,13 @@ interface MultiSelectOptionElements<TItem extends MultiSelectPickerItem> {
   item: TItem;
   option: HTMLElement;
   input: HTMLInputElement;
-  percentage: HTMLSpanElement | undefined;
-  slider: HTMLInputElement | undefined;
+  content: HTMLElement;
+}
+
+export interface MultiSelectItemOptionElements {
+  option: HTMLElement;
+  input: HTMLInputElement;
+  content: HTMLElement;
 }
 
 export interface MultiSelectPickerElements<TItem extends MultiSelectPickerItem> {
@@ -16,7 +21,6 @@ export interface MultiSelectPickerElements<TItem extends MultiSelectPickerItem> 
   toggleButton: HTMLButtonElement;
   menu: HTMLElement;
   getSelectedItems(): readonly TItem[];
-  getItemPercentages(): Readonly<Partial<Record<TItem['id'], number>>>;
   close(): void;
 }
 
@@ -26,8 +30,7 @@ export interface MultiSelectPickerOptions<TId extends string, TItem extends Mult
   toggleLabel: string;
   menuId: string;
   formatItemLabel(item: TItem): string;
-  initialItemPercentages?: Readonly<Partial<Record<TId, number>>> | null | undefined;
-  onItemPercentagesChange?: ((percentages: Readonly<Partial<Record<TId, number>>>) => void) | undefined;
+  decorateItemOption?: ((item: TItem, elements: MultiSelectItemOptionElements) => void) | undefined;
 }
 
 export function createMultiSelectPicker<TId extends string, TItem extends MultiSelectPickerItem<TId>>(
@@ -35,7 +38,7 @@ export function createMultiSelectPicker<TId extends string, TItem extends MultiS
   options: MultiSelectPickerOptions<TId, TItem>
 ): MultiSelectPickerElements<TItem> {
   const root = document.createElement('div');
-  root.className = 'dwar-resource-picker';
+  root.className = 'dwar-multi-select';
 
   const toggleButton = createToggleButton(options.menuId);
   const selectedCount = createSelectedCount();
@@ -44,22 +47,24 @@ export function createMultiSelectPicker<TId extends string, TItem extends MultiS
 
   const menu = document.createElement('div');
   menu.id = options.menuId;
-  menu.className = 'dwar-resource-picker__menu';
+  menu.className = 'dwar-multi-select__menu';
   menu.setAttribute('role', 'listbox');
   menu.setAttribute('aria-multiselectable', 'true');
   menu.hidden = true;
 
   const selectedItemIds = options.selectedItemIds ? new Set(options.selectedItemIds) : null;
-  const percentages = new Map<TId, number>();
   const itemOptions = items.map((item) => {
-    const isSelected = selectedItemIds?.has(item.id) ?? true;
-    percentages.set(item.id, options.initialItemPercentages?.[item.id] ?? 0);
-    return createItemOption(
+    const optionElements = createItemOption(
       item,
-      isSelected,
-      options.formatItemLabel,
-      options.onItemPercentagesChange ? percentages.get(item.id) ?? 0 : undefined
+      selectedItemIds?.has(item.id) ?? true,
+      options.formatItemLabel
     );
+    options.decorateItemOption?.(item, {
+      option: optionElements.option,
+      input: optionElements.input,
+      content: optionElements.content
+    });
+    return optionElements;
   });
   itemOptions.forEach(({ option }) => menu.append(option));
 
@@ -75,59 +80,12 @@ export function createMultiSelectPicker<TId extends string, TItem extends MultiS
     return itemOptions.filter(({ input }) => input.checked).map(({ item }) => item);
   };
 
-  const getItemPercentages = (): Readonly<Partial<Record<TId, number>>> => {
-    return Object.fromEntries(percentages) as Partial<Record<TId, number>>;
-  };
-
-  let previouslySelectedIds = new Set(
-    itemOptions.filter(({ input }) => input.checked).map(({ item }) => item.id)
-  );
-
-  const rebalancePercentages = (changedId?: TId, changedValue?: number): void => {
-    const selected = itemOptions.filter(({ input }) => input.checked).map(({ item }) => item.id);
-    if (selected.length === 0) {
-      return;
-    }
-
-    if (changedId !== undefined && changedValue !== undefined && selected.includes(changedId)) {
-      percentages.set(changedId, clampPercentage(changedValue));
-      const otherIds = selected.filter((id) => id !== changedId);
-      distributeRemaining(otherIds, 100 - (percentages.get(changedId) ?? 0), percentages);
-    } else {
-      distributeRemaining(selected, 100, percentages);
-    }
-
-    itemOptions.forEach(({ item, slider, percentage }) => {
-      if (!slider || !percentage) {
-        return;
-      }
-
-      const value = percentages.get(item.id) ?? 0;
-      slider.value = String(value);
-      percentage.textContent = `${value}%`;
-      slider.setAttribute('aria-valuetext', `${value}%`);
-    });
-  };
-
   const updateSelectedState = (): void => {
     itemOptions.forEach(({ input, option }) => {
       option.setAttribute('aria-selected', String(input.checked));
     });
 
-    const selectedIds = itemOptions.filter(({ input }) => input.checked).map(({ item }) => item.id);
-    const addedIds = selectedIds.filter((id) => !previouslySelectedIds.has(id));
-    const existingIds = selectedIds.filter((id) => !addedIds.includes(id));
-
-    selectedCount.textContent = String(selectedIds.length);
-    if (addedIds.length > 0) {
-      const addedTotal = Math.floor((100 * addedIds.length) / selectedIds.length);
-      distributeRemaining(addedIds, addedTotal, percentages);
-      distributeRemaining(existingIds, 100 - addedTotal, percentages);
-      rebalancePercentages();
-    } else {
-      rebalancePercentages();
-    }
-    previouslySelectedIds = new Set(selectedIds);
+    selectedCount.textContent = String(itemOptions.filter(({ input }) => input.checked).length);
   };
 
   toggleButton.addEventListener('click', () => {
@@ -144,17 +102,7 @@ export function createMultiSelectPicker<TId extends string, TItem extends MultiS
     input.addEventListener('change', () => {
       updateSelectedState();
       options.onSelectionChange?.(getSelectedItems());
-      options.onItemPercentagesChange?.(getItemPercentages());
     });
-  });
-
-  itemOptions.forEach(({ item, slider }) => {
-    slider?.addEventListener('input', () => {
-      rebalancePercentages(item.id, Number(slider.value));
-      options.onItemPercentagesChange?.(getItemPercentages());
-    });
-    slider?.addEventListener('click', (event) => event.stopPropagation());
-    slider?.addEventListener('pointerdown', (event) => event.stopPropagation());
   });
 
   updateSelectedState();
@@ -164,7 +112,6 @@ export function createMultiSelectPicker<TId extends string, TItem extends MultiS
     toggleButton,
     menu,
     getSelectedItems,
-    getItemPercentages,
     close(): void {
       setOpen(false);
     }
@@ -174,7 +121,7 @@ export function createMultiSelectPicker<TId extends string, TItem extends MultiS
 function createToggleButton(menuId: string): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = 'dwar-resource-picker__toggle';
+  button.className = 'dwar-multi-select__toggle';
   button.setAttribute('aria-haspopup', 'listbox');
   button.setAttribute('aria-expanded', 'false');
   button.setAttribute('aria-controls', menuId);
@@ -184,7 +131,7 @@ function createToggleButton(menuId: string): HTMLButtonElement {
 
 function createToggleLabel(text: string): HTMLElement {
   const label = document.createElement('span');
-  label.className = 'dwar-resource-picker__toggle-label';
+  label.className = 'dwar-multi-select__toggle-label';
   label.textContent = text;
 
   return label;
@@ -192,14 +139,14 @@ function createToggleLabel(text: string): HTMLElement {
 
 function createSelectedCount(): HTMLElement {
   const count = document.createElement('span');
-  count.className = 'dwar-resource-picker__count';
+  count.className = 'dwar-multi-select__count';
 
   return count;
 }
 
 function createChevron(): HTMLElement {
   const chevron = document.createElement('span');
-  chevron.className = 'dwar-resource-picker__chevron';
+  chevron.className = 'dwar-multi-select__chevron';
   chevron.textContent = '▾';
   chevron.setAttribute('aria-hidden', 'true');
 
@@ -209,101 +156,37 @@ function createChevron(): HTMLElement {
 function createItemOption<TItem extends MultiSelectPickerItem>(
   item: TItem,
   isSelected: boolean,
-  formatItemLabel: (item: TItem) => string,
-  initialPercentage?: number
+  formatItemLabel: (item: TItem) => string
 ): MultiSelectOptionElements<TItem> {
   const option = document.createElement('div');
-  option.className = 'dwar-resource-option';
+  option.className = 'dwar-multi-select-option';
   option.setAttribute('role', 'option');
   option.setAttribute('aria-selected', String(isSelected));
 
   const row = document.createElement('label');
-  row.className = 'dwar-resource-option__row';
+  row.className = 'dwar-multi-select-option__row';
 
   const input = document.createElement('input');
   input.type = 'checkbox';
   input.checked = isSelected;
   input.value = item.id;
 
-  const badge = document.createElement('span');
-  badge.className = 'dwar-resource-option__badge';
-  badge.style.setProperty('--dwar-resource-color', item.markerColor);
+  const content = document.createElement('span');
+  content.className = 'dwar-multi-select-option__content';
+  content.style.setProperty('--dwar-resource-color', item.markerColor);
 
   const swatch = document.createElement('span');
-  swatch.className = 'dwar-resource-option__swatch';
+  swatch.className = 'dwar-multi-select-option__swatch';
   swatch.setAttribute('aria-hidden', 'true');
 
   const name = document.createElement('span');
-  name.className = 'dwar-resource-option__name';
+  name.className = 'dwar-multi-select-option__name';
   name.textContent = formatItemLabel(item);
 
-  const percentage = initialPercentage === undefined ? undefined : document.createElement('span');
-  if (percentage) {
-    percentage.className = 'dwar-resource-option__percentage';
-    percentage.textContent = `${initialPercentage}%`;
-  }
-
-  badge.append(swatch, name);
-  if (percentage) {
-    badge.append(percentage);
-  }
-  row.append(input, badge);
-
-  const slider = initialPercentage === undefined ? undefined : document.createElement('input');
-  if (slider) {
-    slider.type = 'range';
-    slider.className = 'dwar-resource-option__slider';
-    slider.min = '0';
-    slider.max = '100';
-    slider.step = '1';
-    slider.value = String(initialPercentage);
-    slider.setAttribute('aria-label', `Вероятность добычи ${formatItemLabel(item)}`);
-  }
+  content.append(swatch, name);
+  row.append(input, content);
 
   option.append(row);
-  if (slider) {
-    option.append(slider);
-  }
 
-  return {
-    item,
-    option,
-    input,
-    percentage,
-    slider
-  };
-}
-
-function clampPercentage(value: number): number {
-  return Math.max(0, Math.min(100, Math.round(value)));
-}
-
-function distributeRemaining<TId extends string>(
-  ids: readonly TId[],
-  total: number,
-  percentages: Map<TId, number>
-): void {
-  if (ids.length === 0) {
-    return;
-  }
-
-  const currentValues = ids.map((id) => Math.max(0, percentages.get(id) ?? 0));
-  const currentTotal = currentValues.reduce((sum, value) => sum + value, 0);
-  const exactValues = currentValues.map((value) => {
-    return currentTotal > 0 ? (value / currentTotal) * total : total / ids.length;
-  });
-  const roundedValues = exactValues.map((value) => Math.floor(value));
-  let remainder = total - roundedValues.reduce((sum, value) => sum + value, 0);
-  const order = exactValues
-    .map((value, index) => ({ index, fraction: value - Math.floor(value) }))
-    .sort((left, right) => right.fraction - left.fraction);
-
-  order.forEach(({ index }) => {
-    if (remainder > 0) {
-      roundedValues[index] = (roundedValues[index] ?? 0) + 1;
-      remainder -= 1;
-    }
-  });
-
-  ids.forEach((id, index) => percentages.set(id, roundedValues[index] ?? 0));
+  return { item, option, input, content };
 }

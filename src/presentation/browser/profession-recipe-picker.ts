@@ -3,7 +3,7 @@ import { createMultiSelectPicker, type MultiSelectPickerElements } from './multi
 import { formatProfessionRecipeLabel } from './profession-recipe-label';
 
 export interface ProfessionRecipePickerElements
-  extends Omit<MultiSelectPickerElements<ProfessionRecipeSnapshot>, 'getSelectedItems' | 'getItemPercentages'> {
+  extends Omit<MultiSelectPickerElements<ProfessionRecipeSnapshot>, 'getSelectedItems'> {
   getSelectedRecipes(): readonly ProfessionRecipeSnapshot[];
 }
 

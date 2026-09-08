@@ -58,7 +58,7 @@ export const BOT_WIDGET_STYLES = `
   .dwar-action-button:focus-visible,
   .dwar-mining-action__menu-toggle:focus-visible,
   .dwar-mining-action__force-stop:focus-visible,
-  .dwar-resource-picker__toggle:focus-visible,
+  .dwar-multi-select__toggle:focus-visible,
   .dwar-option-checkbox__input:focus-visible,
   .dwar-exchange-monitoring__input:focus-visible,
   .dwar-exchange-rule__remove:focus-visible {
@@ -394,7 +394,7 @@ export const BOT_WIDGET_STYLES = `
   }
 
   .dwar-action-button,
-  .dwar-resource-picker__toggle,
+  .dwar-multi-select__toggle,
   .dwar-option-checkbox {
     height: 38px;
     border: 1px solid rgba(255, 255, 255, .11);
@@ -616,19 +616,19 @@ export const BOT_WIDGET_STYLES = `
     line-height: 1.2;
   }
 
-  .dwar-resource-picker__toggle:disabled,
+  .dwar-multi-select__toggle:disabled,
   .dwar-option-checkbox:has(.dwar-option-checkbox__input:disabled) {
     color: #7f8ca1;
     cursor: wait;
     background: #151d28;
   }
 
-  .dwar-resource-picker {
+  .dwar-multi-select {
     position: relative;
     min-width: 0;
   }
 
-  .dwar-resource-picker__toggle {
+  .dwar-multi-select__toggle {
     display: flex;
     align-items: center;
     justify-content: flex-start;
@@ -639,14 +639,14 @@ export const BOT_WIDGET_STYLES = `
     background: #0b1118;
   }
 
-  .dwar-resource-picker__toggle:hover,
-  .dwar-resource-picker__toggle:focus-visible {
+  .dwar-multi-select__toggle:hover,
+  .dwar-multi-select__toggle:focus-visible {
     border-color: rgba(120, 217, 194, .42);
     color: #ffffff;
     background-color: #111a24;
   }
 
-  .dwar-resource-picker__toggle-label {
+  .dwar-multi-select__toggle-label {
     flex: 1 1 auto;
     min-width: 0;
     overflow: hidden;
@@ -654,7 +654,7 @@ export const BOT_WIDGET_STYLES = `
     white-space: nowrap;
   }
 
-  .dwar-resource-picker__count {
+  .dwar-multi-select__count {
     display: grid;
     flex: 0 0 auto;
     margin-left: auto;
@@ -669,18 +669,18 @@ export const BOT_WIDGET_STYLES = `
     font-weight: 800;
   }
 
-  .dwar-resource-picker__chevron {
+  .dwar-multi-select__chevron {
     flex: 0 0 auto;
     color: #aeb8c7;
     font-size: 12px;
     transition: transform .14s ease;
   }
 
-  .dwar-resource-picker.is-open .dwar-resource-picker__chevron {
+  .dwar-multi-select.is-open .dwar-multi-select__chevron {
     transform: rotate(180deg);
   }
 
-  .dwar-resource-picker__menu {
+  .dwar-multi-select__menu {
     position: absolute;
     top: calc(100% + 6px);
     right: 0;
@@ -693,7 +693,7 @@ export const BOT_WIDGET_STYLES = `
     box-shadow: 0 18px 36px rgba(0, 0, 0, .46);
   }
 
-  .dwar-resource-picker__menu[hidden] {
+  .dwar-multi-select__menu[hidden] {
     display: none;
   }
 
@@ -711,12 +711,6 @@ export const BOT_WIDGET_STYLES = `
     padding: 6px 7px 4px;
     color: #78d9c2;
     font: 800 11px/1 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  }
-
-  .dwar-hunt-target-option {
-    display: flex;
-    align-items: center;
-    gap: 8px;
   }
 
   .dwar-hunt-target-option__order {
@@ -765,8 +759,10 @@ export const BOT_WIDGET_STYLES = `
     font-size: 12px;
   }
 
-  .dwar-resource-option {
-    display: block;
+  .dwar-multi-select-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     min-height: 34px;
     padding: 6px;
     color: #dbe3f1;
@@ -775,18 +771,22 @@ export const BOT_WIDGET_STYLES = `
     font: 12px/1.2 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
 
-  .dwar-resource-option:hover {
+  .dwar-multi-select-option:hover {
     background: rgba(255, 255, 255, .06);
   }
 
-  .dwar-resource-option__row {
+  .dwar-multi-select-option--with-slider {
+    display: block;
+  }
+
+  .dwar-multi-select-option__row {
     display: flex;
     align-items: center;
     min-width: 0;
     gap: 8px;
   }
 
-  .dwar-resource-option input {
+  .dwar-multi-select-option input {
     width: 16px;
     height: 16px;
     flex: 0 0 auto;
@@ -794,7 +794,7 @@ export const BOT_WIDGET_STYLES = `
     accent-color: #78d9c2;
   }
 
-  .dwar-resource-option__badge {
+  .dwar-multi-select-option__content {
     display: flex;
     align-items: center;
     flex: 1 1 auto;
@@ -803,7 +803,7 @@ export const BOT_WIDGET_STYLES = `
     padding: 4px 0;
   }
 
-  .dwar-resource-option__swatch {
+  .dwar-multi-select-option__swatch {
     width: 10px;
     height: 10px;
     flex: 0 0 auto;
@@ -812,7 +812,7 @@ export const BOT_WIDGET_STYLES = `
     box-shadow: 0 0 10px var(--dwar-resource-color);
   }
 
-  .dwar-resource-option__name {
+  .dwar-multi-select-option__name {
     min-width: 0;
     overflow: hidden;
     flex: 1 1 auto;
@@ -820,7 +820,7 @@ export const BOT_WIDGET_STYLES = `
     white-space: nowrap;
   }
 
-  .dwar-resource-option__percentage {
+  .dwar-resource-probability__percentage {
     flex: 0 0 auto;
     color: #f3c96b;
     font-size: 11px;
@@ -828,7 +828,7 @@ export const BOT_WIDGET_STYLES = `
     text-shadow: 0 0 7px rgba(243, 201, 107, .62);
   }
 
-  .dwar-resource-option input.dwar-resource-option__slider {
+  .dwar-multi-select-option input.dwar-resource-probability__slider {
     display: block;
     width: calc(100% - 24px);
     height: 10px;
@@ -839,14 +839,14 @@ export const BOT_WIDGET_STYLES = `
     cursor: pointer;
   }
 
-  .dwar-resource-option__slider::-webkit-slider-runnable-track {
+  .dwar-resource-probability__slider::-webkit-slider-runnable-track {
     height: 3px;
     background: #4b5868;
     border-radius: 999px;
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
   }
 
-  .dwar-resource-option__slider::-webkit-slider-thumb {
+  .dwar-resource-probability__slider::-webkit-slider-thumb {
     width: 9px;
     height: 9px;
     margin-top: -3px;
@@ -857,20 +857,20 @@ export const BOT_WIDGET_STYLES = `
     box-shadow: 0 0 7px rgba(120, 217, 194, .72);
   }
 
-  .dwar-resource-option__slider::-moz-range-track {
+  .dwar-resource-probability__slider::-moz-range-track {
     height: 3px;
     background: #4b5868;
     border-radius: 999px;
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
   }
 
-  .dwar-resource-option__slider::-moz-range-progress {
+  .dwar-resource-probability__slider::-moz-range-progress {
     height: 3px;
     background: #78d9c2;
     border-radius: 999px;
   }
 
-  .dwar-resource-option__slider::-moz-range-thumb {
+  .dwar-resource-probability__slider::-moz-range-thumb {
     width: 9px;
     height: 9px;
     background: #78d9c2;
