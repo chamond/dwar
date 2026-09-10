@@ -30,14 +30,17 @@ export const BOT_HUNT_TARGET_IDS = [
   'young-treant',
   'treant',
   'krogan',
+  'ficilia',
   'agile-ficilia',
   'orc-conqueror-skeleton',
+  'stone-lotus-outcast',
   'gungl-loner',
   'bloody-zigred',
   'young-beron-tiger',
   'experienced-beron-tiger',
   'brown-hakurt',
-  'cerberus'
+  'cerberus',
+  'stone-lotus-renegade'
 ] as const;
 
 export type BotHuntTargetId = typeof BOT_HUNT_TARGET_IDS[number];

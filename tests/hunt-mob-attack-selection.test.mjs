@@ -302,6 +302,10 @@ test('в справочнике злость доступна только по�
     'giant-zigred',
     'young-treant',
     'treant',
+    'ficilia',
+    'agile-ficilia',
+    'stone-lotus-outcast',
+    'gungl-loner',
     'bloody-zigred'
   ]);
 });

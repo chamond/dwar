@@ -224,11 +224,18 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     canBeAngered: false
   },
   {
+    id: 'ficilia',
+    name: 'Фицилия',
+    level: 3,
+    articleId: 507,
+    canBeAngered: true
+  },
+  {
     id: 'agile-ficilia',
     name: 'Ловкая фицилия',
     level: 4,
     articleId: 508,
-    canBeAngered: false
+    canBeAngered: true
   },
   {
     id: 'orc-conqueror-skeleton',
@@ -236,6 +243,13 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     level: 5,
     articleId: 352,
     canBeAngered: false
+  },
+  {
+    id: 'stone-lotus-outcast',
+    name: 'Изгой Каменного Лотоса',
+    level: 5,
+    articleId: 510,
+    canBeAngered: true
   },
   {
     id: 'gungl-loner',
@@ -277,6 +291,13 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     name: 'Цербер',
     level: 7,
     articleId: 807,
+    canBeAngered: false
+  },
+  {
+    id: 'stone-lotus-renegade',
+    name: 'Ренегат Каменного Лотоса',
+    level: 6,
+    articleId: 512,
     canBeAngered: false
   }
 ] as const satisfies readonly BotHuntTargetProps[];
