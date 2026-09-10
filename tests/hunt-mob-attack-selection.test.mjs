@@ -302,6 +302,7 @@ test('в справочнике злость доступна только по�
     'giant-zigred',
     'young-treant',
     'treant',
+    'krogan',
     'ficilia',
     'agile-ficilia',
     'stone-lotus-outcast',
