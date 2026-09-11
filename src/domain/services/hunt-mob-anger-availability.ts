@@ -6,7 +6,7 @@ export function canAngerHuntMob(
   targets: readonly BotHuntTarget[]
 ): boolean {
   return targets.some((target) => {
-    return target.getArticleIds().includes(mob.getArticleId())
+    return target.getArticleId() === mob.getArticleId()
       && target.canBeAngered();
   });
 }
