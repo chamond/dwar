@@ -70,6 +70,13 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     canBeAngered: true
   },
   {
+    id: 'provocator',
+    name: 'Провокатор',
+    level: 5,
+    articleId: 790,
+    canBeAngered: false
+  },
+  {
     id: 'forest-iguraon',
     name: 'Лесной игураон',
     level: 5,

@@ -8,6 +8,7 @@ export const BOT_HUNT_TARGET_IDS = [
   'ghoul',
   'dead-man',
   'zombie',
+  'provocator',
   'forest-iguraon',
   'krets',
   'krets-digger',
