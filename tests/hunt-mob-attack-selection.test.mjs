@@ -114,6 +114,9 @@ const { createHuntFightLifecycle } = loadCommonJsTypeScriptModule(
 const { AttackHuntMobUseCase } = loadCommonJsTypeScriptModule(
   'src/application/use-cases/attack-hunt-mob.ts'
 );
+const { RunHuntMobAttacksUseCase } = loadCommonJsTypeScriptModule(
+  'src/application/use-cases/run-hunt-mob-attacks.ts'
+);
 const { presentHuntAttackEvent } = loadCommonJsTypeScriptModule(
   'src/presentation/browser/hunt-attack-event-presenter.ts'
 );
@@ -708,6 +711,45 @@ test('после успешной злости публикует событие
     'fight-finished'
   ]);
   assert.equal(completed, true);
+});
+
+test('после отказа из-за восстановления цели ждёт перед следующей попыткой', () => {
+  let attackCalls = 0;
+  const delaySignals = [];
+  const useCase = new RunHuntMobAttacksUseCase(
+    {
+      execute: () => {
+        attackCalls += 1;
+        return of({
+          type: 'attack-target-not-recovered',
+          mob: {
+            id: '10',
+            name: 'Бешеный пёс',
+            level: 2,
+            aggressionLevel: 1,
+            aggressionColor: '#abcdef'
+          }
+        });
+      }
+    },
+    {
+      wait: (milliseconds) => {
+        delaySignals.push(milliseconds);
+        return new Subject();
+      }
+    }
+  );
+
+  const subscription = useCase.execute({
+    targetIds: ['mad-dog'],
+    preferCrowdedTarget: false,
+    aggressiveHunting: false,
+    angerMob: false
+  }).subscribe();
+
+  assert.equal(attackCalls, 1);
+  assert.deepEqual(delaySignals, [5_000]);
+  subscription.unsubscribe();
 });
 
 test('оформляет успешное применение злости в лог охоты', () => {

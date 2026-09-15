@@ -39,13 +39,13 @@ export class RunHuntMobAttacksUseCase {
 
   execute(input: RunHuntMobAttacksInput): Observable<HuntAttackEvent> {
     return defer(() => {
-      let noTargetFound = false;
+      let retryDelayRequired = false;
       let excludedMobIds = input.activeFight
         ? new Set([input.activeFight.id])
         : new Set<string>();
 
       const iteration = defer(() => {
-        noTargetFound = false;
+        retryDelayRequired = false;
 
         return this.attackHuntMob.execute({
           targetIds: input.targetIds,
@@ -56,15 +56,18 @@ export class RunHuntMobAttacksUseCase {
         }).pipe(
           tap((event) => {
             if (event.type === 'no-safe-target') {
-              noTargetFound = true;
+              retryDelayRequired = true;
               excludedMobIds = new Set<string>();
               return;
             }
 
-            if (
-              event.type === 'attack-request-sent'
-              || event.type === 'attack-target-not-recovered'
-            ) {
+            if (event.type === 'attack-target-not-recovered') {
+              retryDelayRequired = true;
+              excludedMobIds = new Set([event.mob.id]);
+              return;
+            }
+
+            if (event.type === 'attack-request-sent') {
               excludedMobIds = new Set([event.mob.id]);
             }
           })
@@ -73,7 +76,7 @@ export class RunHuntMobAttacksUseCase {
 
       const attackLoop = iteration.pipe(
         repeat({
-          delay: () => noTargetFound
+          delay: () => retryDelayRequired
             ? this.delay.wait(this.config.noTargetRetryDelayMs)
             : of(undefined)
         })
