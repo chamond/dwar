@@ -41,12 +41,16 @@ export interface AttackHuntMobConfig {
 }
 
 type NoSafeTargetEvent = Extract<HuntAttackEvent, { type: 'no-safe-target' }>;
+type AttackTargetNotRecoveredEvent = Extract<
+  HuntAttackEvent,
+  { type: 'attack-target-not-recovered' }
+>;
 type AttackRequestSentEvent = Extract<HuntAttackEvent, { type: 'attack-request-sent' }>;
 type AngerAppliedEvent = Extract<HuntAttackEvent, { type: 'anger-applied' }>;
 
 type HuntAttackTaskResult =
   | {
-      event: NoSafeTargetEvent | AngerAppliedEvent;
+      event: NoSafeTargetEvent | AttackTargetNotRecoveredEvent | AngerAppliedEvent;
     }
   | {
       event: AttackRequestSentEvent;
@@ -118,6 +122,15 @@ export class AttackHuntMobUseCase {
           return this.attacker.attack(selectedMob).pipe(
             take(1),
             switchMap((attackResult) => {
+              if (attackResult.rejection === 'target-not-recovered') {
+                return of<HuntAttackTaskResult>({
+                  event: {
+                    type: 'attack-target-not-recovered',
+                    mob: mobInfo
+                  }
+                });
+              }
+
               const fightLifecycle = createHuntFightLifecycle(
                 this.fightFinishedReader.observe()
               );

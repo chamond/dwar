@@ -13,6 +13,7 @@ import {
 } from './hunt-mob-attack-request';
 import {
   isDwarHuntAttackMinigameResponse,
+  isDwarHuntMobTargetNotRecoveredResponse,
   isSuccessfulDwarHuntMobAttackResponse,
   readDwarHuntAttackFightId
 } from './dwar-hunt-mob-attack-response';
@@ -40,6 +41,13 @@ export class BrowserHuntMobAttacker implements HuntMobAttacker {
           throw new UnexpectedServerResponseError(
             `Запрос нападения завершился с HTTP ${status}. Ответ: ${formatResponseBody(body)}`
           );
+        }
+
+        if (isDwarHuntMobTargetNotRecoveredResponse(body)) {
+          return {
+            fightId: null,
+            rejection: 'target-not-recovered'
+          };
         }
 
         assertSuccessfulAttackResponse(body);

@@ -35,6 +35,9 @@ export function presentHuntAttackEvent(
       );
       return;
 
+    case 'attack-target-not-recovered':
+      return;
+
     case 'anger-applied':
       addLog(
         `Злость успешно применена. Цель: ${formatMobLabel(event.mob)}.`,

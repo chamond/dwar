@@ -23,8 +23,6 @@ export interface RunHuntMobAttacksConfig {
 
 export class RunHuntMobAttacksUseCase {
   private readonly config: RunHuntMobAttacksConfig;
-  private lastAttackedMobId: string | null = null;
-
   constructor(
     private readonly attackHuntMob: AttackHuntMobUseCase,
     private readonly delay: Delay,
@@ -42,6 +40,9 @@ export class RunHuntMobAttacksUseCase {
   execute(input: RunHuntMobAttacksInput): Observable<HuntAttackEvent> {
     return defer(() => {
       let noTargetFound = false;
+      let excludedMobIds = input.activeFight
+        ? new Set([input.activeFight.id])
+        : new Set<string>();
 
       const iteration = defer(() => {
         noTargetFound = false;
@@ -51,18 +52,20 @@ export class RunHuntMobAttacksUseCase {
           preferCrowdedTarget: input.preferCrowdedTarget,
           aggressiveHunting: input.aggressiveHunting,
           angerMob: input.angerMob,
-          excludedMobIds: this.lastAttackedMobId === null
-            ? new Set<string>()
-            : new Set([this.lastAttackedMobId])
+          excludedMobIds
         }).pipe(
           tap((event) => {
             if (event.type === 'no-safe-target') {
               noTargetFound = true;
+              excludedMobIds = new Set<string>();
               return;
             }
 
-            if (event.type === 'attack-request-sent') {
-              this.lastAttackedMobId = event.mob.id;
+            if (
+              event.type === 'attack-request-sent'
+              || event.type === 'attack-target-not-recovered'
+            ) {
+              excludedMobIds = new Set([event.mob.id]);
             }
           })
         );

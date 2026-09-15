@@ -88,6 +88,7 @@ const {
 const {
   isDwarHuntAttackMinigameResponse,
   isSuccessfulDwarHuntMobAttackResponse,
+  isDwarHuntMobTargetNotRecoveredResponse,
   readDwarHuntAttackFightId
 } = await loadTypeScriptModule(
   'src/infrastructure/browser/dwar-hunt-mob-attack-response.ts'
@@ -356,6 +357,25 @@ test('принимает ответ нападения только с redirect_
     false
   );
   assert.equal(isSuccessfulDwarHuntMobAttackResponse('not json'), false);
+});
+
+test('распознаёт отказ нападения на ещё не восстановившуюся цель', () => {
+  assert.equal(
+    isDwarHuntMobTargetNotRecoveredResponse(
+      '{"common|action":{"redirect_error":"Цель еще не восстановилась!"}}'
+    ),
+    true
+  );
+  assert.equal(
+    isDwarHuntMobTargetNotRecoveredResponse(
+      '{"redirect_error":"Цель еще не восстановилась!"}'
+    ),
+    true
+  );
+  assert.equal(
+    isDwarHuntMobTargetNotRecoveredResponse('{"redirect_error":"другая ошибка"}'),
+    false
+  );
 });
 
 test('отдельно распознаёт мини-игру в ответе нападения', () => {

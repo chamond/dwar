@@ -16,6 +16,10 @@ export type HuntAttackEvent =
       mob: HuntAttackMobInfo;
     }
   | {
+      type: 'attack-target-not-recovered';
+      mob: HuntAttackMobInfo;
+    }
+  | {
       type: 'anger-applied';
       mob: HuntAttackMobInfo;
     }

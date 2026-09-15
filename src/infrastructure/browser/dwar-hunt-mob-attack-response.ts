@@ -11,6 +11,18 @@ export function isSuccessfulDwarHuntMobAttackResponse(body: string): boolean {
     || (isRecord(actionResponse) && actionResponse.redirect_error === false);
 }
 
+export function isDwarHuntMobTargetNotRecoveredResponse(body: string): boolean {
+  const response = parseResponse(body);
+
+  if (!isRecord(response)) {
+    return false;
+  }
+
+  return isTargetNotRecovered(response.redirect_error)
+    || (isRecord(response['common|action'])
+      && isTargetNotRecovered(response['common|action'].redirect_error));
+}
+
 export function isDwarHuntAttackMinigameResponse(body: string): boolean {
   const response = parseResponse(body);
 
@@ -42,6 +54,10 @@ function parseResponse(body: string): unknown {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+
+function isTargetNotRecovered(value: unknown): boolean {
+  return value === 'Цель еще не восстановилась!';
 }
 
 function readPositiveIntegerId(value: unknown): string | null {
