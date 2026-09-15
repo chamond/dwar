@@ -12,7 +12,9 @@ export function presentHuntAttackEvent(
   switch (event.type) {
     case 'no-safe-target':
       addLog(
-        event.targetCandidateCount === 0
+        event.retryReason === 'target-recovery'
+          ? 'Ожидание 5 секунд: цель ещё не восстановилась, другого моба нет.'
+          : event.targetCandidateCount === 0
           ? 'Целевой моб не найден.'
           : 'Безопасный целевой моб не найден: рядом моб другого вида.',
         {

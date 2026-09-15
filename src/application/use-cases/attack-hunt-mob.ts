@@ -111,7 +111,11 @@ export class AttackHuntMobUseCase {
             return of({
               event: {
                 type: 'no-safe-target',
-                targetCandidateCount: selection.targetCandidateCount
+                targetCandidateCount: selection.targetCandidateCount,
+                ...(input.excludedMobIds.size > 0
+                  && selection.targetCandidateCount === 0
+                  ? { retryReason: 'target-recovery' as const }
+                  : {})
               }
             });
           }

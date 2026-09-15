@@ -10,6 +10,7 @@ export type HuntAttackEvent =
   | {
       type: 'no-safe-target';
       targetCandidateCount: number;
+      retryReason?: 'target-recovery';
     }
   | {
       type: 'attack-request-sent';
