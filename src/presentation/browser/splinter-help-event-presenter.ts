@@ -45,6 +45,12 @@ export function presentSplinterHelpEvent(
         `В текущей локации нет новых подходящих игроков. Повторный поиск через ${formatSeconds(event.retryDelayMs)}.`
       );
       return;
+
+    case 'player-dead':
+      addLog('Персонаж погиб. Все активные процессы остановлены.', {
+        tone: 'failure'
+      });
+      return;
   }
 }
 

@@ -37,6 +37,7 @@ interface RuleRuntime {
 }
 
 export interface ExchangeMonitoringController {
+  stopAllRules(): void;
   destroy(): void;
 }
 
@@ -259,6 +260,9 @@ export function createExchangeMonitoringController(
   options.elements.ruleForm.addEventListener('submit', ruleFormHandler);
 
   return {
+    stopAllRules(): void {
+      runtimes.forEach(stopRuntime);
+    },
     destroy(): void {
       options.elements.intervalInput.removeEventListener('input', intervalInputHandler);
       options.elements.minimumPriceInput.removeEventListener('input', minimumPriceInputHandler);

@@ -28,4 +28,7 @@ export type SplinterHelpEvent =
   | {
       type: 'no-eligible-players';
       retryDelayMs: number;
+    }
+  | {
+      type: 'player-dead';
     };

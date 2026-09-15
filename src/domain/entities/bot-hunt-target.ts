@@ -40,7 +40,8 @@ export const BOT_HUNT_TARGET_IDS = [
   'experienced-beron-tiger',
   'brown-hakurt',
   'cerberus',
-  'stone-lotus-renegade'
+  'stone-lotus-renegade',
+  'wolfer'
 ] as const;
 
 export type BotHuntTargetId = typeof BOT_HUNT_TARGET_IDS[number];

@@ -9,6 +9,7 @@ import {
   type Observable
 } from 'rxjs';
 import type { SplinterHelpEvent } from '../events/splinter-help-event';
+import type { CurrentPlayerAliveDetector } from '../ports/current-player-alive-detector';
 import type { CurrentPlayerSplinterDetector } from '../ports/current-player-splinter-detector';
 import type { Delay } from '../ports/delay';
 import type { GetAreaId } from '../ports/get-area-id';
@@ -31,6 +32,7 @@ export class RequestSplinterHelpUseCase {
     private readonly listCurrentLocationPlayers: ListCurrentLocationPlayersUseCase,
     private readonly privateMessageSender: PrivateMessageSender,
     private readonly detectCurrentPlayerSplinter: CurrentPlayerSplinterDetector,
+    private readonly detectCurrentPlayerAlive: CurrentPlayerAliveDetector,
     private readonly getAreaId: GetAreaId,
     private readonly delay: Delay,
     private readonly equipAncientClanPickaxe: EquipAncientClanPickaxeUseCase,
@@ -67,6 +69,21 @@ export class RequestSplinterHelpUseCase {
   }
 
   private runRound(session: SplinterHelpSession): Observable<SplinterHelpEvent> {
+    return defer(() => this.detectCurrentPlayerAlive()).pipe(
+      take(1),
+      switchMap((isAlive) => {
+        if (!isAlive) {
+          return this.finishDeadSession(session);
+        }
+
+        return this.listPlayersAndRequestHelp(session);
+      })
+    );
+  }
+
+  private listPlayersAndRequestHelp(
+    session: SplinterHelpSession
+  ): Observable<SplinterHelpEvent> {
     return defer(() => this.listCurrentLocationPlayers.execute()).pipe(
       take(1),
       switchMap((players) => {
@@ -104,28 +121,37 @@ export class RequestSplinterHelpUseCase {
           delayMs: this.config.helpDelayMs
         };
 
-        return concat(
-          of(recipientsSelectedEvent),
-          defer(() => this.getAreaId()).pipe(
-            take(1),
-            switchMap((areaId) => this.privateMessageSender.send({
-              recipientNicks: recipients.map(({ nick }) => nick),
-              message,
-              areaId
-            }).pipe(
-              tap(() => {
-                session.markContacted(recipients);
-              })
-            )),
-            take(1),
-            ignoreElements()
-          ),
-          of(messageSentEvent, waitingEvent),
-          this.delay.wait(this.config.helpDelayMs).pipe(
-            take(1),
-            ignoreElements()
-          ),
-          this.checkSplinterAfterWait(session)
+        return defer(() => this.detectCurrentPlayerAlive()).pipe(
+          take(1),
+          switchMap((isAlive) => {
+            if (!isAlive) {
+              return this.finishDeadSession(session);
+            }
+
+            return concat(
+              of(recipientsSelectedEvent),
+              defer(() => this.getAreaId()).pipe(
+                take(1),
+                switchMap((areaId) => this.privateMessageSender.send({
+                  recipientNicks: recipients.map(({ nick }) => nick),
+                  message,
+                  areaId
+                }).pipe(
+                  tap(() => {
+                    session.markContacted(recipients);
+                  })
+                )),
+                take(1),
+                ignoreElements()
+              ),
+              of(messageSentEvent, waitingEvent),
+              this.delay.wait(this.config.helpDelayMs).pipe(
+                take(1),
+                ignoreElements()
+              ),
+              this.checkSplinterAfterWait(session)
+            );
+          })
         );
       })
     );
@@ -170,5 +196,13 @@ export class RequestSplinterHelpUseCase {
         return of(miningToolEquippedEvent, splinterRemovedEvent);
       })
     );
+  }
+
+  private finishDeadSession(session: SplinterHelpSession): Observable<SplinterHelpEvent> {
+    if (this.session === session) {
+      this.session = null;
+    }
+
+    return of({ type: 'player-dead' });
   }
 }

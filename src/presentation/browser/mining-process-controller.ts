@@ -38,6 +38,7 @@ import type { SplinterAlertSound } from './splinter-alert-sound';
 export interface MiningProcessController {
   toggle(): void;
   forceStop(): void;
+  stopImmediately(): void;
   restartAfterSplinter(): void;
 }
 
@@ -288,6 +289,7 @@ export function createMiningProcessController(
       start();
     },
     forceStop,
+    stopImmediately: forceStop,
     restartAfterSplinter(): void {
       if (
         (executionSubscription && !executionSubscription.closed)

@@ -196,6 +196,12 @@ export function mountBotWidget(dependencies: BotWidgetDependencies): void {
     }),
     onSplinterRemoved: () => {
       miningController.restartAfterSplinter();
+    },
+    onPlayerDead: () => {
+      miningController.stopImmediately();
+      craftingController.stopImmediately('Крафт полностью остановлен: персонаж погиб.');
+      huntingController.stopImmediately();
+      exchangeMonitoringController.stopAllRules();
     }
   });
   const huntingController = createHuntingController({

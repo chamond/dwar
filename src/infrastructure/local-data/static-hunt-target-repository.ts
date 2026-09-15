@@ -299,6 +299,13 @@ const LOCAL_HUNT_TARGET_RECORDS = [
     level: 6,
     articleId: 512,
     canBeAngered: false
+  },
+  {
+    id: 'wolfer',
+    name: 'Волфер',
+    level: 4,
+    articleId: 782,
+    canBeAngered: false
   }
 ] as const satisfies readonly BotHuntTargetProps[];
 

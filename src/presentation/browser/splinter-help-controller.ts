@@ -20,6 +20,7 @@ export interface SplinterHelpControllerOptions {
   addLog: AddBotLog;
   reportError: ProcessErrorReporter;
   onSplinterRemoved(): void;
+  onPlayerDead(): void;
 }
 
 export interface SplinterHelpController {
@@ -100,6 +101,13 @@ export function createSplinterHelpController(
 
     const subscription = options.requestSplinterHelp.execute().pipe(
       tap((event) => {
+        if (event.type === 'player-dead') {
+          splinterConfirmed = false;
+          setButtonState();
+          stopThanksWatcher();
+          options.onPlayerDead();
+        }
+
         if (event.type === 'splinter-removed') {
           splinterConfirmed = false;
           setButtonState();

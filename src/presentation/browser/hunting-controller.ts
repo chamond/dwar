@@ -10,6 +10,7 @@ import type { ProcessErrorReporter } from './process-error-reporter';
 export interface HuntingController {
   toggle(): void;
   restart(): void;
+  stopImmediately(): void;
   destroy(): void;
 }
 
@@ -174,6 +175,17 @@ export function createHuntingController(
       start();
     },
     restart,
+    stopImmediately(): void {
+      if (!executionSubscription || executionSubscription.closed) {
+        return;
+      }
+
+      options.addLog('Автоматическая охота полностью остановлена: персонаж погиб.', {
+        tone: 'failure'
+      });
+      stoppedByUser = false;
+      executionSubscription.unsubscribe();
+    },
     destroy(): void {
       executionSubscription?.unsubscribe();
       executionSubscription = null;

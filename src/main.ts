@@ -33,6 +33,7 @@ import { BrowserProfessionRecipeCrafter } from './infrastructure/browser/browser
 import { BrowserPrivateMessageSender } from './infrastructure/browser/browser-private-message-sender';
 import { BrowserSplinterHealerReader } from './infrastructure/browser/browser-splinter-healer-reader';
 import { detectCurrentPlayerSplinter } from './infrastructure/browser/detect-current-player-splinter';
+import { detectCurrentPlayerAlive } from './infrastructure/browser/detect-current-player-alive';
 import { DwarBackpackHtmlParser } from './infrastructure/browser/dwar-backpack-html-parser';
 import { DwarChatUsersHtmlParser } from './infrastructure/browser/dwar-chat-users-html-parser';
 import { DwarExchangeOffersHtmlParser } from './infrastructure/browser/dwar-exchange-offers-html-parser';
@@ -83,6 +84,7 @@ function bootstrap(): void {
     listCurrentLocationPlayers,
     privateMessageSender,
     detectCurrentPlayerSplinter,
+    detectCurrentPlayerAlive,
     getAreaId,
     delay,
     equipAncientClanPickaxe
