@@ -67,9 +67,7 @@ function parseCurrentPlayerAlive(responseText: string): boolean {
     return health > 0;
   }
 
-  throw new UnexpectedServerResponseError(
-    'Current state response does not contain a player life status.'
-  );
+  return true;
 }
 
 function readBoolean(
