@@ -22,19 +22,24 @@ function logCraftingEvent(
   addLog: AddBotLog
 ): void {
   switch (event.type) {
-    case 'craft-started':
+    case 'craft-started': {
+      const remainder = event.remainingResourceAmount === null
+        ? '.'
+        : `, ресурсов остается: ${event.remainingResourceAmount}.`;
+
       addLog(
-        `Крафтим ${event.amount} шт. ${formatProfessionRecipeLabel(event.recipe)}, ресурсов остается: ${event.remainingResourceAmount}.`,
+        `Крафтим ${event.amount} шт. ${formatProfessionRecipeLabel(event.recipe)}${remainder}`,
         {
           parts: [
             'Крафтим ',
             `${event.amount} шт. `,
             createRecipeLogPart(event.recipe),
-            `, ресурсов остается: ${event.remainingResourceAmount}.`
+            remainder
           ]
         }
       );
       return;
+    }
 
     case 'recipe-stopped':
       addLog(
@@ -71,6 +76,10 @@ function createRecipeLogPart(recipe: ProfessionCraftingRecipeInfo): BotLogLinePa
 }
 
 function formatCraftingResourceLabel(recipe: ProfessionCraftingRecipeInfo): string {
+  if (recipe.resourceName === null || recipe.level === null) {
+    return recipe.name;
+  }
+
   return formatResourceLabel({
     name: recipe.resourceName,
     level: recipe.level

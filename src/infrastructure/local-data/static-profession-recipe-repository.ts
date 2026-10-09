@@ -7,7 +7,8 @@ interface LocalProfessionRecipeRecord {
   id: ProfessionRecipeId;
   name: string;
   recipeId: number;
-  resourceId: BotResourceId;
+  resourceId?: BotResourceId;
+  cooldownMs?: number;
   maxAmountPerRequest: number;
 }
 
@@ -32,17 +33,24 @@ const LOCAL_PROFESSION_RECIPE_RECORDS = [
     recipeId: 51536387,
     resourceId: 'turquoise',
     maxAmountPerRequest: 10
+  },
+  {
+    id: 'geb-destruction-element',
+    name: 'Элемент сокрушения Геб',
+    recipeId: 61024293,
+    maxAmountPerRequest: 10,
+    cooldownMs: 15 * 60_000
   }
-] as const satisfies readonly LocalProfessionRecipeRecord[];
+] satisfies readonly LocalProfessionRecipeRecord[];
 
 export class StaticProfessionRecipeRepository implements ProfessionRecipeRepository {
   private readonly recipes: readonly ProfessionRecipe[];
 
   constructor(resourceRepository: ResourceRepository) {
     this.recipes = LOCAL_PROFESSION_RECIPE_RECORDS.map((record) => {
-      const resource = resourceRepository.findById(record.resourceId);
+      const resource = record.resourceId ? resourceRepository.findById(record.resourceId) : null;
 
-      if (!resource) {
+      if (record.resourceId && !resource) {
         throw new Error(`Profession recipe ${record.id} references unknown resource ${record.resourceId}.`);
       }
 
@@ -50,7 +58,8 @@ export class StaticProfessionRecipeRepository implements ProfessionRecipeReposit
         id: record.id,
         name: record.name,
         recipeId: record.recipeId,
-        resource,
+        ...(resource ? { resource } : {}),
+        ...(record.cooldownMs !== undefined ? { cooldownMs: record.cooldownMs } : {}),
         maxAmountPerRequest: record.maxAmountPerRequest
       });
     });

@@ -151,14 +151,17 @@ export class RunProfessionCraftingUseCase {
     cooldownTasks: CraftCooldownTask[],
     taskErrors: unknown[]
   ): Observable<ProfessionCraftingEvent> {
-    const backpackCheckEvent: ProfessionCraftingEvent = {
-      type: 'backpack-check-started',
-      recipes: recipes.map(createRecipeInfo)
-    };
+    const resourceRecipes = recipes.filter((recipe) => recipe.getResource() !== null);
+    const lookups = this.readBackpackQuantities(recipes);
 
     return concat(
-      of(backpackCheckEvent),
-      this.readBackpackQuantities(recipes).pipe(
+      resourceRecipes.length > 0
+        ? of<ProfessionCraftingEvent>({
+            type: 'backpack-check-started',
+            recipes: resourceRecipes.map(createRecipeInfo)
+          })
+        : EMPTY,
+      lookups.pipe(
         switchMap((lookups) => this.requestCraftTasks(
           lookups,
           stoppedRecipeIds,
@@ -172,21 +175,27 @@ export class RunProfessionCraftingUseCase {
   private readBackpackQuantities(
     recipes: readonly ProfessionRecipe[]
   ): Observable<readonly RecipeBackpackLookup[]> {
-    return this.backpackItemQuantityReader.readQuantities(
-      recipes.map((recipe) => recipe.getResource().getArticleId()),
-      {
-        group: this.config.resourceBackpackGroup
-      }
-    ).pipe(
-      map((quantities) => {
-        return recipes.map((recipe) => ({
+    const articleIds = recipes.flatMap((recipe) => {
+      const resource = recipe.getResource();
+      return resource ? [resource.getArticleId()] : [];
+    });
+    const quantities = articleIds.length > 0
+      ? this.backpackItemQuantityReader.readQuantities(articleIds, {
+          group: this.config.resourceBackpackGroup
+        })
+      : of<readonly BackpackItemQuantity[]>([]);
+
+    return quantities.pipe(
+      map((quantities) => recipes.map((recipe) => {
+        const resource = recipe.getResource();
+
+        return {
           recipe,
-          availableAmount: getRequiredQuantity(
-            quantities,
-            recipe.getResource().getArticleId()
-          ).quantity
-        }));
-      }),
+          availableAmount: resource
+            ? getRequiredQuantity(quantities, resource.getArticleId()).quantity
+            : null
+        };
+      })),
       take(1)
     );
   }
@@ -198,7 +207,7 @@ export class RunProfessionCraftingUseCase {
     taskErrors: unknown[]
   ): Observable<ProfessionCraftingEvent> {
     const tasks = lookups.map(({ recipe, availableAmount }) => {
-      const task = availableAmount <= 0
+      const task = availableAmount !== null && availableAmount <= 0
         ? defer(() => {
             stoppedRecipeIds.add(recipe.getId());
 
@@ -222,12 +231,12 @@ export class RunProfessionCraftingUseCase {
 
   private requestCraft(
     recipe: ProfessionRecipe,
-    availableResourceAmount: number,
+    availableResourceAmount: number | null,
     cooldownTasks: CraftCooldownTask[]
   ): Observable<ProfessionCraftingEvent> {
     return defer(() => {
       const recipeInfo = createRecipeInfo(recipe);
-      const amount = Math.min(recipe.getMaxAmountPerRequest(), availableResourceAmount);
+      const amount = Math.min(recipe.getMaxAmountPerRequest(), availableResourceAmount ?? recipe.getMaxAmountPerRequest());
       const requestStartedEvent: ProfessionCraftingEvent = {
         type: 'craft-request-started',
         recipe: recipeInfo,
@@ -238,13 +247,14 @@ export class RunProfessionCraftingUseCase {
         of(requestStartedEvent),
         this.crafter.craft(recipe, amount).pipe(
           map(() => {
-            const durationMs = amount * this.config.cooldownPerItemMs + this.config.postCraftDelayMs;
+            const durationMs = recipe.getCooldownMs()
+              ?? amount * this.config.cooldownPerItemMs + this.config.postCraftDelayMs;
             const craftStartedEvent: ProfessionCraftingEvent = {
               type: 'craft-started',
               recipe: recipeInfo,
               amount,
               durationMs,
-              remainingResourceAmount: availableResourceAmount - amount
+              remainingResourceAmount: availableResourceAmount === null ? null : availableResourceAmount - amount
             };
 
             cooldownTasks.push({
@@ -310,7 +320,7 @@ export class RunProfessionCraftingUseCase {
 
 interface RecipeBackpackLookup {
   recipe: ProfessionRecipe;
-  availableAmount: number;
+  availableAmount: number | null;
 }
 
 interface CraftCooldownTask {
@@ -325,10 +335,10 @@ function createRecipeInfo(recipe: ProfessionRecipe): ProfessionCraftingRecipeInf
     id: recipe.getId(),
     name: recipe.getName(),
     recipeId: recipe.getRecipeId(),
-    resourceId: resource.getId(),
-    resourceName: resource.getName(),
-    markerColor: resource.getMarkerColor(),
-    level: resource.getLevel()
+    resourceId: resource?.getId() ?? null,
+    resourceName: resource?.getName() ?? null,
+    markerColor: resource?.getMarkerColor() ?? '#d8d1c1',
+    level: resource?.getLevel() ?? null
   };
 }
 

@@ -5,10 +5,10 @@ export interface ProfessionCraftingRecipeInfo {
   id: ProfessionRecipeId;
   name: string;
   recipeId: number;
-  resourceId: BotResourceId;
-  resourceName: string;
+  resourceId: BotResourceId | null;
+  resourceName: string | null;
   markerColor: string;
-  level: number;
+  level: number | null;
 }
 
 export type ProfessionCraftingEvent =
@@ -30,7 +30,7 @@ export type ProfessionCraftingEvent =
       recipe: ProfessionCraftingRecipeInfo;
       amount: number;
       durationMs: number;
-      remainingResourceAmount: number;
+      remainingResourceAmount: number | null;
     }
   | {
       type: 'craft-completed';
