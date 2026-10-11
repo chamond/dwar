@@ -45,7 +45,7 @@ import type { HuntZoneScanStore } from '../ports/hunt-zone-scan-store';
 import type { ResourceRepository } from '../ports/resource-repository';
 import type { TaskScheduler } from '../ports/task-scheduler';
 
-const DEFAULT_DANGER_RADIUS = 100;
+const DEFAULT_DANGER_RADIUS = 130;
 const DEFAULT_MONITORING_SCAN_INTERVAL_MS = 4_000;
 const DEFAULT_NO_SAFE_RESOURCE_DELAY_MS = 20_000;
 
