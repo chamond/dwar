@@ -6,3 +6,8 @@ dist/
 !.env.example
 canvas.all.js
 *.png
+# Persistent local Telegram bot data
+orange-telegram-bot/data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

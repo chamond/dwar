@@ -1,0 +1,16 @@
+services:
+  orange-bot:
+    build:
+      context: .
+      dockerfile: dockerfile
+    env_file: .env
+    environment:
+      DATABASE_PATH: /app/data/orange-bot.sqlite
+      NODE_ENV: production
+    volumes:
+      - orange-data:/app/data
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+volumes:
+  orange-data:
