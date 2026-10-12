@@ -20,9 +20,10 @@ export interface RubAmount {
   offset: number;
 }
 const space = /[\s\u00a0\u202f]/g;
+const numberPattern = "-?\\d(?:[\\d., \\u00a0\\u202f]{0,80}\\d)?";
 
 const pattern = new RegExp(
-  `(?:(?<number>-?\\d(?:[\\d., \\u00a0\\u202f]{0,80}\\d)?)[ \\u00a0\\u202f]*|(?<word>${rubWordAmountPattern})[ \\u00a0\\u202f]+)(?:(?<scale>${rubScalePattern})[ \\u00a0\\u202f]*(?<scaledCurrency>${rubCurrencyPattern})?|(?<currency>${rubCurrencyPattern}))(?![\\p{L}\\p{N}_])|(?<standalone>${rubStandalonePattern})(?![\\p{L}\\p{N}_])`,
+  `₽[ \\u00a0\\u202f]*(?<prefixedNumber>${numberPattern})(?![\\p{L}\\p{N}_]|[.,]\\d)|(?:(?<number>${numberPattern})[ \\u00a0\\u202f]*|(?<word>${rubWordAmountPattern})[ \\u00a0\\u202f]+)(?:(?<scale>${rubScalePattern})[ \\u00a0\\u202f]*(?<scaledCurrency>${rubCurrencyPattern})?|(?<currency>${rubCurrencyPattern}))(?![\\p{L}\\p{N}_])|(?<standalone>${rubStandalonePattern})(?![\\p{L}\\p{N}_])`,
   "giu",
 );
 
@@ -55,8 +56,15 @@ export function parseRubAmounts(
     const start = match.index;
     const end = start + match[0].length;
     if (excluded.some(([a, b]) => start < b! && end > a!)) continue;
-    const { number, word, scale, currency, scaledCurrency, standalone } =
-      match.groups!;
+    const {
+      prefixedNumber,
+      word,
+      scale,
+      currency,
+      scaledCurrency,
+      standalone,
+    } = match.groups!;
+    const number = prefixedNumber ?? match.groups!.number;
     const leftBoundary =
       number === undefined ? /[\p{L}\p{N}_+\-]/u : /[\p{L}\p{N}_.,+\-–—]/u;
     if (start > 0 && leftBoundary.test(text[start - 1]!)) continue;

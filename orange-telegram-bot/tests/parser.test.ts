@@ -6,6 +6,13 @@ describe("RUB parser", () => {
   it.each([
     ["Купил за 1000 рублей", ["1000"]],
     ["100 ₽ и 250 руб.", ["100", "250"]],
+    ["₽3255 и 3255₽", ["3255", "3255"]],
+    ["₽ 3255 и 3255 ₽", ["3255", "3255"]],
+    ["₽1\u202f500,50 и ₽-500", ["1500.5", "-500"]],
+    ["Цена: ₽3255, доставка: ₽100.", ["3255", "100"]],
+    ["abc₽3255 ₽3255abc ₽1,2.3 ₽1 50", []],
+    ["https://x.test/₽3255 www.x.test/₽3255", []],
+    ["₽1000000000001", []],
     ["1 500,50 руб.", ["1500.5"]],
     ["1,5 тыс. ₽", ["1500"]],
     ["2 млн рублей", ["2000000"]],
@@ -38,6 +45,18 @@ describe("RUB parser", () => {
     expect(
       parseRubAmounts("1 500 ₽", [{ type: "bold", offset: 0, length: 1 }]),
     ).toHaveLength(1));
+  it("preserves prefix offsets and excludes Telegram code entities", () => {
+    const text = "🍊 ₽3255 и 3255₽";
+    expect(parseRubAmounts(text).map((a) => [a.original, a.offset])).toEqual([
+      ["₽3255", 3],
+      ["3255₽", 11],
+    ]);
+    expect(
+      parseRubAmounts(text, [{ type: "code", offset: 3, length: 5 }]).map(
+        (a) => a.original,
+      ),
+    ).toEqual(["3255₽"]);
+  });
   it("limits input and output", () => {
     expect(values("x".repeat(20000) + "500 ₽")).toEqual([]);
     expect(values("1 ₽ ".repeat(500))).toHaveLength(6);
