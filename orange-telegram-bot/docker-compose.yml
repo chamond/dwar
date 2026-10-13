@@ -1,5 +1,6 @@
 services:
   orange-bot:
+    image: ${ORANGE_BOT_IMAGE:-orange-telegram-bot:local}
     build:
       context: .
       dockerfile: dockerfile

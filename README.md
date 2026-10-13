@@ -8,6 +8,10 @@ The build produces one browser-loadable JavaScript file: `dist/index.js`.
 
 - `npm run typecheck` - checks TypeScript types without emitting files.
 - `npm run build` - type-checks the project, then bundles it to `dist/index.js`.
+- `npm run deploy:orange` - checks and builds the standalone Telegram bot in Docker, then deploys it over SSH.
+- `npm run rollback:orange` - restores the previous Telegram bot release.
+
+For the server's first-time setup and deployment options, see [the Telegram bot README](orange-telegram-bot/README.md#деплой-на-ubuntu-сервер).
 
 ## Architecture
 

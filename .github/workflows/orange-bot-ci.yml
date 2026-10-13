@@ -1,9 +1,19 @@
 name: Orange Telegram bot checks
 on:
   push:
-    paths: ['orange-telegram-bot/**', '.github/workflows/orange-bot-ci.yml']
+    paths:
+      - 'orange-telegram-bot/**'
+      - 'scripts/*orange-bot*.sh'
+      - 'tests/orange-bot-deploy.test.mjs'
+      - '.github/workflows/orange-bot-ci.yml'
+      - 'package.json'
   pull_request:
-    paths: ['orange-telegram-bot/**', '.github/workflows/orange-bot-ci.yml']
+    paths:
+      - 'orange-telegram-bot/**'
+      - 'scripts/*orange-bot*.sh'
+      - 'tests/orange-bot-deploy.test.mjs'
+      - '.github/workflows/orange-bot-ci.yml'
+      - 'package.json'
   workflow_dispatch:
 permissions:
   contents: read
@@ -25,5 +35,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
+      - run: bash -n ../scripts/deploy-orange-bot.sh ../scripts/run-orange-bot-release.sh
+      - run: node --test ../tests/orange-bot-deploy.test.mjs
       - run: docker compose --env-file .env.example config --quiet
       - run: docker build -f dockerfile .
