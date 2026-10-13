@@ -39,7 +39,7 @@ const LOCAL_PROFESSION_RECIPE_RECORDS = [
     name: 'Элемент сокрушения Геб',
     recipeId: 61024293,
     maxAmountPerRequest: 10,
-    cooldownMs: 7 * 60_000
+    cooldownMs: 7.6 * 60_000
   }
 ] satisfies readonly LocalProfessionRecipeRecord[];
 
